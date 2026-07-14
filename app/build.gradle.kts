@@ -52,6 +52,7 @@ android {
 
     sourceSets {
         getByName("androidTest").assets.srcDirs("$projectDir/schemas")
+        getByName("test").resources.srcDirs("$projectDir/src/main/assets")
     }
 }
 
