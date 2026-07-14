@@ -1,0 +1,22 @@
+package io.pitman.myfeeds.data.settings
+
+/**
+ * Ported from SettingsViewModel.cs. Dropped fields with no Android equivalent in this plan:
+ * Instapaper username/password (Instapaper integration dropped, see port plan), and
+ * SupportedOrientation/LockPortraitMode (WP-specific page orientation lock).
+ */
+data class AppSettings(
+    val updateIntervalMinutes: Long = 30,
+    val isFirstRun: Boolean = true,
+    val listFontSize: FontSize = FontSize.NORMAL,
+    val feedListFontSize: FontSize = FontSize.LARGE,
+    val articleFontSize: FontSize = FontSize.NORMAL,
+    val enableImageDisplay: Boolean = true,
+    val maxArticles: Int = 20,
+    val defaultToAllArticleView: Boolean = false,
+    val allowPodcastDownloadOnBattery: Boolean = false,
+    val allowPodcastDownloadOnCellular: Boolean = false,
+    val allowPodcastStreaming: Boolean = true,
+    val lastImportUrl: String? = null,
+    val lastFeedUpdateEpochMillis: Long? = null,
+)
