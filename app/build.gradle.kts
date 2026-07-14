@@ -73,6 +73,7 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.okhttp)
     implementation(libs.jsoup)
+    implementation(libs.kotlinx.coroutines.android)
     ksp(libs.hilt.android.compiler)
     ksp(libs.androidx.room.compiler)
 
