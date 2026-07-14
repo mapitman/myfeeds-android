@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <title>A Blog</title>
+  <subtitle>A blog about things</subtitle>
+  <link rel="self" type="application/atom+xml" href="https://example.com/feed.atom" />
+  <link rel="alternate" type="text/html" href="https://example.com" />
+  <logo>https://example.com/logo.png</logo>
+  <entry>
+    <title>Entry With Content</title>
+    <id>urn:uuid:entry-1</id>
+    <link rel="alternate" type="text/html" href="https://example.com/entry-1" />
+    <updated>2013-06-03T11:05:30Z</updated>
+    <content type="html">&lt;p&gt;Full content body.&lt;/p&gt;</content>
+    <summary>Should not be used since content is present first in document order.</summary>
+  </entry>
+  <entry>
+    <title>Entry With Only Summary</title>
+    <link href="https://example.com/entry-2" />
+    <updated>2013-06-04T09:00:00Z</updated>
+    <summary>Just a summary, no content element.</summary>
+  </entry>
+</feed>

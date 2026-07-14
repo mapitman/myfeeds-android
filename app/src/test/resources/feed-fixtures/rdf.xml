@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rdf:RDF
+    xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+    xmlns:content="http://purl.org/rss/1.0/modules/content/"
+    xmlns:dc="http://purl.org/dc/elements/1.1/"
+    xmlns="http://purl.org/rss/1.0/">
+  <channel rdf:about="https://example.com/rdf-feed">
+    <title>An RDF Feed</title>
+    <link>https://example.com</link>
+    <description>A classic RSS 1.0 / RDF feed.</description>
+    <image rdf:resource="https://example.com/logo.png">
+      <url>https://example.com/logo.png</url>
+    </image>
+  </channel>
+  <item rdf:about="https://example.com/rdf-item-1">
+    <title>RDF Item One</title>
+    <link>https://example.com/rdf-item-1</link>
+    <description>Plain description.</description>
+    <content:encoded><![CDATA[<p>Rich RDF content.</p>]]></content:encoded>
+    <dc:date>2013-06-03T11:05:30Z</dc:date>
+    <enclosure url="https://example.com/rdf-item-1.mp3" type="audio/mpeg" />
+  </item>
+  <item rdf:about="https://example.com/rdf-item-2">
+    <title>RDF Item Two (non-audio enclosure ignored)</title>
+    <link>https://example.com/rdf-item-2</link>
+    <description>No content:encoded here.</description>
+    <dc:date>2013-06-04T09:00:00Z</dc:date>
+    <enclosure url="https://example.com/rdf-item-2.jpg" type="image/jpeg" />
+  </item>
+</rdf:RDF>
