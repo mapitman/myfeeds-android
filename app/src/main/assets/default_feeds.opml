@@ -11,14 +11,14 @@
       <outline text="Ars Technica" xmlUrl="https://feeds.arstechnica.com/arstechnica/index/" />
     </outline>
     <outline text="Mobile">
-      <outline text="Windows Central" xmlUrl="https://www.windowscentral.com/rss.xml" />
-      <outline text="Android Central" xmlUrl="https://www.androidcentral.com/rss.xml" />
+      <outline text="Windows Central" xmlUrl="https://www.windowscentral.com/feeds.xml" />
+      <outline text="Android Central" xmlUrl="https://www.androidcentral.com/feeds.xml" />
       <outline text="9to5Google" xmlUrl="https://9to5google.com/feed/" />
       <outline text="Android Authority" xmlUrl="https://www.androidauthority.com/feed/" />
     </outline>
     <outline text="News">
       <outline text="BBC News" xmlUrl="https://feeds.bbci.co.uk/news/rss.xml" />
-      <outline text="CNN Top Stories" xmlUrl="http://rss.cnn.com/rss/cnn_topstories.rss" />
+      <outline text="Sky News World" xmlUrl="https://feeds.skynews.com/feeds/rss/world.xml" />
       <outline text="NPR News" xmlUrl="https://feeds.npr.org/1001/rss.xml" />
       <outline text="The Guardian World News" xmlUrl="https://www.theguardian.com/world/rss" />
     </outline>

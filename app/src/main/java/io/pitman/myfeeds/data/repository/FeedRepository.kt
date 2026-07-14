@@ -6,6 +6,7 @@ import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.local.FeedItemDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 
 /**
@@ -35,6 +36,9 @@ class FeedRepository @Inject constructor(
     fun observeUnreadCount(feedId: Long): Flow<Int> = feedItemDao.observeUnreadCountForFeed(feedId)
 
     fun observeTotalUnreadCount(): Flow<Int> = feedItemDao.observeTotalUnreadCount()
+
+    fun observeUnreadCountsByFeed(): Flow<Map<Long, Int>> =
+        feedItemDao.observeUnreadCountsByFeed().map { counts -> counts.associate { it.feedId to it.count } }
 
     suspend fun upsertItems(items: List<FeedItem>) = feedItemDao.insertAll(items)
 
