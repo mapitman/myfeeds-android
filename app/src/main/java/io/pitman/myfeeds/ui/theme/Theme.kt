@@ -11,21 +11,35 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = MyFeedsGreen80,
-    secondary = MyFeedsGreenGrey80,
-    tertiary = MyFeedsAccent80,
+    primary = MyFeedsGreenDark,
+    onPrimary = OnMyFeedsGreenDark,
+    primaryContainer = MyFeedsGreenContainerDark,
+    onPrimaryContainer = OnMyFeedsGreenContainerDark,
+    tertiary = MyFeedsOrangeDark,
+    onTertiary = OnMyFeedsOrangeDark,
+    tertiaryContainer = MyFeedsOrangeContainerDark,
+    onTertiaryContainer = OnMyFeedsOrangeContainerDark,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = MyFeedsGreen40,
-    secondary = MyFeedsGreenGrey40,
-    tertiary = MyFeedsAccent40,
+    primary = MyFeedsGreenLight,
+    onPrimary = OnMyFeedsGreenLight,
+    primaryContainer = MyFeedsGreenContainerLight,
+    onPrimaryContainer = OnMyFeedsGreenContainerLight,
+    tertiary = MyFeedsOrangeLight,
+    onTertiary = OnMyFeedsOrangeLight,
+    tertiaryContainer = MyFeedsOrangeContainerLight,
+    onTertiaryContainer = OnMyFeedsOrangeContainerLight,
 )
 
+/**
+ * @param dynamicColor Opt-in to Android 12+ wallpaper-derived color. Off by default so the
+ * ported MyFeeds brand (green accent, orange tertiary) always shows.
+ */
 @Composable
 fun MyFeedsTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    dynamicColor: Boolean = true,
+    dynamicColor: Boolean = false,
     content: @Composable () -> Unit,
 ) {
     val colorScheme = when {
