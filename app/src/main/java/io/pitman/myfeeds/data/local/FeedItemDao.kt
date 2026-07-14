@@ -45,4 +45,7 @@ interface FeedItemDao {
 
     @Query("SELECT COUNT(*) FROM feed_items WHERE isRead = 0")
     fun observeTotalUnreadCount(): Flow<Int>
+
+    @Query("SELECT feedId, COUNT(*) as count FROM feed_items WHERE isRead = 0 GROUP BY feedId")
+    fun observeUnreadCountsByFeed(): Flow<List<FeedUnreadCount>>
 }

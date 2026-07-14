@@ -74,6 +74,7 @@ dependencies {
     implementation(libs.okhttp)
     implementation(libs.jsoup)
     implementation(libs.kotlinx.coroutines.android)
+    implementation(libs.coil.compose)
     ksp(libs.hilt.android.compiler)
     ksp(libs.androidx.room.compiler)
 
