@@ -13,6 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.pitman.myfeeds.addfeed.AddFeedScreen
 import io.pitman.myfeeds.articlelist.ArticleListScreen
 import io.pitman.myfeeds.feedlist.FeedListScreen
+import io.pitman.myfeeds.reader.ReaderScreen
 import io.pitman.myfeeds.ui.theme.MyFeedsTheme
 
 @AndroidEntryPoint
@@ -39,8 +40,21 @@ class MainActivity : ComponentActivity() {
                     composable(
                         "articleList/{feedId}",
                         arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
+                    ) { backStackEntry ->
+                        val feedId = backStackEntry.arguments?.getLong("feedId") ?: 0L
+                        ArticleListScreen(
+                            onBack = { navController.popBackStack() },
+                            onArticleClick = { itemId -> navController.navigate("reader/$feedId/$itemId") },
+                        )
+                    }
+                    composable(
+                        "reader/{feedId}/{itemId}",
+                        arguments = listOf(
+                            navArgument("feedId") { type = NavType.LongType },
+                            navArgument("itemId") { type = NavType.StringType },
+                        ),
                     ) {
-                        ArticleListScreen(onBack = { navController.popBackStack() })
+                        ReaderScreen(onBack = { navController.popBackStack() })
                     }
                 }
             }

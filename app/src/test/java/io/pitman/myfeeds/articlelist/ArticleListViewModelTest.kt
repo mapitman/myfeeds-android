@@ -37,6 +37,8 @@ import java.io.File
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class ArticleListViewModelTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -52,8 +54,8 @@ class ArticleListViewModelTest {
     )
 
     @Before
-    fun setUp() = runTest {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+    fun setUp() = runTest(testDispatcher) {
+        Dispatchers.setMain(testDispatcher)
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao())
@@ -79,7 +81,7 @@ class ArticleListViewModelTest {
     }
 
     @Test
-    fun defaultState_showsUnreadOnlyByDefault() = runTest {
+    fun defaultState_showsUnreadOnlyByDefault() = runTest(testDispatcher) {
         val viewModel = createViewModel()
 
         val state = viewModel.uiState.first { it.feedTitle == "A Feed" }
@@ -90,7 +92,7 @@ class ArticleListViewModelTest {
     }
 
     @Test
-    fun defaultToAllArticleViewSetting_showsAllByDefault() = runTest {
+    fun defaultToAllArticleViewSetting_showsAllByDefault() = runTest(testDispatcher) {
         settingsDataStore.setDefaultToAllArticleView(true)
         val viewModel = createViewModel()
 
@@ -101,7 +103,7 @@ class ArticleListViewModelTest {
     }
 
     @Test
-    fun setShowUnreadOnly_switchesArticleList() = runTest {
+    fun setShowUnreadOnly_switchesArticleList() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.uiState.first { it.feedTitle == "A Feed" }
 
@@ -112,43 +114,45 @@ class ArticleListViewModelTest {
     }
 
     @Test
-    fun toggleSelection_entersAndExitsSelectionMode() = runTest {
+    fun toggleSelection_entersAndExitsSelectionMode() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.uiState.first { it.feedTitle == "A Feed" }
 
         viewModel.toggleSelection("unread-1")
-        assertTrue(viewModel.uiState.value.isSelectionMode)
-        assertEquals(setOf("unread-1"), viewModel.uiState.value.selectedIds)
+        val selected = viewModel.uiState.first { it.isSelectionMode }
+        assertEquals(setOf("unread-1"), selected.selectedIds)
 
         viewModel.toggleSelection("unread-1")
-        assertFalse(viewModel.uiState.value.isSelectionMode)
+        viewModel.uiState.first { !it.isSelectionMode }
     }
 
     @Test
-    fun markSelectedRead_updatesItemsAndClearsSelection() = runTest {
+    fun markSelectedRead_updatesItemsAndClearsSelection() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.uiState.first { it.feedTitle == "A Feed" }
         viewModel.toggleSelection("unread-1")
+        viewModel.uiState.first { it.isSelectionMode }
 
         viewModel.markSelectedRead(true)
         viewModel.uiState.first { !it.isSelectionMode }
 
-        val items = repository.observeItems(feedId).first()
+        val items = repository.observeItems(feedId).first { items -> items.all { it.isRead } }
         assertTrue(items.first { it.id == "unread-1" }.isRead)
         assertEquals(0, repository.observeUnreadCount(feedId).first())
     }
 
     @Test
-    fun deleteSelected_removesItemsAndClearsSelection() = runTest {
+    fun deleteSelected_removesItemsAndClearsSelection() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.setShowUnreadOnly(false)
         viewModel.uiState.first { !it.showUnreadOnly && it.articles.size == 2 }
         viewModel.toggleSelection("read-1")
+        viewModel.uiState.first { it.isSelectionMode }
 
         viewModel.deleteSelected()
         viewModel.uiState.first { !it.isSelectionMode }
 
-        val items = repository.observeItems(feedId).first()
+        val items = repository.observeItems(feedId).first { it.size == 1 }
         assertEquals(listOf("unread-1"), items.map { it.id })
     }
 }
