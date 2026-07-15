@@ -6,6 +6,10 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import androidx.work.Configuration
+import androidx.work.WorkManager
+import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.WorkManagerTestInitHelper
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
@@ -15,6 +19,7 @@ import io.pitman.myfeeds.data.opml.OpmlImporter
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
+import io.pitman.myfeeds.refresh.FeedRefreshScheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -73,11 +78,16 @@ class SettingsViewModelTest {
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
         settingsDataStore = SettingsDataStore(dataStore)
+        WorkManagerTestInitHelper.initializeTestWorkManager(
+            context,
+            Configuration.Builder().setExecutor(SynchronousExecutor()).build(),
+        )
         viewModel = SettingsViewModel(
             settingsDataStore = settingsDataStore,
             feedRepository = repository,
             opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
             opmlExporter = OpmlExporter(db.categoryDao(), db.feedDao()),
+            feedRefreshScheduler = FeedRefreshScheduler(WorkManager.getInstance(context)),
             context = context,
         )
         viewModelStore.put("settings", viewModel)
