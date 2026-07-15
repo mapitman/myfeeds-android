@@ -12,7 +12,7 @@ import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.AppSettings
 import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
-import io.pitman.myfeeds.refresh.FeedRefreshScheduler
+import io.pitman.myfeeds.refresh.FeedRefreshScheduling
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -26,7 +26,7 @@ class SettingsViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
     private val opmlImporter: OpmlImporter,
     private val opmlExporter: OpmlExporter,
-    private val feedRefreshScheduler: FeedRefreshScheduler,
+    private val feedRefreshScheduler: FeedRefreshScheduling,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
     val settings: StateFlow<AppSettings> =

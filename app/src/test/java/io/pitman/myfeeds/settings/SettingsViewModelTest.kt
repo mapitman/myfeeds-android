@@ -6,10 +6,6 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
-import androidx.work.Configuration
-import androidx.work.WorkManager
-import androidx.work.testing.SynchronousExecutor
-import androidx.work.testing.WorkManagerTestInitHelper
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
@@ -19,7 +15,7 @@ import io.pitman.myfeeds.data.opml.OpmlImporter
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
-import io.pitman.myfeeds.refresh.FeedRefreshScheduler
+import io.pitman.myfeeds.refresh.FeedRefreshScheduling
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -69,36 +65,29 @@ class SettingsViewModelTest {
     private val viewModelStore = ViewModelStore()
 
     @Before
-    fun setUp() {
-        // WorkManager's test init touches Robolectric's Looper/Handler machinery; doing that
-        // while Dispatchers.Main is already swapped to testDispatcher inside runTest deadlocked
-        // in CI (every failure timed out at exactly runTest's 60s default), so it must run before
-        // Dispatchers.setMain and outside the coroutine test scope.
+    fun setUp() = runTest(testDispatcher) {
+        Dispatchers.setMain(testDispatcher)
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        WorkManagerTestInitHelper.initializeTestWorkManager(
-            context,
-            Configuration.Builder().setExecutor(SynchronousExecutor()).build(),
+        db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        repository = FeedRepository(db.feedDao(), db.feedItemDao())
+        val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
+            produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
-        val feedRefreshScheduler = FeedRefreshScheduler(WorkManager.getInstance(context))
-
-        runTest(testDispatcher) {
-            Dispatchers.setMain(testDispatcher)
-            db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-            repository = FeedRepository(db.feedDao(), db.feedItemDao())
-            val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
-                produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
-            )
-            settingsDataStore = SettingsDataStore(dataStore)
-            viewModel = SettingsViewModel(
-                settingsDataStore = settingsDataStore,
-                feedRepository = repository,
-                opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
-                opmlExporter = OpmlExporter(db.categoryDao(), db.feedDao()),
-                feedRefreshScheduler = feedRefreshScheduler,
-                context = context,
-            )
-            viewModelStore.put("settings", viewModel)
-        }
+        settingsDataStore = SettingsDataStore(dataStore)
+        // Real WorkManager deadlocked when touched from Robolectric-hosted ViewModel tests (see
+        // the scheduled-refresh PR description), so SettingsViewModel depends on the
+        // FeedRefreshScheduling interface and this test uses a no-op fake instead.
+        viewModel = SettingsViewModel(
+            settingsDataStore = settingsDataStore,
+            feedRepository = repository,
+            opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
+            opmlExporter = OpmlExporter(db.categoryDao(), db.feedDao()),
+            feedRefreshScheduler = object : FeedRefreshScheduling {
+                override fun schedule(intervalMinutes: Long) {}
+            },
+            context = context,
+        )
+        viewModelStore.put("settings", viewModel)
     }
 
     @After

@@ -12,6 +12,16 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
+ * Callers (e.g. [io.pitman.myfeeds.settings.SettingsViewModel]) depend on this instead of
+ * [FeedRefreshScheduler] directly so unit tests can substitute a no-op fake -- touching real
+ * WorkManager from Robolectric-hosted ViewModel tests deadlocked in CI (see the scheduled-refresh
+ * PR description for the reproduction).
+ */
+interface FeedRefreshScheduling {
+    fun schedule(intervalMinutes: Long)
+}
+
+/**
  * Enqueues [FeedRefreshWorker] on the interval from [io.pitman.myfeeds.data.settings.AppSettings]
  * (issue #22). [ExistingPeriodicWorkPolicy.UPDATE] lets rescheduling with a new interval take
  * effect without losing the original enqueue time, per WorkManager's guidance for user-driven
@@ -20,8 +30,8 @@ import javax.inject.Singleton
 @Singleton
 class FeedRefreshScheduler @Inject constructor(
     private val workManager: WorkManager,
-) {
-    fun schedule(intervalMinutes: Long) {
+) : FeedRefreshScheduling {
+    override fun schedule(intervalMinutes: Long) {
         val request = PeriodicWorkRequestBuilder<FeedRefreshWorker>(intervalMinutes, TimeUnit.MINUTES)
             .setConstraints(Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
             .setBackoffCriteria(BackoffPolicy.LINEAR, WorkRequest.MIN_BACKOFF_MILLIS, TimeUnit.MILLISECONDS)
