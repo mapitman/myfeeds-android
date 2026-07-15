@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.pitman.myfeeds.R
+import io.pitman.myfeeds.data.directory.FeedDirectory
+import io.pitman.myfeeds.data.directory.FeedDirectoryEntry
 import io.pitman.myfeeds.data.feed.FeedFetchResult
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
@@ -17,9 +19,15 @@ import io.pitman.myfeeds.data.opml.OpmlImporter
 import io.pitman.myfeeds.data.opml.OpmlParser
 import io.pitman.myfeeds.data.repository.FeedRepository
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -29,6 +37,7 @@ import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
 
+@OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
 @HiltViewModel
 class AddFeedViewModel @Inject constructor(
     private val feedFetcher: FeedFetcher,
@@ -37,6 +46,7 @@ class AddFeedViewModel @Inject constructor(
     private val categoryDao: CategoryDao,
     private val opmlImporter: OpmlImporter,
     private val httpClient: OkHttpClient,
+    private val feedDirectory: FeedDirectory,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
     val categories: StateFlow<List<Category>> =
@@ -44,6 +54,20 @@ class AddFeedViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow<AddFeedUiState>(AddFeedUiState.Idle)
     val uiState: StateFlow<AddFeedUiState> = _uiState
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery
+
+    val searchResults: StateFlow<List<FeedDirectoryEntry>> = _searchQuery
+        .debounce(SEARCH_DEBOUNCE_MS)
+        .flatMapLatest { query ->
+            if (query.isBlank()) flowOf(emptyList()) else flowOf(query).mapLatest { feedDirectory.search(it) }
+        }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun setSearchQuery(query: String) {
+        _searchQuery.value = query
+    }
 
     fun addFeedByUrl(url: String, categoryName: String) {
         val trimmedUrl = url.trim()
@@ -55,25 +79,36 @@ class AddFeedViewModel @Inject constructor(
 
         viewModelScope.launch {
             _uiState.value = AddFeedUiState.Loading
-            when (val result = feedFetcher.fetchFeed(normalizeUrl(trimmedUrl))) {
-                is FeedFetchResult.Failure -> _uiState.value = AddFeedUiState.Error(result.message)
-                is FeedFetchResult.Success -> {
-                    val categoryId = categoryDao.getByName(trimmedCategory)?.id
-                        ?: categoryDao.insert(Category(name = trimmedCategory))
-                    val feedId = feedRepository.subscribe(
-                        Feed(
-                            categoryId = categoryId,
-                            title = result.feed.title,
-                            feedUrl = result.resolvedUrl,
-                            siteUrl = result.feed.siteUrl,
-                            description = result.feed.description,
-                            imageUrl = result.feed.imageUrl,
-                        ),
-                    )
-                    val feed = feedRepository.getFeed(feedId)
-                    if (feed != null) feedUpdateEngine.updateFeed(feed)
-                    _uiState.value = AddFeedUiState.Success(context.getString(R.string.add_feed_added_message, result.feed.title))
-                }
+            addFeed(normalizeUrl(trimmedUrl), trimmedCategory)
+        }
+    }
+
+    fun addFromDirectory(entry: FeedDirectoryEntry) {
+        viewModelScope.launch {
+            _uiState.value = AddFeedUiState.Loading
+            addFeed(entry.xmlUrl, entry.category)
+        }
+    }
+
+    private suspend fun addFeed(url: String, categoryName: String) {
+        when (val result = feedFetcher.fetchFeed(url)) {
+            is FeedFetchResult.Failure -> _uiState.value = AddFeedUiState.Error(result.message)
+            is FeedFetchResult.Success -> {
+                val categoryId = categoryDao.getByName(categoryName)?.id
+                    ?: categoryDao.insert(Category(name = categoryName))
+                val feedId = feedRepository.subscribe(
+                    Feed(
+                        categoryId = categoryId,
+                        title = result.feed.title,
+                        feedUrl = result.resolvedUrl,
+                        siteUrl = result.feed.siteUrl,
+                        description = result.feed.description,
+                        imageUrl = result.feed.imageUrl,
+                    ),
+                )
+                val feed = feedRepository.getFeed(feedId)
+                if (feed != null) feedUpdateEngine.updateFeed(feed)
+                _uiState.value = AddFeedUiState.Success(context.getString(R.string.add_feed_added_message, result.feed.title))
             }
         }
     }
@@ -135,4 +170,8 @@ class AddFeedViewModel @Inject constructor(
         } else {
             "https://$input"
         }
+
+    private companion object {
+        const val SEARCH_DEBOUNCE_MS = 300L
+    }
 }

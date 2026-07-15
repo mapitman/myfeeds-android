@@ -4,7 +4,7 @@ import org.w3c.dom.Element
 import java.io.InputStream
 import javax.xml.parsers.DocumentBuilderFactory
 
-data class OpmlFeed(val title: String, val xmlUrl: String)
+data class OpmlFeed(val title: String, val xmlUrl: String, val description: String? = null)
 
 data class OpmlCategory(val name: String, val feeds: List<OpmlFeed>)
 
@@ -33,7 +33,11 @@ object OpmlParser {
                     .mapNotNull { it.toOpmlFeedOrNull() }
                 categories += OpmlCategory(name = outline.outlineTitle(), feeds = feeds)
             } else {
-                uncategorizedFeeds += OpmlFeed(title = outline.outlineTitle(), xmlUrl = xmlUrl)
+                uncategorizedFeeds += OpmlFeed(
+                    title = outline.outlineTitle(),
+                    xmlUrl = xmlUrl,
+                    description = outline.getAttribute("description").ifBlank { null },
+                )
             }
         }
 
@@ -57,7 +61,11 @@ object OpmlParser {
     private fun Element.toOpmlFeedOrNull(): OpmlFeed? {
         val xmlUrl = getAttribute("xmlUrl")
         if (xmlUrl.isNullOrBlank()) return null
-        return OpmlFeed(title = outlineTitle(), xmlUrl = xmlUrl)
+        return OpmlFeed(
+            title = outlineTitle(),
+            xmlUrl = xmlUrl,
+            description = getAttribute("description").ifBlank { null },
+        )
     }
 
     private fun Element.outlineTitle(): String =
