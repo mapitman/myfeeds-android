@@ -15,6 +15,9 @@ data class ParsedFeedItem(
     val publishDate: Instant?,
     val itemGuid: String,
     val enclosure: ParsedEnclosure?,
+    /** From `itunes:duration` (RSS podcast feeds only) -- lets the reader show a resume position
+     *  proportionally (issue #75) before the episode has ever actually been buffered/played. */
+    val durationMs: Long? = null,
 )
 
 data class ParsedFeed(

@@ -74,7 +74,16 @@ object FeedParser {
             publishDate = FeedDateParser.parse(item.textOf("pubDate")),
             itemGuid = guid.ifBlank { url },
             enclosure = enclosure,
+            durationMs = item.firstLocalNameOrNull("duration")?.let(::parseItunesDurationMs),
         )
+    }
+
+    /** `itunes:duration` is either plain seconds or `[HH:]MM:SS`. */
+    private fun parseItunesDurationMs(raw: String): Long? {
+        val parts = raw.trim().split(":").map { it.toIntOrNull() ?: return null }
+        if (parts.isEmpty() || parts.size > 3) return null
+        val seconds = parts.fold(0) { acc, part -> acc * 60 + part }
+        return seconds * 1000L
     }
 
     // ---- Atom ----

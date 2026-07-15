@@ -43,6 +43,9 @@ data class FeedItem(
     val enclosureType: String? = null,
     val enclosureLength: Long? = null,
     val enclosurePosition: Double? = null,
+    /** From RSS `itunes:duration` (issue #75), where the feed provides it -- lets the reader show
+     *  the saved resume position proportionally before the episode has ever been buffered/played. */
+    val enclosureDurationMs: Long? = null,
     val downloadedBytes: Long? = null,
     val downloadedFilePath: String? = null,
 )

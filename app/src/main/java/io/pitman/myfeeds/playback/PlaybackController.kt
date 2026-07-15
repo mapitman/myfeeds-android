@@ -12,16 +12,24 @@ import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.settings.SettingsDataStore
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val SKIP_FORWARD_MS = 30_000L
 private const val SKIP_BACKWARD_MS = 15_000L
+private const val POSITION_TICK_MS = 500L
 
 data class PlaybackUiState(
     val currentItemId: String? = null,
@@ -55,18 +63,26 @@ class PlaybackController @Inject constructor(
     private val _uiState = MutableStateFlow(PlaybackUiState())
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
 
+    // Player.Listener.onEvents only fires on discrete state changes (play/pause/seek/media item
+    // transition/etc.), never on a timer -- without this, positionMs (and the progress bar/elapsed
+    // time driven by it, issue #75) would sit frozen at wherever it was during ongoing playback.
+    private val positionTickerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
+    private var positionTickerJob: Job? = null
+
+    private fun snapshotState(player: Player) = PlaybackUiState(
+        currentItemId = player.currentMediaItem?.mediaId,
+        feedId = currentFeedId,
+        title = player.currentMediaItem?.mediaMetadata?.title?.toString(),
+        isPlaying = player.isPlaying,
+        isBuffering = player.playbackState == Player.STATE_BUFFERING,
+        positionMs = player.currentPosition,
+        durationMs = player.duration.coerceAtLeast(0L),
+        isEnded = player.playbackState == Player.STATE_ENDED,
+    )
+
     private val playerListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
-            _uiState.value = PlaybackUiState(
-                currentItemId = player.currentMediaItem?.mediaId,
-                feedId = currentFeedId,
-                title = player.currentMediaItem?.mediaMetadata?.title?.toString(),
-                isPlaying = player.isPlaying,
-                isBuffering = player.playbackState == Player.STATE_BUFFERING,
-                positionMs = player.currentPosition,
-                durationMs = player.duration.coerceAtLeast(0L),
-                isEnded = player.playbackState == Player.STATE_ENDED,
-            )
+            _uiState.value = snapshotState(player)
         }
     }
 
@@ -82,10 +98,21 @@ class PlaybackController @Inject constructor(
                 val mediaController = future.get()
                 controller = mediaController
                 mediaController.addListener(playerListener)
+                startPositionTicker(mediaController)
                 onConnected(mediaController)
             },
             MoreExecutors.directExecutor(),
         )
+    }
+
+    private fun startPositionTicker(player: Player) {
+        positionTickerJob?.cancel()
+        positionTickerJob = positionTickerScope.launch {
+            while (isActive) {
+                delay(POSITION_TICK_MS)
+                if (player.isPlaying) _uiState.value = snapshotState(player)
+            }
+        }
     }
 
     /** Returns false without starting playback if streaming is disallowed and nothing is downloaded. */
@@ -150,6 +177,7 @@ class PlaybackController @Inject constructor(
     }
 
     fun release() {
+        positionTickerJob?.cancel()
         controller?.release()
         controller = null
     }

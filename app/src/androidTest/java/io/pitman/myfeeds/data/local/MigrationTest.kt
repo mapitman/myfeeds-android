@@ -47,6 +47,30 @@ class MigrationTest {
         migrated.close()
     }
 
+    @Test
+    fun migrate2To3_addsEnclosureDurationColumnWithoutDataLoss() {
+        helper.createDatabase(TEST_DB, 2).apply {
+            execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
+            execSQL(
+                "INSERT INTO feeds (id, categoryId, title, userTitle, description, feedUrl, siteUrl, " +
+                    "imageUrl, displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled) " +
+                    "VALUES (1, 1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0)",
+            )
+            execSQL(
+                "INSERT INTO feed_items (id, feedId, title, isRead) VALUES ('item-1', 1, 'An Item', 0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 3, true, MIGRATION_2_3)
+
+        migrated.query("SELECT enclosureDurationMs FROM feed_items WHERE id = 'item-1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+        }
+        migrated.close()
+    }
+
     companion object {
         private const val TEST_DB = "migration-test"
     }

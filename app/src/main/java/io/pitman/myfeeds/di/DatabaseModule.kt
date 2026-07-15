@@ -12,6 +12,7 @@ import io.pitman.myfeeds.data.local.CategoryDao
 import io.pitman.myfeeds.data.local.FeedDao
 import io.pitman.myfeeds.data.local.FeedItemDao
 import io.pitman.myfeeds.data.local.MIGRATION_1_2
+import io.pitman.myfeeds.data.local.MIGRATION_2_3
 import javax.inject.Singleton
 
 @Module
@@ -21,7 +22,7 @@ object DatabaseModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME)
-            .addMigrations(MIGRATION_1_2)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
             .build()
 
     @Provides
