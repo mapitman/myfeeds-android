@@ -34,6 +34,12 @@ interface FeedItemDao {
     @Query("SELECT * FROM feed_items WHERE feedId = :feedId AND itemGuid = :itemGuid LIMIT 1")
     suspend fun findByItemGuid(feedId: Long, itemGuid: String): FeedItem?
 
+    @Query("SELECT * FROM feed_items WHERE id = :id")
+    suspend fun getById(id: String): FeedItem?
+
+    @Query("UPDATE feed_items SET enclosurePosition = :position WHERE id = :id")
+    suspend fun setEnclosurePosition(id: String, position: Double?)
+
     @Query("UPDATE feed_items SET isRead = :isRead WHERE id = :id")
     suspend fun setRead(id: String, isRead: Boolean)
 

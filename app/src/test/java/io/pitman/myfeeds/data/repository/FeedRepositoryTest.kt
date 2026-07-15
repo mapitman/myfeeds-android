@@ -123,6 +123,18 @@ class FeedRepositoryTest {
     }
 
     @Test
+    fun setEnclosurePosition_persistsAndClears() = runTest {
+        val feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
+
+        repository.setEnclosurePosition("item-1", 42.5)
+        assertEquals(42.5, repository.getItem("item-1")?.enclosurePosition)
+
+        repository.setEnclosurePosition("item-1", null)
+        assertNull(repository.getItem("item-1")?.enclosurePosition)
+    }
+
+    @Test
     fun trimToItemsToKeep_noOpWhenUnderLimit() = runTest {
         val feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed", itemsToKeep = 10))
         repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))

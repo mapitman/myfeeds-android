@@ -75,6 +75,8 @@ dependencies {
     implementation(libs.jsoup)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.coil.compose)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.session)
     ksp(libs.hilt.android.compiler)
     ksp(libs.androidx.room.compiler)
 

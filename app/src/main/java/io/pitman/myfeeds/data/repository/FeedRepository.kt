@@ -47,6 +47,11 @@ class FeedRepository @Inject constructor(
     suspend fun findByItemGuid(feedId: Long, itemGuid: String): FeedItem? =
         feedItemDao.findByItemGuid(feedId, itemGuid)
 
+    suspend fun getItem(itemId: String): FeedItem? = feedItemDao.getById(itemId)
+
+    suspend fun setEnclosurePosition(itemId: String, position: Double?) =
+        feedItemDao.setEnclosurePosition(itemId, position)
+
     suspend fun markRead(itemId: String, isRead: Boolean = true) = feedItemDao.setRead(itemId, isRead)
 
     suspend fun markAllRead(feedId: Long) = feedItemDao.markAllReadForFeed(feedId)
