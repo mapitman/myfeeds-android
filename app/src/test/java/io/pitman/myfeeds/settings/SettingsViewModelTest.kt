@@ -69,28 +69,36 @@ class SettingsViewModelTest {
     private val viewModelStore = ViewModelStore()
 
     @Before
-    fun setUp() = runTest(testDispatcher) {
-        Dispatchers.setMain(testDispatcher)
+    fun setUp() {
+        // WorkManager's test init touches Robolectric's Looper/Handler machinery; doing that
+        // while Dispatchers.Main is already swapped to testDispatcher inside runTest deadlocked
+        // in CI (every failure timed out at exactly runTest's 60s default), so it must run before
+        // Dispatchers.setMain and outside the coroutine test scope.
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        repository = FeedRepository(db.feedDao(), db.feedItemDao())
-        val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
-            produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
-        )
-        settingsDataStore = SettingsDataStore(dataStore)
         WorkManagerTestInitHelper.initializeTestWorkManager(
             context,
             Configuration.Builder().setExecutor(SynchronousExecutor()).build(),
         )
-        viewModel = SettingsViewModel(
-            settingsDataStore = settingsDataStore,
-            feedRepository = repository,
-            opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
-            opmlExporter = OpmlExporter(db.categoryDao(), db.feedDao()),
-            feedRefreshScheduler = FeedRefreshScheduler(WorkManager.getInstance(context)),
-            context = context,
-        )
-        viewModelStore.put("settings", viewModel)
+        val feedRefreshScheduler = FeedRefreshScheduler(WorkManager.getInstance(context))
+
+        runTest(testDispatcher) {
+            Dispatchers.setMain(testDispatcher)
+            db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+            repository = FeedRepository(db.feedDao(), db.feedItemDao())
+            val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
+                produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
+            )
+            settingsDataStore = SettingsDataStore(dataStore)
+            viewModel = SettingsViewModel(
+                settingsDataStore = settingsDataStore,
+                feedRepository = repository,
+                opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
+                opmlExporter = OpmlExporter(db.categoryDao(), db.feedDao()),
+                feedRefreshScheduler = feedRefreshScheduler,
+                context = context,
+            )
+            viewModelStore.put("settings", viewModel)
+        }
     }
 
     @After
