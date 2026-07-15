@@ -76,6 +76,7 @@ class AddFeedViewModelTest {
             categoryDao = db.categoryDao(),
             opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
             httpClient = httpClient,
+            context = context,
         )
         viewModelStore.put("addFeed", viewModel)
     }

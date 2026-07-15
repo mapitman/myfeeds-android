@@ -28,8 +28,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.pitman.myfeeds.R
 import io.pitman.myfeeds.ui.components.ListItemRow
 import kotlinx.coroutines.launch
 
@@ -51,23 +53,23 @@ fun FeedListScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("MyFeeds")
+                        Text(stringResource(R.string.app_name))
                         Text(
-                            text = "${uiState.totalUnread} unread",
+                            text = stringResource(R.string.feed_list_total_unread, uiState.totalUnread),
                             style = MaterialTheme.typography.labelSmall,
                         )
                     }
                 },
                 actions = {
                     IconButton(onClick = onSettingsClick) {
-                        Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                        Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.cd_settings))
                     }
                 },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddFeedClick) {
-                Icon(Icons.Filled.Add, contentDescription = "Add feed")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.cd_add_feed))
             }
         },
     ) { innerPadding ->
@@ -76,7 +78,7 @@ fun FeedListScreen(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center,
             ) {
-                Text("No feeds yet")
+                Text(stringResource(R.string.feed_list_no_feeds_yet))
             }
             return@Scaffold
         }
@@ -120,7 +122,7 @@ private fun CategoryFeedList(
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
                 Text(
-                    text = "${section.totalUnread} Unread",
+                    text = stringResource(R.string.feed_list_section_unread, section.totalUnread),
                     style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),

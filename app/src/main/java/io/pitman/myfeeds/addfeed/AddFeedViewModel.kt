@@ -1,8 +1,11 @@
 package io.pitman.myfeeds.addfeed
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.feed.FeedFetchResult
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
@@ -34,6 +37,7 @@ class AddFeedViewModel @Inject constructor(
     private val categoryDao: CategoryDao,
     private val opmlImporter: OpmlImporter,
     private val httpClient: OkHttpClient,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
     val categories: StateFlow<List<Category>> =
         categoryDao.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -44,10 +48,10 @@ class AddFeedViewModel @Inject constructor(
     fun addFeedByUrl(url: String, categoryName: String) {
         val trimmedUrl = url.trim()
         if (trimmedUrl.isEmpty()) {
-            _uiState.value = AddFeedUiState.Error("Enter a feed or site URL")
+            _uiState.value = AddFeedUiState.Error(context.getString(R.string.add_feed_enter_url_error))
             return
         }
-        val trimmedCategory = categoryName.trim().ifEmpty { "Uncategorized" }
+        val trimmedCategory = categoryName.trim().ifEmpty { context.getString(R.string.add_feed_uncategorized) }
 
         viewModelScope.launch {
             _uiState.value = AddFeedUiState.Loading
@@ -68,7 +72,7 @@ class AddFeedViewModel @Inject constructor(
                     )
                     val feed = feedRepository.getFeed(feedId)
                     if (feed != null) feedUpdateEngine.updateFeed(feed)
-                    _uiState.value = AddFeedUiState.Success("Added ${result.feed.title}")
+                    _uiState.value = AddFeedUiState.Success(context.getString(R.string.add_feed_added_message, result.feed.title))
                 }
             }
         }
@@ -87,7 +91,7 @@ class AddFeedViewModel @Inject constructor(
     fun importOpmlFromUrl(url: String) {
         val trimmedUrl = url.trim()
         if (trimmedUrl.isEmpty()) {
-            _uiState.value = AddFeedUiState.Error("Enter an OPML URL")
+            _uiState.value = AddFeedUiState.Error(context.getString(R.string.add_feed_enter_opml_url_error))
             return
         }
 
@@ -105,7 +109,7 @@ class AddFeedViewModel @Inject constructor(
                 }
             }
             if (document == null) {
-                _uiState.value = AddFeedUiState.Error("Could not load OPML from $trimmedUrl")
+                _uiState.value = AddFeedUiState.Error(context.getString(R.string.add_feed_could_not_load_opml, trimmedUrl))
             } else {
                 finishImport(document)
             }
@@ -115,9 +119,9 @@ class AddFeedViewModel @Inject constructor(
     private suspend fun finishImport(document: OpmlDocument) {
         val importedCount = opmlImporter.import(document)
         _uiState.value = if (importedCount > 0) {
-            AddFeedUiState.Success("Imported $importedCount feeds")
+            AddFeedUiState.Success(context.getString(R.string.add_feed_imported_count, importedCount))
         } else {
-            AddFeedUiState.Error("No feeds found in OPML")
+            AddFeedUiState.Error(context.getString(R.string.add_feed_no_feeds_found_in_opml))
         }
     }
 

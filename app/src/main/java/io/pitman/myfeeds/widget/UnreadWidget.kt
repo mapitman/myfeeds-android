@@ -27,6 +27,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import io.pitman.myfeeds.MainActivity
+import io.pitman.myfeeds.R
 import kotlinx.coroutines.flow.first
 
 data class UnreadFeed(val feedId: Long, val title: String, val unreadCount: Int)
@@ -56,16 +57,20 @@ class UnreadWidget : GlanceAppWidget() {
             }
             .sortedByDescending { it.unreadCount }
 
+        val appName = context.getString(R.string.app_name)
+        val unreadText = context.getString(R.string.feed_list_total_unread, totalUnread)
+        val allCaughtUpText = context.getString(R.string.widget_all_caught_up)
+
         provideContent {
             GlanceTheme {
-                WidgetContent(totalUnread, unreadFeeds)
+                WidgetContent(appName, unreadText, allCaughtUpText, unreadFeeds)
             }
         }
     }
 }
 
 @Composable
-private fun WidgetContent(totalUnread: Int, feeds: List<UnreadFeed>) {
+private fun WidgetContent(appName: String, unreadText: String, allCaughtUpText: String, feeds: List<UnreadFeed>) {
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -74,16 +79,16 @@ private fun WidgetContent(totalUnread: Int, feeds: List<UnreadFeed>) {
             .clickable(actionStartActivity<MainActivity>()),
     ) {
         Text(
-            text = "MyFeeds",
+            text = appName,
             style = TextStyle(color = ColorProvider(Color.White), fontWeight = FontWeight.Bold, fontSize = 16.sp),
         )
         Text(
-            text = "$totalUnread unread",
+            text = unreadText,
             style = TextStyle(color = ColorProvider(Color(0xFF8BC34A)), fontSize = 13.sp),
         )
         if (feeds.isEmpty()) {
             Text(
-                text = "All caught up",
+                text = allCaughtUpText,
                 style = TextStyle(color = ColorProvider(Color.LightGray), fontSize = 13.sp),
                 modifier = GlanceModifier.padding(top = 8.dp),
             )

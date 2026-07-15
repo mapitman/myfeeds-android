@@ -1,0 +1,114 @@
+<resources>
+    <!-- Common actions -->
+    <string name="action_cancel">Abbrechen</string>
+    <string name="action_confirm">Bestätigen</string>
+    <string name="action_save">Speichern</string>
+
+    <!-- Content descriptions -->
+    <string name="cd_back">Zurück</string>
+    <string name="cd_settings">Einstellungen</string>
+    <string name="cd_add_feed">Feed hinzufügen</string>
+    <string name="cd_clear_selection">Auswahl aufheben</string>
+    <string name="cd_mark_read">Als gelesen markieren</string>
+    <string name="cd_mark_unread">Als ungelesen markieren</string>
+    <string name="cd_delete">Löschen</string>
+    <string name="cd_open_in_browser">Im Browser öffnen</string>
+    <string name="cd_share">Teilen</string>
+    <string name="cd_rewind">15 Sekunden zurückspulen</string>
+    <string name="cd_forward">30 Sekunden vorspulen</string>
+    <string name="cd_pause">Pause</string>
+    <string name="cd_play">Abspielen</string>
+    <string name="cd_delete_download">Download löschen</string>
+    <string name="cd_download_episode">Episode herunterladen</string>
+
+    <!-- Feed list -->
+    <string name="feed_list_no_feeds_yet">Noch keine Feeds</string>
+    <string name="feed_list_total_unread">%1$d ungelesen</string>
+    <string name="feed_list_section_unread">%1$d ungelesen</string>
+
+    <!-- Article list -->
+    <string name="article_list_selected">%1$d ausgewählt</string>
+    <string name="article_list_unread_count">%1$d ungelesen</string>
+    <string name="article_list_tab_unread">Ungelesen</string>
+    <string name="article_list_tab_all">Alle</string>
+
+    <!-- Reader -->
+    <string name="reader_no_article_to_show">Kein Artikel vorhanden</string>
+    <string name="reader_page_position">%1$d von %2$d</string>
+
+    <!-- Settings -->
+    <string name="settings_title">Einstellungen</string>
+    <string name="settings_section_general">Allgemein</string>
+    <string name="settings_section_fonts">Schriftarten</string>
+    <string name="settings_section_podcasts">Podcasts</string>
+    <string name="settings_section_actions">Aktionen</string>
+    <string name="settings_section_about">Über</string>
+    <string name="settings_show_images">Bilder anzeigen</string>
+    <string name="settings_default_to_all_articles">Standardmäßig alle Artikel anzeigen</string>
+    <string name="settings_notify_on_new_items">Bei neuen Artikeln benachrichtigen</string>
+    <string name="settings_update_interval">Aktualisierungsintervall: %1$d Min.</string>
+    <string name="settings_update_interval_minutes_chip">%1$dm</string>
+    <string name="settings_max_articles_per_feed">Max. Artikel pro Feed: %1$d</string>
+    <string name="settings_article_font_size">Schriftgröße des Artikels</string>
+    <string name="settings_article_list_font_size">Schriftgröße der Artikelliste</string>
+    <string name="settings_feed_list_font_size">Schriftgröße der Feedliste</string>
+    <string name="settings_download_on_battery">Download bei Akkubetrieb</string>
+    <string name="settings_download_on_cellular">Download über Mobilfunk</string>
+    <string name="settings_allow_streaming">Streaming erlauben</string>
+    <string name="settings_about_description">Ein RSS/Atom-Feedreader und Podcast-Client.</string>
+    <string name="settings_export_opml">OPML exportieren</string>
+    <string name="settings_export_feeds_chooser_title">Feeds exportieren</string>
+    <string name="settings_clear_podcasts">Podcasts löschen</string>
+    <string name="settings_add_default_feeds">Standard-Feeds hinzufügen</string>
+    <string name="settings_remove_all_feeds">Alle Feeds entfernen</string>
+    <string name="settings_reset_settings">Einstellungen zurücksetzen</string>
+    <string name="settings_confirm_clear_podcasts_title">Podcasts löschen?</string>
+    <string name="settings_confirm_clear_podcasts_message">Dadurch werden die gespeicherten Wiedergabepositionen heruntergeladener Episoden gelöscht.</string>
+    <string name="settings_confirm_add_default_feeds_title">Standard-Feeds hinzufügen?</string>
+    <string name="settings_confirm_add_default_feeds_message">Dadurch werden die mitgelieferten Starter-Feeds zu Ihren Abonnements hinzugefügt.</string>
+    <string name="settings_confirm_remove_all_feeds_title">Alle Feeds entfernen?</string>
+    <string name="settings_confirm_remove_all_feeds_message">Dadurch werden alle abonnierten Feeds und ihre Artikel dauerhaft gelöscht.</string>
+    <string name="settings_confirm_reset_title">Einstellungen zurücksetzen?</string>
+    <string name="settings_confirm_reset_message">Dadurch werden alle Einstellungen auf ihre Standardwerte zurückgesetzt. Feeds sind davon nicht betroffen.</string>
+
+    <!-- Add feed -->
+    <string name="add_feed_title">Feed hinzufügen</string>
+    <string name="add_feed_by_url_heading">Über URL hinzufügen</string>
+    <string name="add_feed_url_label">Feed- oder Website-URL</string>
+    <string name="add_feed_category_label">Kategorie</string>
+    <string name="add_feed_add_button">Feed hinzufügen</string>
+    <string name="add_feed_import_from_opml_heading">Aus OPML importieren</string>
+    <string name="add_feed_choose_opml_file">OPML-Datei auswählen</string>
+    <string name="add_feed_or_opml_url_label">Oder OPML-URL</string>
+    <string name="add_feed_import_from_url_button">Von URL importieren</string>
+    <string name="add_feed_enter_url_error">Geben Sie eine Feed- oder Website-URL ein</string>
+    <string name="add_feed_uncategorized">Unkategorisiert</string>
+    <string name="add_feed_added_message">%1$s hinzugefügt</string>
+    <string name="add_feed_enter_opml_url_error">Geben Sie eine OPML-URL ein</string>
+    <string name="add_feed_could_not_load_opml">OPML konnte nicht von %1$s geladen werden</string>
+    <string name="add_feed_imported_count">%1$d Feeds importiert</string>
+    <string name="add_feed_no_feeds_found_in_opml">Keine Feeds in der OPML-Datei gefunden</string>
+
+    <!-- Feed properties -->
+    <string name="feed_properties_title">Feedeigenschaften</string>
+    <string name="feed_properties_title_label">Titel</string>
+    <string name="feed_properties_save_title">Titel speichern</string>
+    <string name="feed_properties_use_global_max">Globale Einstellung für maximale Artikel verwenden (%1$d)</string>
+    <string name="feed_properties_max_articles_for_feed">Max. Artikel für diesen Feed: %1$d</string>
+    <string name="feed_properties_auto_download">Neue Episoden automatisch herunterladen</string>
+    <string name="feed_properties_unsubscribe">Abbestellen</string>
+    <string name="feed_properties_confirm_unsubscribe_title">Diesen Feed abbestellen?</string>
+    <string name="feed_properties_confirm_unsubscribe_message">Dadurch werden der Feed und seine Artikel dauerhaft gelöscht.</string>
+
+    <!-- Notifications -->
+    <string name="notification_new_items_channel_name">Neue Artikel</string>
+    <string name="notification_new_items_channel_description">Benachrichtigt, wenn eine Feed-Aktualisierung neue Artikel findet</string>
+    <string name="notification_new_items_title">Neue Artikel</string>
+    <plurals name="notification_new_items_body">
+        <item quantity="one">%1$d neuer Artikel</item>
+        <item quantity="other">%1$d neue Artikel</item>
+    </plurals>
+
+    <!-- Widget -->
+    <string name="widget_all_caught_up">Alles gelesen</string>
+</resources>

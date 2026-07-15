@@ -34,9 +34,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.pitman.myfeeds.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,10 +71,10 @@ fun AddFeedScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Add Feed") },
+                title = { Text(stringResource(R.string.add_feed_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -84,11 +86,11 @@ fun AddFeedScreen(
                 .padding(16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            Text("Add by URL", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.add_feed_by_url_heading), style = MaterialTheme.typography.titleMedium)
             OutlinedTextField(
                 value = url,
                 onValueChange = { url = it },
-                label = { Text("Feed or site URL") },
+                label = { Text(stringResource(R.string.add_feed_url_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
@@ -100,7 +102,7 @@ fun AddFeedScreen(
                 OutlinedTextField(
                     value = categoryName,
                     onValueChange = { categoryName = it },
-                    label = { Text("Category") },
+                    label = { Text(stringResource(R.string.add_feed_category_label)) },
                     modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
                 )
                 ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
@@ -120,23 +122,23 @@ fun AddFeedScreen(
                 enabled = uiState !is AddFeedUiState.Loading,
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {
-                Text("Add Feed")
+                Text(stringResource(R.string.add_feed_add_button))
             }
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
 
-            Text("Import from OPML", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.add_feed_import_from_opml_heading), style = MaterialTheme.typography.titleMedium)
             OutlinedButton(
                 onClick = { filePickerLauncher.launch("*/*") },
                 enabled = uiState !is AddFeedUiState.Loading,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                Text("Choose OPML File")
+                Text(stringResource(R.string.add_feed_choose_opml_file))
             }
             OutlinedTextField(
                 value = opmlUrl,
                 onValueChange = { opmlUrl = it },
-                label = { Text("Or OPML URL") },
+                label = { Text(stringResource(R.string.add_feed_or_opml_url_label)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
@@ -145,7 +147,7 @@ fun AddFeedScreen(
                 enabled = uiState !is AddFeedUiState.Loading,
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
-                Text("Import from URL")
+                Text(stringResource(R.string.add_feed_import_from_url_button))
             }
 
             when (val state = uiState) {
