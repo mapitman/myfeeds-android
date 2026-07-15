@@ -4,9 +4,15 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -19,6 +25,8 @@ import io.pitman.myfeeds.articlelist.ArticleListScreen
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.feedlist.FeedListScreen
 import io.pitman.myfeeds.feedproperties.FeedPropertiesScreen
+import io.pitman.myfeeds.playback.MiniPlayerBar
+import io.pitman.myfeeds.playback.MiniPlayerViewModel
 import io.pitman.myfeeds.reader.ReaderScreen
 import io.pitman.myfeeds.refresh.FeedRefreshScheduler
 import io.pitman.myfeeds.settings.SettingsScreen
@@ -62,48 +70,74 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyFeedsTheme {
                 val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = startDestination) {
-                    composable("feedList") {
-                        FeedListScreen(
-                            onAddFeedClick = { navController.navigate("addFeed") },
-                            onFeedClick = { feedId -> navController.navigate("articleList/$feedId") },
-                            onSettingsClick = { navController.navigate("settings") },
-                            onFeedLongClick = { feedId -> navController.navigate("feedProperties/$feedId") },
-                        )
-                    }
-                    composable(
-                        "feedProperties/{feedId}",
-                        arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
+                val miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel()
+                val playbackState by miniPlayerViewModel.playbackState.collectAsState()
+
+                Column(modifier = Modifier.fillMaxSize()) {
+                    NavHost(
+                        navController = navController,
+                        startDestination = startDestination,
+                        modifier = Modifier.weight(1f),
                     ) {
-                        FeedPropertiesScreen(onBack = { navController.popBackStack() })
+                        composable("feedList") {
+                            FeedListScreen(
+                                onAddFeedClick = { navController.navigate("addFeed") },
+                                onFeedClick = { feedId -> navController.navigate("articleList/$feedId") },
+                                onSettingsClick = { navController.navigate("settings") },
+                                onFeedLongClick = { feedId -> navController.navigate("feedProperties/$feedId") },
+                            )
+                        }
+                        composable(
+                            "feedProperties/{feedId}",
+                            arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
+                        ) {
+                            FeedPropertiesScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("settings") {
+                            SettingsScreen(onBack = { navController.popBackStack() })
+                        }
+                        composable("addFeed") {
+                            AddFeedScreen(
+                                onDone = { navController.popBackStack() },
+                                onBack = { navController.popBackStack() },
+                            )
+                        }
+                        composable(
+                            "articleList/{feedId}",
+                            arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
+                        ) { backStackEntry ->
+                            val feedId = backStackEntry.arguments?.getLong("feedId") ?: 0L
+                            ArticleListScreen(
+                                onBack = { navController.popBackStack() },
+                                onArticleClick = { itemId -> navController.navigate("reader/$feedId/$itemId") },
+                            )
+                        }
+                        composable(
+                            "reader/{feedId}/{itemId}",
+                            arguments = listOf(
+                                navArgument("feedId") { type = NavType.LongType },
+                                navArgument("itemId") { type = NavType.StringType },
+                            ),
+                        ) {
+                            ReaderScreen(onBack = { navController.popBackStack() })
+                        }
                     }
-                    composable("settings") {
-                        SettingsScreen(onBack = { navController.popBackStack() })
-                    }
-                    composable("addFeed") {
-                        AddFeedScreen(
-                            onDone = { navController.popBackStack() },
-                            onBack = { navController.popBackStack() },
+
+                    if (playbackState.currentItemId != null) {
+                        MiniPlayerBar(
+                            playbackState = playbackState,
+                            onClick = {
+                                val feedId = playbackState.feedId
+                                val itemId = playbackState.currentItemId
+                                if (feedId != null && itemId != null) {
+                                    navController.navigate("reader/$feedId/$itemId")
+                                }
+                            },
+                            onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
+                            onSkipBackward = miniPlayerViewModel::skipBackward,
+                            onSkipForward = miniPlayerViewModel::skipForward,
+                            onStop = miniPlayerViewModel::stop,
                         )
-                    }
-                    composable(
-                        "articleList/{feedId}",
-                        arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
-                    ) { backStackEntry ->
-                        val feedId = backStackEntry.arguments?.getLong("feedId") ?: 0L
-                        ArticleListScreen(
-                            onBack = { navController.popBackStack() },
-                            onArticleClick = { itemId -> navController.navigate("reader/$feedId/$itemId") },
-                        )
-                    }
-                    composable(
-                        "reader/{feedId}/{itemId}",
-                        arguments = listOf(
-                            navArgument("feedId") { type = NavType.LongType },
-                            navArgument("itemId") { type = NavType.StringType },
-                        ),
-                    ) {
-                        ReaderScreen(onBack = { navController.popBackStack() })
                     }
                 }
             }

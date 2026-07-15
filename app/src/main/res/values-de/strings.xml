@@ -20,6 +20,7 @@
     <string name="cd_play">Abspielen</string>
     <string name="cd_delete_download">Download löschen</string>
     <string name="cd_download_episode">Episode herunterladen</string>
+    <string name="cd_stop_playback">Wiedergabe stoppen</string>
 
     <!-- Feed list -->
     <string name="feed_list_no_feeds_yet">Noch keine Feeds</string>

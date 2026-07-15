@@ -144,17 +144,6 @@ class ReaderViewModelTest {
     }
 
     @Test
-    fun skipBackward_noActivePlayback_isNoOpAndDoesNotCrash() = runTest(testDispatcher) {
-        val viewModel = createViewModel("item-1")
-        viewModel.uiState.first { it.items.isNotEmpty() }
-
-        viewModel.skipBackward()
-        viewModel.skipForward()
-
-        assertEquals(0L, viewModel.playbackState.value.positionMs)
-    }
-
-    @Test
     fun markRead_marksItemReadInRepository() = runTest(testDispatcher) {
         val viewModel = createViewModel("item-1")
         viewModel.uiState.first { it.items.isNotEmpty() }

@@ -22,6 +22,7 @@
     <string name="cd_play">Play</string>
     <string name="cd_delete_download">Delete download</string>
     <string name="cd_download_episode">Download episode</string>
+    <string name="cd_stop_playback">Stop playback</string>
 
     <!-- Feed list -->
     <string name="feed_list_no_feeds_yet">No feeds yet</string>
