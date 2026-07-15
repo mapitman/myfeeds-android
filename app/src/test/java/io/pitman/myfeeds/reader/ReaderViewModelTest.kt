@@ -1,5 +1,8 @@
 package io.pitman.myfeeds.reader
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
@@ -9,6 +12,8 @@ import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.settings.SettingsDataStore
+import io.pitman.myfeeds.playback.PlaybackController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -20,10 +25,13 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 /**
  * Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet.
@@ -42,8 +50,12 @@ class ReaderViewModelTest {
     private val viewModelStore = ViewModelStore()
     private var nextViewModelKey = 0
 
+    @get:Rule
+    val tempFolder = TemporaryFolder()
+
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
+    private lateinit var playbackController: PlaybackController
     private var feedId: Long = 0
 
     @Before
@@ -52,6 +64,10 @@ class ReaderViewModelTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao())
+        val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
+            produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
+        )
+        playbackController = PlaybackController(context, SettingsDataStore(dataStore))
 
         val categoryId = db.categoryDao().insert(Category(name = "Tech"))
         feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
@@ -75,6 +91,7 @@ class ReaderViewModelTest {
         ReaderViewModel(
             savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId, "itemId" to itemId)),
             feedRepository = repository,
+            playbackController = playbackController,
         ).also { viewModelStore.put("reader-${nextViewModelKey++}", it) }
 
     @Test
@@ -93,6 +110,26 @@ class ReaderViewModelTest {
         val state = viewModel.uiState.first { it.items.isNotEmpty() }
 
         assertEquals(1, state.initialIndex)
+    }
+
+    @Test
+    fun uiState_includesFeedTitle() = runTest(testDispatcher) {
+        val viewModel = createViewModel("item-1")
+
+        val state = viewModel.uiState.first { it.items.isNotEmpty() }
+
+        assertEquals("A Feed", state.feedTitle)
+    }
+
+    @Test
+    fun skipBackward_noActivePlayback_isNoOpAndDoesNotCrash() = runTest(testDispatcher) {
+        val viewModel = createViewModel("item-1")
+        viewModel.uiState.first { it.items.isNotEmpty() }
+
+        viewModel.skipBackward()
+        viewModel.skipForward()
+
+        assertEquals(0L, viewModel.playbackState.value.positionMs)
     }
 
     @Test
