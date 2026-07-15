@@ -29,6 +29,7 @@
     <string name="feed_list_total_unread">%1$d unread</string>
     <string name="feed_list_section_unread">%1$d Unread</string>
     <string name="feed_list_refresh_error">Couldn\'t refresh: check your connection</string>
+    <string name="feed_list_podcasts_tab">Podcasts</string>
 
     <!-- Article list -->
     <string name="article_list_selected">%1$d selected</string>

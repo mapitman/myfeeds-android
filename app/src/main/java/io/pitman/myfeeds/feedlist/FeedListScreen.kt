@@ -106,10 +106,15 @@ fun FeedListScreen(
         Column(modifier = Modifier.padding(innerPadding)) {
             ScrollableTabRow(selectedTabIndex = pagerState.currentPage) {
                 uiState.categories.forEachIndexed { index, section ->
+                    val tabTitle = if (section.isPodcastsSection) {
+                        stringResource(R.string.feed_list_podcasts_tab)
+                    } else {
+                        section.category.name
+                    }
                     Tab(
                         selected = pagerState.currentPage == index,
                         onClick = { scope.launch { pagerState.animateScrollToPage(index) } },
-                        text = { Text(section.category.name) },
+                        text = { Text(tabTitle) },
                     )
                 }
             }

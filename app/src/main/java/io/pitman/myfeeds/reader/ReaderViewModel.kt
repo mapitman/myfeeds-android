@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
@@ -70,7 +71,7 @@ class ReaderViewModel @Inject constructor(
         val index = items.indexOfFirst { it.id == finishedItemId }
         if (index == -1) return
         val next = items.getOrNull(index + 1) ?: return
-        if (next.enclosureUrl == null) return
+        if (!next.isPodcastEpisode) return
         viewModelScope.launch { playbackController.play(next, uiState.value.feedTitle) }
     }
 
