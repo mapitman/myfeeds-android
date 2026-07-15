@@ -26,4 +26,7 @@ interface FeedDao {
 
     @Query("SELECT * FROM feeds WHERE id = :id")
     suspend fun getById(id: Long): Feed?
+
+    @Query("SELECT * FROM feeds WHERE id = :id")
+    fun observeById(id: Long): Flow<Feed?>
 }

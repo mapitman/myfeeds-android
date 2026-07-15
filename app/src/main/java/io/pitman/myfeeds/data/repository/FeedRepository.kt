@@ -23,6 +23,8 @@ class FeedRepository @Inject constructor(
 
     suspend fun getFeed(feedId: Long): Feed? = feedDao.getById(feedId)
 
+    fun observeFeed(feedId: Long): Flow<Feed?> = feedDao.observeById(feedId)
+
     suspend fun subscribe(feed: Feed): Long = feedDao.insert(feed)
 
     suspend fun unsubscribe(feed: Feed) = feedDao.delete(feed)
@@ -48,6 +50,8 @@ class FeedRepository @Inject constructor(
     suspend fun markRead(itemId: String, isRead: Boolean = true) = feedItemDao.setRead(itemId, isRead)
 
     suspend fun markAllRead(feedId: Long) = feedItemDao.markAllReadForFeed(feedId)
+
+    suspend fun deleteItems(items: List<FeedItem>) = feedItemDao.deleteAll(items)
 
     /**
      * Deletes the oldest items beyond the feed's `itemsToKeep`, mirroring the original

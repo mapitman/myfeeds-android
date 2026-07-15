@@ -32,4 +32,16 @@ class FeedDateParserTest {
     fun parse_garbage_returnsNullInsteadOfThrowing() {
         assertNull(FeedDateParser.parse("not a date at all"))
     }
+
+    @Test
+    fun parse_namedUsTimezoneAbbreviations() {
+        assertEquals(
+            Instant.parse("2026-07-09T01:25:18Z"),
+            FeedDateParser.parse("Wed, 08 Jul 2026 18:25:18 PDT"),
+        )
+        assertEquals(
+            Instant.parse("2013-06-03T15:05:30Z"),
+            FeedDateParser.parse("Mon, 03 Jun 2013 11:05:30 EDT"),
+        )
+    }
 }
