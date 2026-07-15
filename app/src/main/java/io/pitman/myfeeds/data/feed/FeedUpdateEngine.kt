@@ -39,7 +39,7 @@ class FeedUpdateEngine @Inject constructor(
     }
 
     private suspend fun persist(feed: Feed, parsed: ParsedFeed): FeedUpdateResult {
-        var newItemCount = 0
+        val newItemIds = mutableListOf<String>()
 
         parsed.items.forEach { parsedItem ->
             val itemGuid = parsedItem.itemGuid.ifBlank { parsedItem.url }
@@ -47,9 +47,10 @@ class FeedUpdateEngine @Inject constructor(
 
             val existing = feedRepository.findByItemGuid(feed.id, itemGuid)
             val imageUrl = FirstImageExtractor.extractFirstImageUrl(parsedItem.description, parsedItem.url)
+            val id = existing?.id ?: UUID.randomUUID().toString()
 
             val entity = FeedItem(
-                id = existing?.id ?: UUID.randomUUID().toString(),
+                id = id,
                 feedId = feed.id,
                 title = parsedItem.title,
                 description = parsedItem.description,
@@ -64,13 +65,13 @@ class FeedUpdateEngine @Inject constructor(
                 enclosurePosition = existing?.enclosurePosition,
             )
             feedRepository.upsertItems(listOf(entity))
-            if (existing == null) newItemCount++
+            if (existing == null) newItemIds += id
         }
 
         feedRepository.updateFeed(feed.copy(lastGet = Instant.now().toEpochMilli()))
         val evicted = feedRepository.trimToItemsToKeep(feed.id)
 
-        return FeedUpdateResult.Success(newItemCount = newItemCount, evictedItemIds = evicted.map { it.id })
+        return FeedUpdateResult.Success(feedId = feed.id, newItemIds = newItemIds, evictedItemIds = evicted.map { it.id })
     }
 
     companion object {

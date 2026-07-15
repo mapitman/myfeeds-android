@@ -1,6 +1,13 @@
 package io.pitman.myfeeds.data.feed
 
 sealed interface FeedUpdateResult {
-    data class Success(val newItemCount: Int, val evictedItemIds: List<String>) : FeedUpdateResult
+    data class Success(
+        val feedId: Long,
+        val newItemIds: List<String>,
+        val evictedItemIds: List<String>,
+    ) : FeedUpdateResult {
+        val newItemCount: Int get() = newItemIds.size
+    }
+
     data class Failure(val message: String) : FeedUpdateResult
 }

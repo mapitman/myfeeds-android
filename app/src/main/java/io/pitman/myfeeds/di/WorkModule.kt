@@ -8,6 +8,8 @@ import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
+import io.pitman.myfeeds.download.DownloadManager
+import io.pitman.myfeeds.download.DownloadScheduling
 import io.pitman.myfeeds.refresh.FeedRefreshScheduler
 import io.pitman.myfeeds.refresh.FeedRefreshScheduling
 import javax.inject.Singleton
@@ -25,4 +27,7 @@ object WorkManagerModule {
 abstract class WorkBindingModule {
     @Binds
     abstract fun bindFeedRefreshScheduling(impl: FeedRefreshScheduler): FeedRefreshScheduling
+
+    @Binds
+    abstract fun bindDownloadScheduling(impl: DownloadManager): DownloadScheduling
 }

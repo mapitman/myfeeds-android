@@ -10,9 +10,12 @@ import androidx.room.PrimaryKey
  * (matches the original's `UniqueIdentifier` PK); dedup on ingest is by `itemGuid` (fallback
  * chain guid -> id -> link, applied in the feed update engine, not here).
  *
- * `enclosureBytesDownloaded`/`isEnclosureDownloading` from the original were runtime-only (no
- * [Column] attribute) and `enclosureRequestId` was a WP BackgroundTransferService request id with
- * no Android equivalent (WorkManager tracks its own requests) — none are persisted here.
+ * `enclosureRequestId` (a WP BackgroundTransferService request id) has no Android equivalent and
+ * isn't persisted -- WorkManager tracks its own requests, looked up by this row's [id] instead.
+ * `downloadedBytes`/`downloadedFilePath` (issue #23) replace the original's runtime-only
+ * `EnclosureBytesDownloaded`/`IsEnclosureDownloading`: they need to be persisted here since
+ * Android downloads happen in a background worker, not a live in-memory transfer the UI already
+ * holds a reference to.
  */
 @Entity(
     tableName = "feed_items",
@@ -40,4 +43,6 @@ data class FeedItem(
     val enclosureType: String? = null,
     val enclosureLength: Long? = null,
     val enclosurePosition: Double? = null,
+    val downloadedBytes: Long? = null,
+    val downloadedFilePath: String? = null,
 )

@@ -4,16 +4,13 @@ import androidx.room.testing.MigrationTestHelper
 import androidx.sqlite.db.framework.FrameworkSQLiteOpenHelperFactory
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 
-/**
- * Infra for future schema migrations (Room exports schema JSON to app/schemas, wired via
- * ksp { arg("room.schemaLocation", ...) } in build.gradle.kts). No migrations exist yet at
- * version 1 -- this test establishes that MigrationTestHelper can open the exported v1 schema,
- * so a real Migration(1, 2) test can be added here once the schema next changes.
- */
+/** Schema migration coverage (Room exports schema JSON to app/schemas via room.schemaLocation). */
 @RunWith(AndroidJUnit4::class)
 class MigrationTest {
     @get:Rule
@@ -27,6 +24,27 @@ class MigrationTest {
     @Test
     fun version1Schema_opensSuccessfully() {
         helper.createDatabase(TEST_DB, 1).close()
+    }
+
+    @Test
+    fun migrate1To2_addsDownloadColumnsWithoutDataLoss() {
+        helper.createDatabase(TEST_DB, 1).apply {
+            execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
+            execSQL(
+                "INSERT INTO feeds (id, categoryId, title, userTitle, description, feedUrl, siteUrl, " +
+                    "imageUrl, displayMode, itemsToKeep, lastGet, sortOrder) " +
+                    "VALUES (1, 1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 2, true, MIGRATION_1_2)
+
+        migrated.query("SELECT autoDownloadEnabled FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
+        migrated.close()
     }
 
     companion object {
