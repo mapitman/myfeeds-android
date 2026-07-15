@@ -1,6 +1,11 @@
 package io.pitman.myfeeds.settings
 
+import android.Manifest
 import android.content.Intent
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -35,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.pitman.myfeeds.data.settings.AppSettings
@@ -49,6 +55,10 @@ fun SettingsScreen(
     onBack: () -> Unit = {},
 ) {
     val settings by viewModel.settings.collectAsState()
+    val context = LocalContext.current
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission(),
+    ) { /* If denied, the setting stays on but no notification will be shown until granted. */ }
 
     Scaffold(
         modifier = modifier,
@@ -73,6 +83,20 @@ fun SettingsScreen(
             UpdateIntervalSetting(settings, viewModel)
             SwitchRow("Show images", settings.enableImageDisplay, viewModel::setEnableImageDisplay)
             SwitchRow("Default to all articles", settings.defaultToAllArticleView, viewModel::setDefaultToAllArticleView)
+            SwitchRow(
+                "Notify on new items",
+                settings.notifyOnNewItems,
+                onCheckedChange = { enabled ->
+                    viewModel.setNotifyOnNewItems(enabled)
+                    if (enabled &&
+                        Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
+                        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) !=
+                        PackageManager.PERMISSION_GRANTED
+                    ) {
+                        notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    }
+                },
+            )
             MaxArticlesSetting(settings, viewModel)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))

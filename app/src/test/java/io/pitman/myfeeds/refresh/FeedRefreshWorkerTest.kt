@@ -1,5 +1,6 @@
 package io.pitman.myfeeds.refresh
 
+import android.app.NotificationManager
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
@@ -21,14 +22,18 @@ import io.pitman.myfeeds.download.DownloadScheduling
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import org.robolectric.Shadows
 import org.robolectric.annotation.Config
 import java.io.File
 
@@ -50,6 +55,7 @@ class FeedRefreshWorkerTest {
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
     private lateinit var downloadRepository: EnclosureDownloadRepository
+    private lateinit var settingsDataStore: SettingsDataStore
 
     @Before
     fun setUp() {
@@ -59,13 +65,14 @@ class FeedRefreshWorkerTest {
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
+        settingsDataStore = SettingsDataStore(dataStore)
         downloadRepository = EnclosureDownloadRepository(
             feedRepository = repository,
             downloadScheduling = object : DownloadScheduling {
                 override fun enqueueDownload(itemId: String, allowCellular: Boolean, allowOnBattery: Boolean) {}
                 override fun cancelDownload(itemId: String) {}
             },
-            settingsDataStore = SettingsDataStore(dataStore),
+            settingsDataStore = settingsDataStore,
         )
     }
 
@@ -82,7 +89,7 @@ class FeedRefreshWorkerTest {
         val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
 
         val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
-            .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository))
+            .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, settingsDataStore))
             .build()
 
         val result = worker.doWork()
@@ -90,15 +97,106 @@ class FeedRefreshWorkerTest {
         assertEquals(ListenableWorker.Result.success(), result)
     }
 
+    @Test
+    fun doWork_postsNotification_whenNewItemsFoundAndSettingEnabled() = runTest {
+        settingsDataStore.setNotifyOnNewItems(true)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        Shadows.shadowOf(context as android.app.Application).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
+        val server = MockWebServer()
+        server.start()
+        try {
+            val categoryId = db.categoryDao().insert(Category(name = "Tech"))
+            val url = server.url("/feed.xml").toString()
+            repository.subscribe(Feed(categoryId = categoryId, title = "A Feed", feedUrl = url))
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0"><channel>
+                      <title>A Feed</title>
+                      <link>https://example.com</link>
+                      <description>desc</description>
+                      <item>
+                        <title>New Article</title>
+                        <link>https://example.com/1</link>
+                        <guid>guid-1</guid>
+                        <description>Body</description>
+                        <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+                      </item>
+                    </channel></rss>
+                    """.trimIndent(),
+                ),
+            )
+            val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
+
+            val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
+                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, settingsDataStore))
+                .build()
+
+            worker.doWork()
+
+            val notificationManager = context.getSystemService(NotificationManager::class.java)
+            val shadowManager = Shadows.shadowOf(notificationManager)
+            assertTrue(shadowManager.allNotifications.isNotEmpty())
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun doWork_doesNotNotify_whenSettingDisabled() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val server = MockWebServer()
+        server.start()
+        try {
+            val categoryId = db.categoryDao().insert(Category(name = "Tech"))
+            val url = server.url("/feed.xml").toString()
+            repository.subscribe(Feed(categoryId = categoryId, title = "A Feed", feedUrl = url))
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0"><channel>
+                      <title>A Feed</title>
+                      <link>https://example.com</link>
+                      <description>desc</description>
+                      <item>
+                        <title>New Article</title>
+                        <link>https://example.com/1</link>
+                        <guid>guid-1</guid>
+                        <description>Body</description>
+                        <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+                      </item>
+                    </channel></rss>
+                    """.trimIndent(),
+                ),
+            )
+            val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
+
+            val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
+                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, settingsDataStore))
+                .build()
+
+            worker.doWork()
+
+            val notificationManager = context.getSystemService(NotificationManager::class.java)
+            val shadowManager = Shadows.shadowOf(notificationManager)
+            assertTrue(shadowManager.allNotifications.isEmpty())
+        } finally {
+            server.shutdown()
+        }
+    }
+
     private class TestWorkerFactory(
         private val repository: FeedRepository,
         private val engine: FeedUpdateEngine,
         private val downloadRepository: EnclosureDownloadRepository,
+        private val settingsDataStore: SettingsDataStore,
     ) : WorkerFactory() {
         override fun createWorker(
             appContext: Context,
             workerClassName: String,
             workerParameters: WorkerParameters,
-        ) = FeedRefreshWorker(appContext, workerParameters, repository, engine, downloadRepository)
+        ) = FeedRefreshWorker(appContext, workerParameters, repository, engine, downloadRepository, settingsDataStore)
     }
 }

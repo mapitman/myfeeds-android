@@ -75,6 +75,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsDataStore.setAllowPodcastStreaming(value) }
     }
 
+    fun setNotifyOnNewItems(value: Boolean) {
+        viewModelScope.launch { settingsDataStore.setNotifyOnNewItems(value) }
+    }
+
     fun clearPodcasts() {
         viewModelScope.launch { feedRepository.clearAllEnclosurePositions() }
     }
