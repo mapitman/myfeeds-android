@@ -57,6 +57,7 @@ class ReaderViewModelTest {
 
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
+    private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var playbackController: PlaybackController
     private lateinit var downloadRepository: EnclosureDownloadRepository
     private var feedId: Long = 0
@@ -70,7 +71,7 @@ class ReaderViewModelTest {
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
-        val settingsDataStore = SettingsDataStore(dataStore)
+        settingsDataStore = SettingsDataStore(dataStore)
         playbackController = PlaybackController(context, settingsDataStore)
         downloadRepository = EnclosureDownloadRepository(
             feedRepository = repository,
@@ -105,6 +106,7 @@ class ReaderViewModelTest {
             feedRepository = repository,
             playbackController = playbackController,
             downloadRepository = downloadRepository,
+            settingsDataStore = settingsDataStore,
         ).also { viewModelStore.put("reader-${nextViewModelKey++}", it) }
 
     @Test

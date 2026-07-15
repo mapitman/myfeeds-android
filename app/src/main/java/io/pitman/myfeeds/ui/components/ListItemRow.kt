@@ -30,6 +30,7 @@ fun ListItemRow(
     imageUrl: String? = null,
     unreadCount: Int = 0,
     isRead: Boolean = false,
+    titleFontScale: Float = 1f,
     onClick: () -> Unit = {},
     onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
@@ -53,7 +54,9 @@ fun ListItemRow(
         Column(modifier = Modifier.weight(1f).padding(start = if (imageUrl != null) 12.dp else 0.dp)) {
             Text(
                 text = title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.let {
+                    if (titleFontScale == 1f) it else it.copy(fontSize = it.fontSize * titleFontScale)
+                },
                 fontWeight = if (isRead) FontWeight.Normal else FontWeight.Bold,
                 color = if (isRead) {
                     MaterialTheme.colorScheme.onSurfaceVariant

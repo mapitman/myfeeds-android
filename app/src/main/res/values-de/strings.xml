@@ -25,12 +25,15 @@
     <string name="feed_list_no_feeds_yet">Noch keine Feeds</string>
     <string name="feed_list_total_unread">%1$d ungelesen</string>
     <string name="feed_list_section_unread">%1$d ungelesen</string>
+    <string name="feed_list_refresh_error">Aktualisierung fehlgeschlagen: Verbindung prüfen</string>
 
     <!-- Article list -->
     <string name="article_list_selected">%1$d ausgewählt</string>
     <string name="article_list_unread_count">%1$d ungelesen</string>
     <string name="article_list_tab_unread">Ungelesen</string>
     <string name="article_list_tab_all">Alle</string>
+    <string name="article_list_no_articles">Keine Artikel</string>
+    <string name="article_list_no_unread_articles">Keine ungelesenen Artikel</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">Kein Artikel vorhanden</string>

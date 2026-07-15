@@ -25,12 +25,15 @@
     <string name="feed_list_no_feeds_yet">Aucun flux pour le moment</string>
     <string name="feed_list_total_unread">%1$d non lus</string>
     <string name="feed_list_section_unread">%1$d non lus</string>
+    <string name="feed_list_refresh_error">Échec de l\'actualisation : vérifiez votre connexion</string>
 
     <!-- Article list -->
     <string name="article_list_selected">%1$d sélectionné(s)</string>
     <string name="article_list_unread_count">%1$d non lus</string>
     <string name="article_list_tab_unread">Non lus</string>
     <string name="article_list_tab_all">Tous</string>
+    <string name="article_list_no_articles">Aucun article</string>
+    <string name="article_list_no_unread_articles">Aucun article non lu</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">Aucun article à afficher</string>
