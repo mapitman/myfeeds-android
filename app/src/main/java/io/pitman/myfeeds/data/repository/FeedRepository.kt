@@ -60,8 +60,12 @@ class FeedRepository @Inject constructor(
 
     suspend fun removeAllFeeds() = feedDao.deleteAll()
 
-    /** Clears saved podcast resume positions. Actual downloaded-file deletion lands with #23. */
+    /** Clears saved podcast resume positions. Does not touch downloaded files/state (see [io.pitman.myfeeds.download.DownloadManager]). */
     suspend fun clearAllEnclosurePositions() = feedItemDao.clearAllEnclosurePositions()
+
+    suspend fun setDownloadedBytes(itemId: String, bytes: Long?) = feedItemDao.setDownloadedBytes(itemId, bytes)
+
+    suspend fun setDownloadedFilePath(itemId: String, path: String?) = feedItemDao.setDownloadedFilePath(itemId, path)
 
     /**
      * Deletes the oldest items beyond the feed's `itemsToKeep`, mirroring the original

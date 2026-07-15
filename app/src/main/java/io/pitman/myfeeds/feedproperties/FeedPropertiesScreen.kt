@@ -95,6 +95,16 @@ fun FeedPropertiesScreen(
                 )
             }
 
+            Text(
+                text = "Auto-download new episodes",
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(top = 24.dp),
+            )
+            Switch(
+                checked = uiState.autoDownloadEnabled,
+                onCheckedChange = viewModel::setAutoDownloadEnabled,
+            )
+
             Button(
                 onClick = { showUnsubscribeConfirm = true },
                 modifier = Modifier.padding(top = 32.dp).fillMaxWidth(),

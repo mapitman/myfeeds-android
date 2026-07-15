@@ -57,4 +57,10 @@ interface FeedItemDao {
 
     @Query("UPDATE feed_items SET enclosurePosition = NULL WHERE enclosurePosition IS NOT NULL")
     suspend fun clearAllEnclosurePositions()
+
+    @Query("UPDATE feed_items SET downloadedBytes = :bytes WHERE id = :id")
+    suspend fun setDownloadedBytes(id: String, bytes: Long?)
+
+    @Query("UPDATE feed_items SET downloadedFilePath = :path, downloadedBytes = NULL WHERE id = :id")
+    suspend fun setDownloadedFilePath(id: String, path: String?)
 }

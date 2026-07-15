@@ -13,6 +13,8 @@ import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
+import io.pitman.myfeeds.download.DownloadScheduling
+import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import io.pitman.myfeeds.playback.PlaybackController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -56,6 +58,7 @@ class ReaderViewModelTest {
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
     private lateinit var playbackController: PlaybackController
+    private lateinit var downloadRepository: EnclosureDownloadRepository
     private var feedId: Long = 0
 
     @Before
@@ -67,7 +70,16 @@ class ReaderViewModelTest {
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
-        playbackController = PlaybackController(context, SettingsDataStore(dataStore))
+        val settingsDataStore = SettingsDataStore(dataStore)
+        playbackController = PlaybackController(context, settingsDataStore)
+        downloadRepository = EnclosureDownloadRepository(
+            feedRepository = repository,
+            downloadScheduling = object : DownloadScheduling {
+                override fun enqueueDownload(itemId: String, allowCellular: Boolean, allowOnBattery: Boolean) {}
+                override fun cancelDownload(itemId: String) {}
+            },
+            settingsDataStore = settingsDataStore,
+        )
 
         val categoryId = db.categoryDao().insert(Category(name = "Tech"))
         feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
@@ -92,6 +104,7 @@ class ReaderViewModelTest {
             savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId, "itemId" to itemId)),
             feedRepository = repository,
             playbackController = playbackController,
+            downloadRepository = downloadRepository,
         ).also { viewModelStore.put("reader-${nextViewModelKey++}", it) }
 
     @Test

@@ -18,6 +18,7 @@ data class FeedPropertiesUiState(
     val displayTitle: String = "",
     val itemsToKeep: Int? = null,
     val globalMaxArticles: Int = 20,
+    val autoDownloadEnabled: Boolean = false,
     val isUnsubscribed: Boolean = false,
 )
 
@@ -41,6 +42,7 @@ class FeedPropertiesViewModel @Inject constructor(
                 displayTitle = feed.userTitle ?: feed.title.orEmpty(),
                 itemsToKeep = feed.itemsToKeep,
                 globalMaxArticles = settings.maxArticles,
+                autoDownloadEnabled = feed.autoDownloadEnabled,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedPropertiesUiState())
@@ -58,6 +60,13 @@ class FeedPropertiesViewModel @Inject constructor(
         viewModelScope.launch {
             val feed = feedRepository.getFeed(feedId) ?: return@launch
             feedRepository.updateFeed(feed.copy(itemsToKeep = itemsToKeep))
+        }
+    }
+
+    fun setAutoDownloadEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            val feed = feedRepository.getFeed(feedId) ?: return@launch
+            feedRepository.updateFeed(feed.copy(autoDownloadEnabled = enabled))
         }
     }
 

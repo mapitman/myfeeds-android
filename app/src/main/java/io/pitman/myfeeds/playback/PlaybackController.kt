@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -76,7 +77,8 @@ class PlaybackController @Inject constructor(
     /** Returns false without starting playback if streaming is disallowed and nothing is downloaded. */
     suspend fun play(item: FeedItem, feedTitle: String?): Boolean {
         val allowStreaming = settingsDataStore.settings.first().allowPodcastStreaming
-        val uri = PlaybackUrlResolver.resolve(item, downloadedFilePath = null, allowStreaming = allowStreaming)
+        val downloadedFilePath = item.downloadedFilePath?.takeIf { File(it).exists() }
+        val uri = PlaybackUrlResolver.resolve(item, downloadedFilePath, allowStreaming = allowStreaming)
             ?: return false
 
         val mediaItem = MediaItem.Builder()

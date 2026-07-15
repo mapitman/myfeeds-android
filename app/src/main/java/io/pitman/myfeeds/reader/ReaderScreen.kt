@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -19,11 +20,14 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FastForward
 import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -132,6 +136,8 @@ fun ReaderScreen(
                 onSeek = viewModel::seekTo,
                 onSkipForward = viewModel::skipForward,
                 onSkipBackward = viewModel::skipBackward,
+                onDownload = { viewModel.downloadEnclosure(uiState.items[page]) },
+                onDelete = { viewModel.deleteDownload(uiState.items[page]) },
             )
         }
     }
@@ -150,6 +156,8 @@ private fun ArticlePage(
     onSeek: (Long) -> Unit,
     onSkipForward: () -> Unit,
     onSkipBackward: () -> Unit,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(
@@ -167,10 +175,15 @@ private fun ArticlePage(
             PodcastPlayerControls(
                 isCurrentItem = playbackState.currentItemId == item.id,
                 playbackState = playbackState,
+                downloadedFilePath = item.downloadedFilePath,
+                downloadedBytes = item.downloadedBytes,
+                enclosureLength = item.enclosureLength,
                 onTogglePlayPause = onTogglePlayPause,
                 onSeek = onSeek,
                 onSkipForward = onSkipForward,
                 onSkipBackward = onSkipBackward,
+                onDownload = onDownload,
+                onDelete = onDelete,
             )
         }
         val imageUrl = item.imageUrl
@@ -192,14 +205,21 @@ private fun ArticlePage(
 private fun PodcastPlayerControls(
     isCurrentItem: Boolean,
     playbackState: PlaybackUiState,
+    downloadedFilePath: String?,
+    downloadedBytes: Long?,
+    enclosureLength: Long?,
     onTogglePlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
     onSkipForward: () -> Unit,
     onSkipBackward: () -> Unit,
+    onDownload: () -> Unit,
+    onDelete: () -> Unit,
 ) {
     val positionMs = if (isCurrentItem) playbackState.positionMs else 0L
     val durationMs = if (isCurrentItem) playbackState.durationMs else 0L
     val isPlaying = isCurrentItem && playbackState.isPlaying
+    val isDownloaded = downloadedFilePath != null
+    val isDownloading = !isDownloaded && downloadedBytes != null
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         Slider(
@@ -217,6 +237,7 @@ private fun PodcastPlayerControls(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onSkipBackward) {
                 Icon(Icons.Filled.FastRewind, contentDescription = "Rewind 15 seconds")
@@ -229,6 +250,32 @@ private fun PodcastPlayerControls(
             }
             IconButton(onClick = onSkipForward) {
                 Icon(Icons.Filled.FastForward, contentDescription = "Forward 30 seconds")
+            }
+            when {
+                isDownloading -> {
+                    val progress = if (enclosureLength != null && enclosureLength > 0) {
+                        (downloadedBytes!!.toFloat() / enclosureLength).coerceIn(0f, 1f)
+                    } else {
+                        null
+                    }
+                    Box(modifier = Modifier.padding(8.dp)) {
+                        if (progress != null) {
+                            CircularProgressIndicator(progress = { progress }, modifier = Modifier.size(24.dp))
+                        } else {
+                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        }
+                    }
+                }
+                isDownloaded -> {
+                    IconButton(onClick = onDelete) {
+                        Icon(Icons.Filled.Delete, contentDescription = "Delete download")
+                    }
+                }
+                else -> {
+                    IconButton(onClick = onDownload) {
+                        Icon(Icons.Filled.Download, contentDescription = "Download episode")
+                    }
+                }
             }
         }
     }

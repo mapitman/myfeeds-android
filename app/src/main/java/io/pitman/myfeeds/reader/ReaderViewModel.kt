@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import io.pitman.myfeeds.playback.PlaybackController
 import io.pitman.myfeeds.playback.PlaybackUiState
 import kotlinx.coroutines.flow.SharingStarted
@@ -31,6 +32,7 @@ class ReaderViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val feedRepository: FeedRepository,
     private val playbackController: PlaybackController,
+    private val downloadRepository: EnclosureDownloadRepository,
 ) : ViewModel() {
     private val feedId: Long = checkNotNull(savedStateHandle["feedId"])
     private val initialItemId: String = checkNotNull(savedStateHandle["itemId"])
@@ -93,5 +95,13 @@ class ReaderViewModel @Inject constructor(
     fun skipBackward() {
         val playback = playbackState.value
         playbackController.seekTo((playback.positionMs - SKIP_BACKWARD_MS).coerceAtLeast(0L))
+    }
+
+    fun downloadEnclosure(item: FeedItem) {
+        viewModelScope.launch { downloadRepository.startDownload(item) }
+    }
+
+    fun deleteDownload(item: FeedItem) {
+        viewModelScope.launch { downloadRepository.deleteDownload(item) }
     }
 }

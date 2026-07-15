@@ -34,4 +34,6 @@ data class Feed(
     val itemsToKeep: Int? = null,
     val lastGet: Long? = null,
     val sortOrder: Int? = null,
+    /** New in this port (issue #23) -- the original MyFeeds only supported manual downloads. */
+    val autoDownloadEnabled: Boolean = false,
 )
