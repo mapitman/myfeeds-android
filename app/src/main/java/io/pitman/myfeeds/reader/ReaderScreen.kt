@@ -15,15 +15,21 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
@@ -47,6 +53,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import io.pitman.myfeeds.articlelist.ArticleDateFormatter
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.playback.PlaybackUiState
 import kotlinx.coroutines.flow.distinctUntilChanged
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +64,7 @@ fun ReaderScreen(
     onBack: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val playbackState by viewModel.playbackState.collectAsState()
     val context = LocalContext.current
 
     if (uiState.items.isEmpty()) {
@@ -119,6 +127,11 @@ fun ReaderScreen(
             ArticlePage(
                 item = uiState.items[page],
                 onImageClick = { zoomedImageUrl = it },
+                playbackState = playbackState,
+                onTogglePlayPause = { viewModel.togglePlayPause(uiState.items[page]) },
+                onSeek = viewModel::seekTo,
+                onSkipForward = viewModel::skipForward,
+                onSkipBackward = viewModel::skipBackward,
             )
         }
     }
@@ -129,7 +142,15 @@ fun ReaderScreen(
 }
 
 @Composable
-private fun ArticlePage(item: FeedItem, onImageClick: (String) -> Unit) {
+private fun ArticlePage(
+    item: FeedItem,
+    onImageClick: (String) -> Unit,
+    playbackState: PlaybackUiState,
+    onTogglePlayPause: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onSkipForward: () -> Unit,
+    onSkipBackward: () -> Unit,
+) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(
             text = item.title.orEmpty(),
@@ -142,6 +163,16 @@ private fun ArticlePage(item: FeedItem, onImageClick: (String) -> Unit) {
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
+        if (item.enclosureUrl != null) {
+            PodcastPlayerControls(
+                isCurrentItem = playbackState.currentItemId == item.id,
+                playbackState = playbackState,
+                onTogglePlayPause = onTogglePlayPause,
+                onSeek = onSeek,
+                onSkipForward = onSkipForward,
+                onSkipBackward = onSkipBackward,
+            )
+        }
         val imageUrl = item.imageUrl
         if (imageUrl != null) {
             AsyncImage(
@@ -155,6 +186,59 @@ private fun ArticlePage(item: FeedItem, onImageClick: (String) -> Unit) {
         }
         ArticleBody(html = item.description.orEmpty(), baseUrl = item.url)
     }
+}
+
+@Composable
+private fun PodcastPlayerControls(
+    isCurrentItem: Boolean,
+    playbackState: PlaybackUiState,
+    onTogglePlayPause: () -> Unit,
+    onSeek: (Long) -> Unit,
+    onSkipForward: () -> Unit,
+    onSkipBackward: () -> Unit,
+) {
+    val positionMs = if (isCurrentItem) playbackState.positionMs else 0L
+    val durationMs = if (isCurrentItem) playbackState.durationMs else 0L
+    val isPlaying = isCurrentItem && playbackState.isPlaying
+
+    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        Slider(
+            value = positionMs.toFloat(),
+            onValueChange = { onSeek(it.toLong()) },
+            valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
+        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+        ) {
+            Text(formatDuration(positionMs), style = MaterialTheme.typography.bodySmall)
+            Text(formatDuration((durationMs - positionMs).coerceAtLeast(0L)), style = MaterialTheme.typography.bodySmall)
+        }
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+        ) {
+            IconButton(onClick = onSkipBackward) {
+                Icon(Icons.Filled.FastRewind, contentDescription = "Rewind 15 seconds")
+            }
+            IconButton(onClick = onTogglePlayPause) {
+                Icon(
+                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                    contentDescription = if (isPlaying) "Pause" else "Play",
+                )
+            }
+            IconButton(onClick = onSkipForward) {
+                Icon(Icons.Filled.FastForward, contentDescription = "Forward 30 seconds")
+            }
+        }
+    }
+}
+
+private fun formatDuration(millis: Long): String {
+    val totalSeconds = millis / 1000
+    val minutes = totalSeconds / 60
+    val seconds = totalSeconds % 60
+    return "%d:%02d".format(minutes, seconds)
 }
 
 @Composable
