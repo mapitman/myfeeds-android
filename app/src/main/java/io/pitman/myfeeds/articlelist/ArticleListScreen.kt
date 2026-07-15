@@ -2,6 +2,7 @@ package io.pitman.myfeeds.articlelist
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,12 +35,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.settings.scaleFactor
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -50,6 +55,7 @@ fun ArticleListScreen(
     onBack: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val listFontSize by viewModel.listFontSize.collectAsState()
 
     Scaffold(
         modifier = modifier,
@@ -108,17 +114,28 @@ fun ArticleListScreen(
                     text = { Text(stringResource(R.string.article_list_tab_all)) },
                 )
             }
-            LazyColumn(modifier = Modifier.fillMaxSize()) {
-                items(uiState.articles, key = { it.id }) { article ->
-                    ArticleRow(
-                        article = article,
-                        selected = article.id in uiState.selectedIds,
-                        selectionMode = uiState.isSelectionMode,
-                        onClick = {
-                            if (uiState.isSelectionMode) viewModel.toggleSelection(article.id) else onArticleClick(article.id)
-                        },
-                        onLongClick = { viewModel.toggleSelection(article.id) },
+            if (uiState.articles.isEmpty()) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringResource(
+                            if (uiState.showUnreadOnly) R.string.article_list_no_unread_articles else R.string.article_list_no_articles,
+                        ),
                     )
+                }
+            } else {
+                LazyColumn(modifier = Modifier.fillMaxSize()) {
+                    items(uiState.articles, key = { it.id }) { article ->
+                        ArticleRow(
+                            article = article,
+                            selected = article.id in uiState.selectedIds,
+                            selectionMode = uiState.isSelectionMode,
+                            titleFontScale = listFontSize.scaleFactor,
+                            onClick = {
+                                if (uiState.isSelectionMode) viewModel.toggleSelection(article.id) else onArticleClick(article.id)
+                            },
+                            onLongClick = { viewModel.toggleSelection(article.id) },
+                        )
+                    }
                 }
             }
         }
@@ -131,23 +148,28 @@ private fun ArticleRow(
     article: FeedItem,
     selected: Boolean,
     selectionMode: Boolean,
+    titleFontScale: Float,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
 ) {
+    val isRowSelected = selected
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .then(if (selectionMode) Modifier.semantics { this.selected = isRowSelected } else Modifier)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (selectionMode) {
-            Checkbox(checked = selected, onCheckedChange = { onClick() })
+            Checkbox(checked = selected, onCheckedChange = null)
         }
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(
                 text = article.title.orEmpty(),
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.titleMedium.let {
+                    if (titleFontScale == 1f) it else it.copy(fontSize = it.fontSize * titleFontScale)
+                },
                 fontWeight = if (article.isRead) FontWeight.Normal else FontWeight.Bold,
                 color = if (article.isRead) {
                     MaterialTheme.colorScheme.onSurfaceVariant

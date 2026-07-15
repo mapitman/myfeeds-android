@@ -25,12 +25,15 @@
     <string name="feed_list_no_feeds_yet">Aún no hay fuentes</string>
     <string name="feed_list_total_unread">%1$d sin leer</string>
     <string name="feed_list_section_unread">%1$d sin leer</string>
+    <string name="feed_list_refresh_error">No se pudo actualizar: comprueba tu conexión</string>
 
     <!-- Article list -->
     <string name="article_list_selected">%1$d seleccionados</string>
     <string name="article_list_unread_count">%1$d sin leer</string>
     <string name="article_list_tab_unread">No leídos</string>
     <string name="article_list_tab_all">Todos</string>
+    <string name="article_list_no_articles">No hay artículos</string>
+    <string name="article_list_no_unread_articles">No hay artículos sin leer</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">No hay ningún artículo que mostrar</string>

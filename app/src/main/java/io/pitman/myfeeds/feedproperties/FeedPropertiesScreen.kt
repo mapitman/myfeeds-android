@@ -3,6 +3,7 @@ package io.pitman.myfeeds.feedproperties
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -27,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.pitman.myfeeds.R
@@ -75,17 +77,21 @@ fun FeedPropertiesScreen(
             }
 
             val useGlobalMax = uiState.itemsToKeep == null
-            Text(
-                text = stringResource(R.string.feed_properties_use_global_max, uiState.globalMaxArticles),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 24.dp),
-            )
-            Switch(
-                checked = useGlobalMax,
-                onCheckedChange = { checked ->
-                    viewModel.setItemsToKeep(if (checked) null else uiState.globalMaxArticles)
-                },
-            )
+            val onUseGlobalMaxChange: (Boolean) -> Unit = { checked ->
+                viewModel.setItemsToKeep(if (checked) null else uiState.globalMaxArticles)
+            }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(value = useGlobalMax, onValueChange = onUseGlobalMaxChange, role = Role.Switch)
+                    .padding(top = 24.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.feed_properties_use_global_max, uiState.globalMaxArticles),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Switch(checked = useGlobalMax, onCheckedChange = null)
+            }
             if (!useGlobalMax) {
                 val itemsToKeep = uiState.itemsToKeep ?: uiState.globalMaxArticles
                 Text(
@@ -100,15 +106,22 @@ fun FeedPropertiesScreen(
                 )
             }
 
-            Text(
-                text = stringResource(R.string.feed_properties_auto_download),
-                style = MaterialTheme.typography.bodyLarge,
-                modifier = Modifier.padding(top = 24.dp),
-            )
-            Switch(
-                checked = uiState.autoDownloadEnabled,
-                onCheckedChange = viewModel::setAutoDownloadEnabled,
-            )
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = uiState.autoDownloadEnabled,
+                        onValueChange = viewModel::setAutoDownloadEnabled,
+                        role = Role.Switch,
+                    )
+                    .padding(top = 24.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.feed_properties_auto_download),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Switch(checked = uiState.autoDownloadEnabled, onCheckedChange = null)
+            }
 
             Button(
                 onClick = { showUnsubscribeConfirm = true },

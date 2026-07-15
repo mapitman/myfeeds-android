@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -62,6 +64,10 @@ class ArticleListViewModel @Inject constructor(
             feedTitle.value = feed?.userTitle ?: feed?.title.orEmpty()
         }
     }
+
+    val listFontSize: StateFlow<FontSize> = settingsDataStore.settings
+        .map { it.listFontSize }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.NORMAL)
 
     fun setShowUnreadOnly(unreadOnly: Boolean) {
         showUnreadOnly.value = unreadOnly

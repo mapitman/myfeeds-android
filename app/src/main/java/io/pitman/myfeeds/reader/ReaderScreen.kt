@@ -59,6 +59,7 @@ import coil.compose.AsyncImage
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.articlelist.ArticleDateFormatter
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.settings.scaleFactor
 import io.pitman.myfeeds.playback.PlaybackUiState
 import kotlinx.coroutines.flow.distinctUntilChanged
 
@@ -71,6 +72,7 @@ fun ReaderScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
+    val articleFontSize by viewModel.articleFontSize.collectAsState()
     val context = LocalContext.current
 
     if (uiState.items.isEmpty()) {
@@ -133,6 +135,7 @@ fun ReaderScreen(
             ArticlePage(
                 item = uiState.items[page],
                 onImageClick = { zoomedImageUrl = it },
+                fontScale = articleFontSize.scaleFactor,
                 playbackState = playbackState,
                 onTogglePlayPause = { viewModel.togglePlayPause(uiState.items[page]) },
                 onSeek = viewModel::seekTo,
@@ -153,6 +156,7 @@ fun ReaderScreen(
 private fun ArticlePage(
     item: FeedItem,
     onImageClick: (String) -> Unit,
+    fontScale: Float,
     playbackState: PlaybackUiState,
     onTogglePlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
@@ -199,7 +203,7 @@ private fun ArticlePage(
                     .clickable { onImageClick(imageUrl) },
             )
         }
-        ArticleBody(html = item.description.orEmpty(), baseUrl = item.url)
+        ArticleBody(html = item.description.orEmpty(), baseUrl = item.url, fontScale = fontScale)
     }
 }
 
@@ -291,11 +295,12 @@ private fun formatDuration(millis: Long): String {
 }
 
 @Composable
-private fun ArticleBody(html: String, baseUrl: String?) {
+private fun ArticleBody(html: String, baseUrl: String?, fontScale: Float) {
     val context = LocalContext.current
     val sanitized = remember(html) { HtmlSanitizer.sanitize(html) }
     val textColor = MaterialTheme.colorScheme.onSurface
     val backgroundColor = MaterialTheme.colorScheme.surface
+    val bodyFontSizePx = (16 * fontScale).toInt()
 
     AndroidView(
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
@@ -317,7 +322,7 @@ private fun ArticleBody(html: String, baseUrl: String?) {
             val styledHtml = """
                 <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                  body { color: $textColorHex; background-color: $backgroundColorHex; font-family: sans-serif; font-size: 16px; }
+                  body { color: $textColorHex; background-color: $backgroundColorHex; font-family: sans-serif; font-size: ${bodyFontSizePx}px; }
                   img { max-width: 100%; height: auto; }
                   a { color: $textColorHex; }
                 </style></head><body>$sanitized</body></html>

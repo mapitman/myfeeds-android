@@ -27,12 +27,15 @@
     <string name="feed_list_no_feeds_yet">No feeds yet</string>
     <string name="feed_list_total_unread">%1$d unread</string>
     <string name="feed_list_section_unread">%1$d Unread</string>
+    <string name="feed_list_refresh_error">Couldn\'t refresh: check your connection</string>
 
     <!-- Article list -->
     <string name="article_list_selected">%1$d selected</string>
     <string name="article_list_unread_count">%1$d unread</string>
     <string name="article_list_tab_unread">Unread</string>
     <string name="article_list_tab_all">All</string>
+    <string name="article_list_no_articles">No articles</string>
+    <string name="article_list_no_unread_articles">No unread articles</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">No article to show</string>

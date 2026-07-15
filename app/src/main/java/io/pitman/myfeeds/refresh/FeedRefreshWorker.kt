@@ -3,6 +3,7 @@ package io.pitman.myfeeds.refresh
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.util.Log
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -48,6 +49,12 @@ class FeedRefreshWorker @AssistedInject constructor(
         val feeds = feedRepository.observeAllFeeds().first()
         val feedsById = feeds.associateBy { it.id }
         val results = feedUpdateEngine.updateFeeds(feeds)
+
+        // Per-feed failures don't fail the whole run (see class doc), but they shouldn't be
+        // silently invisible either -- at minimum, surface them in logcat for debugging (issue #27).
+        results.filterIsInstance<FeedUpdateResult.Failure>().forEach { failure ->
+            Log.w(TAG, "Feed refresh failed: ${failure.message}")
+        }
 
         results.filterIsInstance<FeedUpdateResult.Success>()
             .filter { feedsById[it.feedId]?.autoDownloadEnabled == true }
@@ -99,5 +106,6 @@ class FeedRefreshWorker @AssistedInject constructor(
 
     companion object {
         private const val NEW_ITEMS_NOTIFICATION_ID = 1
+        private const val TAG = "FeedRefreshWorker"
     }
 }

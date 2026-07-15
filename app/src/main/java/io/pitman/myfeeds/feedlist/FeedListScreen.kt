@@ -18,13 +18,18 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.ScrollableTabRow
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -32,6 +37,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.pitman.myfeeds.R
+import io.pitman.myfeeds.data.settings.scaleFactor
 import io.pitman.myfeeds.ui.components.ListItemRow
 import kotlinx.coroutines.launch
 
@@ -46,9 +52,20 @@ fun FeedListScreen(
     onFeedLongClick: (Long) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val feedListFontSize by viewModel.feedListFontSize.collectAsState()
+    val refreshError by viewModel.refreshError.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(refreshError) {
+        refreshError?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeRefreshError()
+        }
+    }
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) { Snackbar(it) } },
         topBar = {
             TopAppBar(
                 title = {
@@ -100,6 +117,7 @@ fun FeedListScreen(
                 CategoryFeedList(
                     section = uiState.categories[page],
                     isRefreshing = uiState.isRefreshing,
+                    titleFontScale = feedListFontSize.scaleFactor,
                     onRefresh = viewModel::refresh,
                     onFeedClick = onFeedClick,
                     onFeedLongClick = onFeedLongClick,
@@ -114,6 +132,7 @@ fun FeedListScreen(
 private fun CategoryFeedList(
     section: CategorySectionUiState,
     isRefreshing: Boolean,
+    titleFontScale: Float,
     onRefresh: () -> Unit,
     onFeedClick: (Long) -> Unit,
     onFeedLongClick: (Long) -> Unit,
@@ -134,6 +153,7 @@ private fun CategoryFeedList(
                     subtitle = item.feed.description,
                     imageUrl = item.feed.imageUrl,
                     unreadCount = item.unreadCount,
+                    titleFontScale = titleFontScale,
                     onClick = { onFeedClick(item.feed.id) },
                     onLongClick = { onFeedLongClick(item.feed.id) },
                 )

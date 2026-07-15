@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.settings.FontSize
+import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import io.pitman.myfeeds.playback.PlaybackController
 import io.pitman.myfeeds.playback.PlaybackUiState
@@ -33,6 +35,7 @@ class ReaderViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
     private val playbackController: PlaybackController,
     private val downloadRepository: EnclosureDownloadRepository,
+    settingsDataStore: SettingsDataStore,
 ) : ViewModel() {
     private val feedId: Long = checkNotNull(savedStateHandle["feedId"])
     private val initialItemId: String = checkNotNull(savedStateHandle["itemId"])
@@ -60,6 +63,10 @@ class ReaderViewModel @Inject constructor(
                 }
         }
     }
+
+    val articleFontSize: StateFlow<FontSize> = settingsDataStore.settings
+        .map { it.articleFontSize }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.NORMAL)
 
     private fun advanceToNextItem(finishedItemId: String) {
         val items = uiState.value.items
