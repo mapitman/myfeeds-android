@@ -55,10 +55,6 @@ class ArticleListViewModel @Inject constructor(
         ArticleListUiState(title, unreadOnly, articles, unreadCount, selected)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArticleListUiState())
 
-    val listFontSize: StateFlow<FontSize> = settingsDataStore.settings
-        .map { it.listFontSize }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.NORMAL)
-
     init {
         viewModelScope.launch {
             val defaultToAllView = settingsDataStore.settings.first().defaultToAllArticleView
@@ -68,6 +64,10 @@ class ArticleListViewModel @Inject constructor(
             feedTitle.value = feed?.userTitle ?: feed?.title.orEmpty()
         }
     }
+
+    val listFontSize: StateFlow<FontSize> = settingsDataStore.settings
+        .map { it.listFontSize }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.NORMAL)
 
     fun setShowUnreadOnly(unreadOnly: Boolean) {
         showUnreadOnly.value = unreadOnly

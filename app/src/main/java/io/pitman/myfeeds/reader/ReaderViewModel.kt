@@ -40,10 +40,6 @@ class ReaderViewModel @Inject constructor(
     private val feedId: Long = checkNotNull(savedStateHandle["feedId"])
     private val initialItemId: String = checkNotNull(savedStateHandle["itemId"])
 
-    val articleFontSize: StateFlow<FontSize> = settingsDataStore.settings
-        .map { it.articleFontSize }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.NORMAL)
-
     val uiState: StateFlow<ReaderUiState> = combine(
         feedRepository.observeItems(feedId),
         feedRepository.observeFeed(feedId),
@@ -67,6 +63,10 @@ class ReaderViewModel @Inject constructor(
                 }
         }
     }
+
+    val articleFontSize: StateFlow<FontSize> = settingsDataStore.settings
+        .map { it.articleFontSize }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.NORMAL)
 
     private fun advanceToNextItem(finishedItemId: String) {
         val items = uiState.value.items

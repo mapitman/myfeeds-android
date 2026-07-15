@@ -52,10 +52,6 @@ class FeedListViewModel @Inject constructor(
     /** One-shot refresh-failure message for a Snackbar; cleared via [consumeRefreshError]. */
     val refreshError: StateFlow<String?> = _refreshError
 
-    val feedListFontSize: StateFlow<FontSize> = settingsDataStore.settings
-        .map { it.feedListFontSize }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.LARGE)
-
     val uiState: StateFlow<FeedListUiState> = combine(
         categoryDao.observeAll(),
         feedRepository.observeAllFeeds(),
@@ -75,6 +71,10 @@ class FeedListViewModel @Inject constructor(
     init {
         viewModelScope.launch { seeder.seedIfFirstRun() }
     }
+
+    val feedListFontSize: StateFlow<FontSize> = settingsDataStore.settings
+        .map { it.feedListFontSize }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.LARGE)
 
     fun refresh() {
         viewModelScope.launch {
