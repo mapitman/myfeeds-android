@@ -1,0 +1,103 @@
+package io.pitman.myfeeds.reader
+
+import androidx.lifecycle.SavedStateHandle
+import androidx.room.Room
+import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.data.local.AppDatabase
+import io.pitman.myfeeds.data.local.Category
+import io.pitman.myfeeds.data.local.Feed
+import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.repository.FeedRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
+import org.junit.Before
+import org.junit.Test
+import org.junit.runner.RunWith
+import org.robolectric.RobolectricTestRunner
+import org.robolectric.annotation.Config
+
+/**
+ * Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet.
+ *
+ * The test dispatcher is shared between setMain and runTest so that runTest's automatic
+ * child-coroutine cleanup also cancels the ViewModel's viewModelScope children (uiState's
+ * WhileSubscribed collector); otherwise it can outlive the test method and race the next
+ * test's setMain/resetMain, intermittently throwing "Dispatchers.Main is used concurrently".
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
+class ReaderViewModelTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    private lateinit var db: AppDatabase
+    private lateinit var repository: FeedRepository
+    private var feedId: Long = 0
+
+    @Before
+    fun setUp() = runTest(testDispatcher) {
+        Dispatchers.setMain(testDispatcher)
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
+        repository = FeedRepository(db.feedDao(), db.feedItemDao())
+
+        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
+        feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        repository.upsertItems(
+            listOf(
+                FeedItem(id = "item-1", feedId = feedId, title = "First", itemGuid = "g1", publishDate = 3L),
+                FeedItem(id = "item-2", feedId = feedId, title = "Second", itemGuid = "g2", publishDate = 2L),
+                FeedItem(id = "item-3", feedId = feedId, title = "Third", itemGuid = "g3", publishDate = 1L),
+            ),
+        )
+    }
+
+    @After
+    fun tearDown() {
+        db.close()
+        Dispatchers.resetMain()
+    }
+
+    private fun createViewModel(itemId: String) = ReaderViewModel(
+        savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId, "itemId" to itemId)),
+        feedRepository = repository,
+    )
+
+    @Test
+    fun uiState_loadsAllItemsOrderedByPublishDateDescending() = runTest(testDispatcher) {
+        val viewModel = createViewModel("item-2")
+
+        val state = viewModel.uiState.first { it.items.isNotEmpty() }
+
+        assertEquals(listOf("item-1", "item-2", "item-3"), state.items.map { it.id })
+    }
+
+    @Test
+    fun uiState_initialIndexMatchesRequestedItem() = runTest(testDispatcher) {
+        val viewModel = createViewModel("item-2")
+
+        val state = viewModel.uiState.first { it.items.isNotEmpty() }
+
+        assertEquals(1, state.initialIndex)
+    }
+
+    @Test
+    fun markRead_marksItemReadInRepository() = runTest(testDispatcher) {
+        val viewModel = createViewModel("item-1")
+        viewModel.uiState.first { it.items.isNotEmpty() }
+
+        viewModel.markRead("item-1")
+
+        val item = repository.observeItems(feedId).first { items -> items.first { it.id == "item-1" }.isRead }
+            .first { it.id == "item-1" }
+        assertTrue(item.isRead)
+    }
+}

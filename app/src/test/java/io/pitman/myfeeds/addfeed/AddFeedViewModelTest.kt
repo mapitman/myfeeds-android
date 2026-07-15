@@ -30,6 +30,8 @@ import org.robolectric.annotation.Config
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class AddFeedViewModelTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
     private lateinit var server: MockWebServer
     private lateinit var db: AppDatabase
     private lateinit var viewModel: AddFeedViewModel
@@ -52,7 +54,7 @@ class AddFeedViewModelTest {
 
     @Before
     fun setUp() {
-        Dispatchers.setMain(UnconfinedTestDispatcher())
+        Dispatchers.setMain(testDispatcher)
         server = MockWebServer()
         server.start()
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
@@ -80,7 +82,7 @@ class AddFeedViewModelTest {
         viewModel.uiState.first { it !is AddFeedUiState.Idle && it !is AddFeedUiState.Loading }
 
     @Test
-    fun addFeedByUrl_subscribesAndPopulatesItems() = runTest {
+    fun addFeedByUrl_subscribesAndPopulatesItems() = runTest(testDispatcher) {
         // addFeedByUrl fetches twice: once to validate/discover, once more inside
         // FeedUpdateEngine.updateFeed to actually persist items.
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
@@ -100,7 +102,7 @@ class AddFeedViewModelTest {
     }
 
     @Test
-    fun addFeedByUrl_blankUrl_showsErrorWithoutFetching() = runTest {
+    fun addFeedByUrl_blankUrl_showsErrorWithoutFetching() = runTest(testDispatcher) {
         viewModel.addFeedByUrl("  ", "Tech")
         val state = awaitTerminalState()
 
@@ -109,7 +111,7 @@ class AddFeedViewModelTest {
     }
 
     @Test
-    fun addFeedByUrl_fetchFailure_showsErrorAndDoesNotSubscribe() = runTest {
+    fun addFeedByUrl_fetchFailure_showsErrorAndDoesNotSubscribe() = runTest(testDispatcher) {
         server.enqueue(MockResponse().setResponseCode(404))
 
         viewModel.addFeedByUrl(server.url("/missing.xml").toString(), "Tech")
@@ -120,7 +122,7 @@ class AddFeedViewModelTest {
     }
 
     @Test
-    fun addFeedByUrl_blankCategory_fallsBackToUncategorized() = runTest {
+    fun addFeedByUrl_blankCategory_fallsBackToUncategorized() = runTest(testDispatcher) {
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
 
@@ -132,7 +134,7 @@ class AddFeedViewModelTest {
     }
 
     @Test
-    fun importOpml_populatesCategoriesAndFeeds() = runTest {
+    fun importOpml_populatesCategoriesAndFeeds() = runTest(testDispatcher) {
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0"><body>
