@@ -135,6 +135,20 @@ class FeedRepositoryTest {
     }
 
     @Test
+    fun observePodcastFeedIds_includesOnlyFeedsWithEnclosures() = runTest {
+        val podcastFeedId = repository.subscribe(Feed(categoryId = categoryId, title = "Podcast Feed"))
+        val articleFeedId = repository.subscribe(Feed(categoryId = categoryId, title = "Article Feed"))
+        repository.upsertItems(
+            listOf(
+                FeedItem(id = "ep-1", feedId = podcastFeedId, itemGuid = "g1", enclosureUrl = "https://example.com/ep1.mp3"),
+                FeedItem(id = "art-1", feedId = articleFeedId, itemGuid = "g2"),
+            ),
+        )
+
+        assertEquals(setOf(podcastFeedId), repository.observePodcastFeedIds().first())
+    }
+
+    @Test
     fun trimToItemsToKeep_noOpWhenUnderLimit() = runTest {
         val feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed", itemsToKeep = 10))
         repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))

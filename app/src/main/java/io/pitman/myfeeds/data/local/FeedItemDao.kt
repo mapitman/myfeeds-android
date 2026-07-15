@@ -55,6 +55,11 @@ interface FeedItemDao {
     @Query("SELECT feedId, COUNT(*) as count FROM feed_items WHERE isRead = 0 GROUP BY feedId")
     fun observeUnreadCountsByFeed(): Flow<List<FeedUnreadCount>>
 
+    // Podcast-ness (issue #65) is derived, not stored: a feed is a podcast if any of its items
+    // has an enclosure, regardless of which category it's subscribed under.
+    @Query("SELECT DISTINCT feedId FROM feed_items WHERE enclosureUrl IS NOT NULL")
+    fun observePodcastFeedIds(): Flow<List<Long>>
+
     @Query("UPDATE feed_items SET enclosurePosition = NULL WHERE enclosurePosition IS NOT NULL")
     suspend fun clearAllEnclosurePositions()
 

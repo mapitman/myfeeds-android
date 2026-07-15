@@ -42,6 +42,8 @@ class FeedRepository @Inject constructor(
     fun observeUnreadCountsByFeed(): Flow<Map<Long, Int>> =
         feedItemDao.observeUnreadCountsByFeed().map { counts -> counts.associate { it.feedId to it.count } }
 
+    fun observePodcastFeedIds(): Flow<Set<Long>> = feedItemDao.observePodcastFeedIds().map { it.toSet() }
+
     suspend fun upsertItems(items: List<FeedItem>) = feedItemDao.insertAll(items)
 
     suspend fun findByItemGuid(feedId: Long, itemGuid: String): FeedItem? =
