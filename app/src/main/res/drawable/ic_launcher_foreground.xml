@@ -1,8 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Standard RSS-feed glyph (dot + two quarter-circle signal arcs), white on transparent, for
-     use as the adaptive launcher icon foreground and the splash screen icon. Drawn within the
-     center ~66dp "safe zone" of the 108dp viewport so it isn't clipped by adaptive icon masking.
-     See Marketing/ApplicationIcon.png in myfeeds-winphone for the source branding this mirrors. -->
+<!-- Centered "m" monogram with RSS signal-wave arcs radiating outward symmetrically (180-degree
+     rotational symmetry) into the top-right and bottom-left quadrants only. Unlike a
+     corner-anchored RSS glyph, this stays entirely within the 108dp viewport's ~66dp
+     adaptive-icon "safe zone" without needing to touch any edge, so it isn't clipped regardless
+     of which mask shape (circle, squircle, rounded square, etc.) a given launcher applies.
+     See Marketing/ApplicationIcon.png in myfeeds-winphone for the original brand mark this
+     reinterprets. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -10,7 +13,12 @@
     android:viewportHeight="108">
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M27,74 A7,7 0 1,0 41,74 A7,7 0 1,0 27,74 Z
-                           M55,74 A21,21 0 0,0 34,53 L34,60 A14,14 0 0,1 48,74 Z
-                           M69,74 A35,35 0 0,0 34,39 L34,46 A28,28 0 0,1 62,74 Z" />
+        android:pathData="M73,54 A19,19 0 0,0 54,35 L54,41 A13,13 0 0,1 67,54 Z
+                           M83,54 A29,29 0 0,0 54,25 L54,31 A23,23 0 0,1 77,54 Z
+                           M35,54 A19,19 0 0,0 54,73 L54,67 A13,13 0 0,1 41,54 Z
+                           M25,54 A29,29 0 0,0 54,83 L54,77 A23,23 0 0,1 31,54 Z
+                           M46,48.5 H48.8 V59.5 H46 Z
+                           M52.6,48.5 H55.4 V59.5 H52.6 Z
+                           M59.2,48.5 H62 V59.5 H59.2 Z
+                           M46,48.5 H62 V50.7 H46 Z" />
 </vector>

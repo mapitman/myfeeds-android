@@ -88,7 +88,7 @@ class FeedRefreshWorker @AssistedInject constructor(
             android.app.PendingIntent.FLAG_IMMUTABLE or android.app.PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val notification = NotificationCompat.Builder(applicationContext, MyFeedsApp.NEW_ITEMS_CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_foreground)
+            .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(applicationContext.getString(R.string.notification_new_items_title))
             .setContentText(
                 applicationContext.resources.getQuantityString(
