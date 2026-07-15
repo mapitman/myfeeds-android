@@ -14,6 +14,7 @@ import io.pitman.myfeeds.addfeed.AddFeedScreen
 import io.pitman.myfeeds.articlelist.ArticleListScreen
 import io.pitman.myfeeds.feedlist.FeedListScreen
 import io.pitman.myfeeds.reader.ReaderScreen
+import io.pitman.myfeeds.settings.SettingsScreen
 import io.pitman.myfeeds.ui.theme.MyFeedsTheme
 
 @AndroidEntryPoint
@@ -29,7 +30,11 @@ class MainActivity : ComponentActivity() {
                         FeedListScreen(
                             onAddFeedClick = { navController.navigate("addFeed") },
                             onFeedClick = { feedId -> navController.navigate("articleList/$feedId") },
+                            onSettingsClick = { navController.navigate("settings") },
                         )
+                    }
+                    composable("settings") {
+                        SettingsScreen(onBack = { navController.popBackStack() })
                     }
                     composable("addFeed") {
                         AddFeedScreen(

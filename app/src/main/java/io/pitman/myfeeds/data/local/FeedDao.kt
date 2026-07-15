@@ -29,4 +29,7 @@ interface FeedDao {
 
     @Query("SELECT * FROM feeds WHERE id = :id")
     fun observeById(id: Long): Flow<Feed?>
+
+    @Query("DELETE FROM feeds")
+    suspend fun deleteAll()
 }

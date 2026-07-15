@@ -4,6 +4,7 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
@@ -46,12 +47,21 @@ class ArticleListViewModelTest {
     private lateinit var repository: FeedRepository
     private lateinit var settingsDataStore: SettingsDataStore
     private var feedId: Long = 0
+    private var nextViewModelKey = 0
 
-    private fun createViewModel(): ArticleListViewModel = ArticleListViewModel(
-        savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId)),
-        feedRepository = repository,
-        settingsDataStore = settingsDataStore,
-    )
+    // ViewModels here are constructed directly (not via a real ViewModelProvider), so nothing
+    // would otherwise call ViewModel.clear() to cancel their viewModelScope between tests. A
+    // leaked WhileSubscribed collector then outlives the test method and races the next test's
+    // Dispatchers.setMain/resetMain. Routing creation through a real ViewModelStore and clearing
+    // it in tearDown cancels those coroutines properly, the same way the Android framework does.
+    private val viewModelStore = ViewModelStore()
+
+    private fun createViewModel(): ArticleListViewModel =
+        ArticleListViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId)),
+            feedRepository = repository,
+            settingsDataStore = settingsDataStore,
+        ).also { viewModelStore.put("articleList-${nextViewModelKey++}", it) }
 
     @Before
     fun setUp() = runTest(testDispatcher) {
@@ -76,6 +86,7 @@ class ArticleListViewModelTest {
 
     @After
     fun tearDown() {
+        viewModelStore.clear()
         db.close()
         Dispatchers.resetMain()
     }
