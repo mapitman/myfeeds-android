@@ -1,6 +1,7 @@
 package io.pitman.myfeeds.reader
 
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
@@ -27,16 +28,19 @@ import org.robolectric.annotation.Config
 /**
  * Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet.
  *
- * The test dispatcher is shared between setMain and runTest so that runTest's automatic
- * child-coroutine cleanup also cancels the ViewModel's viewModelScope children (uiState's
- * WhileSubscribed collector); otherwise it can outlive the test method and race the next
- * test's setMain/resetMain, intermittently throwing "Dispatchers.Main is used concurrently".
+ * The test dispatcher is shared between setMain and runTest, and ViewModels are routed through a
+ * real ViewModelStore that's cleared in tearDown -- otherwise nothing cancels their
+ * viewModelScope between tests (they're constructed directly, not via a ViewModelProvider), and
+ * a leaked WhileSubscribed collector can outlive the test method and race the next test's
+ * setMain/resetMain, intermittently throwing "Dispatchers.Main is used concurrently".
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class ReaderViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
+    private val viewModelStore = ViewModelStore()
+    private var nextViewModelKey = 0
 
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
@@ -62,14 +66,16 @@ class ReaderViewModelTest {
 
     @After
     fun tearDown() {
+        viewModelStore.clear()
         db.close()
         Dispatchers.resetMain()
     }
 
-    private fun createViewModel(itemId: String) = ReaderViewModel(
-        savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId, "itemId" to itemId)),
-        feedRepository = repository,
-    )
+    private fun createViewModel(itemId: String) =
+        ReaderViewModel(
+            savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId, "itemId" to itemId)),
+            feedRepository = repository,
+        ).also { viewModelStore.put("reader-${nextViewModelKey++}", it) }
 
     @Test
     fun uiState_loadsAllItemsOrderedByPublishDateDescending() = runTest(testDispatcher) {

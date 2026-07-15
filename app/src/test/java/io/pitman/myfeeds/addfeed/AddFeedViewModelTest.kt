@@ -1,5 +1,6 @@
 package io.pitman.myfeeds.addfeed
 
+import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.feed.FeedFetcher
@@ -31,6 +32,13 @@ import org.robolectric.annotation.Config
 @Config(sdk = [35])
 class AddFeedViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
+
+    // ViewModels here are constructed directly (not via a real ViewModelProvider), so nothing
+    // would otherwise call ViewModel.clear() to cancel their viewModelScope between tests. A
+    // leaked WhileSubscribed collector then outlives the test method and races the next test's
+    // Dispatchers.setMain/resetMain. Routing creation through a real ViewModelStore and clearing
+    // it in tearDown cancels those coroutines properly, the same way the Android framework does.
+    private val viewModelStore = ViewModelStore()
 
     private lateinit var server: MockWebServer
     private lateinit var db: AppDatabase
@@ -69,10 +77,12 @@ class AddFeedViewModelTest {
             opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
             httpClient = httpClient,
         )
+        viewModelStore.put("addFeed", viewModel)
     }
 
     @After
     fun tearDown() {
+        viewModelStore.clear()
         server.shutdown()
         db.close()
         Dispatchers.resetMain()

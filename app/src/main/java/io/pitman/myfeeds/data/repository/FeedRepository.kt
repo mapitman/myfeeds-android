@@ -53,6 +53,11 @@ class FeedRepository @Inject constructor(
 
     suspend fun deleteItems(items: List<FeedItem>) = feedItemDao.deleteAll(items)
 
+    suspend fun removeAllFeeds() = feedDao.deleteAll()
+
+    /** Clears saved podcast resume positions. Actual downloaded-file deletion lands with #23. */
+    suspend fun clearAllEnclosurePositions() = feedItemDao.clearAllEnclosurePositions()
+
     /**
      * Deletes the oldest items beyond the feed's `itemsToKeep`, mirroring the original
      * FeedUpdater's trim-by-publish-date behavior. Returns the evicted items so callers can clean
