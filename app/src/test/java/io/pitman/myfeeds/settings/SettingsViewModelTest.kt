@@ -35,6 +35,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import kotlin.time.Duration.Companion.seconds
 
 /**
  * Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet.
@@ -42,6 +43,10 @@ import java.io.File
  * The test dispatcher is shared between setMain and runTest so runTest's automatic
  * child-coroutine cleanup also covers the ViewModel's viewModelScope children (see the
  * article-reader PR for the full explanation of the flakiness this avoids).
+ *
+ * runTest's default 60s dispatch timeout is raised to 120s: this file is the flakiest in the
+ * suite on CI's slower/more contended runners, and observed failures consistently timed out at
+ * exactly the default -- a sign of slow-runner contention rather than a genuine hang.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -65,7 +70,7 @@ class SettingsViewModelTest {
     private val viewModelStore = ViewModelStore()
 
     @Before
-    fun setUp() = runTest(testDispatcher) {
+    fun setUp() = runTest(testDispatcher, timeout = 120.seconds) {
         Dispatchers.setMain(testDispatcher)
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
@@ -98,7 +103,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun setUpdateIntervalMinutes_persistsAndReflectsInSettings() = runTest(testDispatcher) {
+    fun setUpdateIntervalMinutes_persistsAndReflectsInSettings() = runTest(testDispatcher, timeout = 120.seconds) {
         viewModel.setUpdateIntervalMinutes(60)
 
         val settings = viewModel.settings.first { it.updateIntervalMinutes == 60L }
@@ -106,7 +111,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun setArticleFontSize_persists() = runTest(testDispatcher) {
+    fun setArticleFontSize_persists() = runTest(testDispatcher, timeout = 120.seconds) {
         viewModel.setArticleFontSize(FontSize.LARGE)
 
         val settings = viewModel.settings.first { it.articleFontSize == FontSize.LARGE }
@@ -114,7 +119,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun addDefaultFeeds_importsBundledOpml() = runTest(testDispatcher) {
+    fun addDefaultFeeds_importsBundledOpml() = runTest(testDispatcher, timeout = 120.seconds) {
         viewModel.addDefaultFeeds()
 
         val categories = db.categoryDao().observeAll().first { it.size == 3 }
@@ -124,7 +129,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun removeAllFeeds_deletesAllFeedsAndCascadesItems() = runTest(testDispatcher) {
+    fun removeAllFeeds_deletesAllFeedsAndCascadesItems() = runTest(testDispatcher, timeout = 120.seconds) {
         val categoryId = db.categoryDao().insert(Category(name = "Tech"))
         val feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
         repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
@@ -137,7 +142,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun clearPodcasts_clearsEnclosurePositions() = runTest(testDispatcher) {
+    fun clearPodcasts_clearsEnclosurePositions() = runTest(testDispatcher, timeout = 120.seconds) {
         val categoryId = db.categoryDao().insert(Category(name = "Tech"))
         val feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
         repository.upsertItems(
@@ -151,7 +156,7 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun resetSettings_restoresDefaultsWithoutTouchingFeeds() = runTest(testDispatcher) {
+    fun resetSettings_restoresDefaultsWithoutTouchingFeeds() = runTest(testDispatcher, timeout = 120.seconds) {
         val categoryId = db.categoryDao().insert(Category(name = "Tech"))
         repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
         viewModel.setMaxArticles(99)
