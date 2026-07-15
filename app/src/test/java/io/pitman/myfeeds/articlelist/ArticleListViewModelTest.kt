@@ -7,6 +7,8 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.data.feed.FeedFetcher
+import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
@@ -20,9 +22,11 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Before
@@ -47,6 +51,8 @@ class ArticleListViewModelTest {
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
     private lateinit var settingsDataStore: SettingsDataStore
+    private lateinit var feedUpdateEngine: FeedUpdateEngine
+    private lateinit var context: android.content.Context
     private var feedId: Long = 0
     private var nextViewModelKey = 0
 
@@ -61,19 +67,22 @@ class ArticleListViewModelTest {
         ArticleListViewModel(
             savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId)),
             feedRepository = repository,
+            feedUpdateEngine = feedUpdateEngine,
             settingsDataStore = settingsDataStore,
+            context = context,
         ).also { viewModelStore.put("articleList-${nextViewModelKey++}", it) }
 
     @Before
     fun setUp() = runTest(testDispatcher) {
         Dispatchers.setMain(testDispatcher)
-        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao())
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
         settingsDataStore = SettingsDataStore(dataStore)
+        feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
 
         val categoryId = db.categoryDao().insert(Category(name = "Tech"))
         feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
@@ -157,6 +166,19 @@ class ArticleListViewModelTest {
         val items = repository.observeItems(feedId).first { items -> items.all { it.isRead } }
         assertTrue(items.first { it.id == "unread-1" }.isRead)
         assertEquals(0, repository.observeUnreadCount(feedId).first())
+    }
+
+    @Test
+    fun refresh_feedHasNoUrl_setsRefreshErrorAndClearsIsRefreshing() = runTest(testDispatcher) {
+        // The test fixture feed has no feedUrl, so FeedUpdateEngine.updateFeed fails deterministically
+        // without needing a real network call.
+        val viewModel = createViewModel()
+        viewModel.uiState.first { it.feedTitle == "A Feed" }
+
+        viewModel.refresh()
+
+        assertNotNull(viewModel.refreshError.first { it != null })
+        assertFalse(viewModel.uiState.value.isRefreshing)
     }
 
     @Test

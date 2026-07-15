@@ -1,9 +1,14 @@
 package io.pitman.myfeeds.articlelist
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import io.pitman.myfeeds.R
+import io.pitman.myfeeds.data.feed.FeedUpdateEngine
+import io.pitman.myfeeds.data.feed.FeedUpdateResult
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.FontSize
@@ -26,6 +31,7 @@ data class ArticleListUiState(
     val articles: List<FeedItem> = emptyList(),
     val unreadCount: Int = 0,
     val selectedIds: Set<String> = emptySet(),
+    val isRefreshing: Boolean = false,
 ) {
     val isSelectionMode: Boolean get() = selectedIds.isNotEmpty()
 }
@@ -35,13 +41,20 @@ data class ArticleListUiState(
 class ArticleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val feedRepository: FeedRepository,
+    private val feedUpdateEngine: FeedUpdateEngine,
     settingsDataStore: SettingsDataStore,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
     private val feedId: Long = checkNotNull(savedStateHandle["feedId"])
 
     private val showUnreadOnly = MutableStateFlow(true)
     private val selectedIds = MutableStateFlow<Set<String>>(emptySet())
     private val feedTitle = MutableStateFlow("")
+    private val isRefreshing = MutableStateFlow(false)
+    private val _refreshError = MutableStateFlow<String?>(null)
+
+    /** One-shot refresh-failure message for a Snackbar; cleared via [consumeRefreshError]. */
+    val refreshError: StateFlow<String?> = _refreshError
 
     val uiState: StateFlow<ArticleListUiState> = combine(
         feedTitle,
@@ -53,6 +66,8 @@ class ArticleListViewModel @Inject constructor(
         selectedIds,
     ) { title, unreadOnly, articles, unreadCount, selected ->
         ArticleListUiState(title, unreadOnly, articles, unreadCount, selected)
+    }.combine(isRefreshing) { state, refreshing ->
+        state.copy(isRefreshing = refreshing)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArticleListUiState())
 
     init {
@@ -63,6 +78,21 @@ class ArticleListViewModel @Inject constructor(
             val feed = feedRepository.getFeed(feedId)
             feedTitle.value = feed?.userTitle ?: feed?.title.orEmpty()
         }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            isRefreshing.value = true
+            val feed = feedRepository.getFeed(feedId)
+            if (feed != null && feedUpdateEngine.updateFeed(feed) is FeedUpdateResult.Failure) {
+                _refreshError.value = context.getString(R.string.feed_list_refresh_error)
+            }
+            isRefreshing.value = false
+        }
+    }
+
+    fun consumeRefreshError() {
+        _refreshError.value = null
     }
 
     val listFontSize: StateFlow<FontSize> = settingsDataStore.settings
