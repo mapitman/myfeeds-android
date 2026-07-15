@@ -13,6 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.pitman.myfeeds.addfeed.AddFeedScreen
 import io.pitman.myfeeds.articlelist.ArticleListScreen
 import io.pitman.myfeeds.feedlist.FeedListScreen
+import io.pitman.myfeeds.feedproperties.FeedPropertiesScreen
 import io.pitman.myfeeds.reader.ReaderScreen
 import io.pitman.myfeeds.settings.SettingsScreen
 import io.pitman.myfeeds.ui.theme.MyFeedsTheme
@@ -31,7 +32,14 @@ class MainActivity : ComponentActivity() {
                             onAddFeedClick = { navController.navigate("addFeed") },
                             onFeedClick = { feedId -> navController.navigate("articleList/$feedId") },
                             onSettingsClick = { navController.navigate("settings") },
+                            onFeedLongClick = { feedId -> navController.navigate("feedProperties/$feedId") },
                         )
+                    }
+                    composable(
+                        "feedProperties/{feedId}",
+                        arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
+                    ) {
+                        FeedPropertiesScreen(onBack = { navController.popBackStack() })
                     }
                     composable("settings") {
                         SettingsScreen(onBack = { navController.popBackStack() })

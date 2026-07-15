@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import io.pitman.myfeeds.data.opml.OpmlExporter
 import io.pitman.myfeeds.data.opml.OpmlImporter
 import io.pitman.myfeeds.data.opml.OpmlParser
 import io.pitman.myfeeds.data.repository.FeedRepository
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 @HiltViewModel
@@ -22,6 +24,7 @@ class SettingsViewModel @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val feedRepository: FeedRepository,
     private val opmlImporter: OpmlImporter,
+    private val opmlExporter: OpmlExporter,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
     val settings: StateFlow<AppSettings> =
@@ -84,5 +87,13 @@ class SettingsViewModel @Inject constructor(
 
     fun resetSettings() {
         viewModelScope.launch { settingsDataStore.reset() }
+    }
+
+    /** Writes the OPML export to a cache file for the caller to share via [android.content.Intent.ACTION_SEND]. */
+    suspend fun exportOpmlToFile(): File {
+        val opml = opmlExporter.export()
+        val file = File(context.cacheDir, "myfeeds-export.opml")
+        file.writeText(opml)
+        return file
     }
 }
