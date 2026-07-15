@@ -1,6 +1,7 @@
 package io.pitman.myfeeds.ui.components
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,6 +22,7 @@ import coil.compose.AsyncImage
  * Reusable row for feed-list and article-list screens (issues #13, #15): an optional leading
  * image, a title, an optional subtitle, and an optional unread-count badge.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ListItemRow(
     title: String,
@@ -29,12 +31,13 @@ fun ListItemRow(
     unreadCount: Int = 0,
     isRead: Boolean = false,
     onClick: () -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
 ) {
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

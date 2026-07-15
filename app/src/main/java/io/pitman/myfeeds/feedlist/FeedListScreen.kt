@@ -41,6 +41,7 @@ fun FeedListScreen(
     onFeedClick: (Long) -> Unit = {},
     onAddFeedClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    onFeedLongClick: (Long) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
@@ -99,6 +100,7 @@ fun FeedListScreen(
                     isRefreshing = uiState.isRefreshing,
                     onRefresh = viewModel::refresh,
                     onFeedClick = onFeedClick,
+                    onFeedLongClick = onFeedLongClick,
                 )
             }
         }
@@ -112,6 +114,7 @@ private fun CategoryFeedList(
     isRefreshing: Boolean,
     onRefresh: () -> Unit,
     onFeedClick: (Long) -> Unit,
+    onFeedLongClick: (Long) -> Unit,
 ) {
     PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
@@ -130,6 +133,7 @@ private fun CategoryFeedList(
                     imageUrl = item.feed.imageUrl,
                     unreadCount = item.unreadCount,
                     onClick = { onFeedClick(item.feed.id) },
+                    onLongClick = { onFeedLongClick(item.feed.id) },
                 )
             }
         }

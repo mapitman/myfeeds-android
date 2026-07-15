@@ -10,6 +10,7 @@ import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.opml.OpmlExporter
 import io.pitman.myfeeds.data.opml.OpmlImporter
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.FontSize
@@ -76,6 +77,7 @@ class SettingsViewModelTest {
             settingsDataStore = settingsDataStore,
             feedRepository = repository,
             opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
+            opmlExporter = OpmlExporter(db.categoryDao(), db.feedDao()),
             context = context,
         )
         viewModelStore.put("settings", viewModel)
