@@ -1,0 +1,162 @@
+package io.pitman.myfeeds.addfeed
+
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ExposedDropdownMenuBox
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun AddFeedScreen(
+    modifier: Modifier = Modifier,
+    viewModel: AddFeedViewModel = hiltViewModel(),
+    onDone: () -> Unit = {},
+    onBack: () -> Unit = {},
+) {
+    val uiState by viewModel.uiState.collectAsState()
+    val categories by viewModel.categories.collectAsState()
+    val context = LocalContext.current
+
+    var url by remember { mutableStateOf("") }
+    var categoryName by remember { mutableStateOf("") }
+    var categoryMenuExpanded by remember { mutableStateOf(false) }
+    var opmlUrl by remember { mutableStateOf("") }
+
+    val filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        if (uri != null) {
+            context.contentResolver.openInputStream(uri)?.let { viewModel.importOpml(it) }
+        }
+    }
+
+    LaunchedEffect(uiState) {
+        if (uiState is AddFeedUiState.Success) onDone()
+    }
+
+    Scaffold(
+        modifier = modifier,
+        topBar = {
+            TopAppBar(
+                title = { Text("Add Feed") },
+                navigationIcon = {
+                    IconButton(onClick = onBack) {
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                    }
+                },
+            )
+        },
+    ) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .padding(16.dp)
+                .verticalScroll(rememberScrollState()),
+        ) {
+            Text("Add by URL", style = MaterialTheme.typography.titleMedium)
+            OutlinedTextField(
+                value = url,
+                onValueChange = { url = it },
+                label = { Text("Feed or site URL") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            ExposedDropdownMenuBox(
+                expanded = categoryMenuExpanded,
+                onExpandedChange = { categoryMenuExpanded = it },
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                OutlinedTextField(
+                    value = categoryName,
+                    onValueChange = { categoryName = it },
+                    label = { Text("Category") },
+                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
+                )
+                ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
+                    categories.forEach { category ->
+                        DropdownMenuItem(
+                            text = { Text(category.name) },
+                            onClick = {
+                                categoryName = category.name
+                                categoryMenuExpanded = false
+                            },
+                        )
+                    }
+                }
+            }
+            Button(
+                onClick = { viewModel.addFeedByUrl(url, categoryName) },
+                enabled = uiState !is AddFeedUiState.Loading,
+                modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
+            ) {
+                Text("Add Feed")
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 24.dp))
+
+            Text("Import from OPML", style = MaterialTheme.typography.titleMedium)
+            OutlinedButton(
+                onClick = { filePickerLauncher.launch("*/*") },
+                enabled = uiState !is AddFeedUiState.Loading,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Text("Choose OPML File")
+            }
+            OutlinedTextField(
+                value = opmlUrl,
+                onValueChange = { opmlUrl = it },
+                label = { Text("Or OPML URL") },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Button(
+                onClick = { viewModel.importOpmlFromUrl(opmlUrl) },
+                enabled = uiState !is AddFeedUiState.Loading,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Text("Import from URL")
+            }
+
+            when (val state = uiState) {
+                is AddFeedUiState.Loading -> CircularProgressIndicator(modifier = Modifier.padding(top = 16.dp))
+                is AddFeedUiState.Error -> Text(
+                    text = state.message,
+                    color = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.padding(top = 16.dp),
+                )
+                else -> Unit
+            }
+        }
+    }
+}
