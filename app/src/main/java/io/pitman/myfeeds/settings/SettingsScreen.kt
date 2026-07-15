@@ -39,10 +39,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.settings.AppSettings
 import io.pitman.myfeeds.data.settings.FontSize
 import kotlinx.coroutines.launch
@@ -64,10 +67,10 @@ fun SettingsScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(stringResource(R.string.settings_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -79,12 +82,16 @@ fun SettingsScreen(
                 .padding(horizontal = 16.dp)
                 .verticalScroll(rememberScrollState()),
         ) {
-            SectionHeader("General")
+            SectionHeader(stringResource(R.string.settings_section_general))
             UpdateIntervalSetting(settings, viewModel)
-            SwitchRow("Show images", settings.enableImageDisplay, viewModel::setEnableImageDisplay)
-            SwitchRow("Default to all articles", settings.defaultToAllArticleView, viewModel::setDefaultToAllArticleView)
+            SwitchRow(stringResource(R.string.settings_show_images), settings.enableImageDisplay, viewModel::setEnableImageDisplay)
             SwitchRow(
-                "Notify on new items",
+                stringResource(R.string.settings_default_to_all_articles),
+                settings.defaultToAllArticleView,
+                viewModel::setDefaultToAllArticleView,
+            )
+            SwitchRow(
+                stringResource(R.string.settings_notify_on_new_items),
                 settings.notifyOnNewItems,
                 onCheckedChange = { enabled ->
                     viewModel.setNotifyOnNewItems(enabled)
@@ -100,34 +107,38 @@ fun SettingsScreen(
             MaxArticlesSetting(settings, viewModel)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            SectionHeader("Fonts")
-            FontSizeRow("Article font size", settings.articleFontSize, viewModel::setArticleFontSize)
-            FontSizeRow("Article list font size", settings.listFontSize, viewModel::setListFontSize)
-            FontSizeRow("Feed list font size", settings.feedListFontSize, viewModel::setFeedListFontSize)
+            SectionHeader(stringResource(R.string.settings_section_fonts))
+            FontSizeRow(stringResource(R.string.settings_article_font_size), settings.articleFontSize, viewModel::setArticleFontSize)
+            FontSizeRow(stringResource(R.string.settings_article_list_font_size), settings.listFontSize, viewModel::setListFontSize)
+            FontSizeRow(stringResource(R.string.settings_feed_list_font_size), settings.feedListFontSize, viewModel::setFeedListFontSize)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            SectionHeader("Podcasts")
+            SectionHeader(stringResource(R.string.settings_section_podcasts))
             SwitchRow(
-                "Download on battery",
+                stringResource(R.string.settings_download_on_battery),
                 settings.allowPodcastDownloadOnBattery,
                 viewModel::setAllowPodcastDownloadOnBattery,
             )
             SwitchRow(
-                "Download on cellular",
+                stringResource(R.string.settings_download_on_cellular),
                 settings.allowPodcastDownloadOnCellular,
                 viewModel::setAllowPodcastDownloadOnCellular,
             )
-            SwitchRow("Allow streaming", settings.allowPodcastStreaming, viewModel::setAllowPodcastStreaming)
+            SwitchRow(stringResource(R.string.settings_allow_streaming), settings.allowPodcastStreaming, viewModel::setAllowPodcastStreaming)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            SectionHeader("Actions")
+            SectionHeader(stringResource(R.string.settings_section_actions))
             ActionsSection(viewModel)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            SectionHeader("About")
-            Text("MyFeeds", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.padding(vertical = 4.dp))
+            SectionHeader(stringResource(R.string.settings_section_about))
             Text(
-                "An RSS/Atom feed reader and podcast client.",
+                stringResource(R.string.app_name),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(vertical = 4.dp),
+            )
+            Text(
+                stringResource(R.string.settings_about_description),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.padding(bottom = 24.dp),
@@ -161,13 +172,16 @@ private fun SwitchRow(label: String, checked: Boolean, onCheckedChange: (Boolean
 @Composable
 private fun UpdateIntervalSetting(settings: AppSettings, viewModel: SettingsViewModel) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text("Update interval: ${settings.updateIntervalMinutes} min", style = MaterialTheme.typography.bodyLarge)
+        Text(
+            stringResource(R.string.settings_update_interval, settings.updateIntervalMinutes),
+            style = MaterialTheme.typography.bodyLarge,
+        )
         Row {
             listOf(15L, 30L, 60L, 120L).forEach { minutes ->
                 FilterChip(
                     selected = settings.updateIntervalMinutes == minutes,
                     onClick = { viewModel.setUpdateIntervalMinutes(minutes) },
-                    label = { Text("${minutes}m") },
+                    label = { Text(stringResource(R.string.settings_update_interval_minutes_chip, minutes)) },
                     modifier = Modifier.padding(end = 8.dp),
                 )
             }
@@ -178,7 +192,10 @@ private fun UpdateIntervalSetting(settings: AppSettings, viewModel: SettingsView
 @Composable
 private fun MaxArticlesSetting(settings: AppSettings, viewModel: SettingsViewModel) {
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
-        Text("Max articles per feed: ${settings.maxArticles}", style = MaterialTheme.typography.bodyLarge)
+        Text(
+            stringResource(R.string.settings_max_articles_per_feed, settings.maxArticles),
+            style = MaterialTheme.typography.bodyLarge,
+        )
         Slider(
             value = settings.maxArticles.toFloat(),
             onValueChange = { viewModel.setMaxArticles(it.toInt()) },
@@ -210,6 +227,7 @@ private fun ActionsSection(viewModel: SettingsViewModel) {
     var confirmAction by remember { mutableStateOf<ConfirmableAction?>(null) }
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val exportFeedsChooserTitle = stringResource(R.string.settings_export_feeds_chooser_title)
 
     Column {
         OutlinedButton(
@@ -222,32 +240,32 @@ private fun ActionsSection(viewModel: SettingsViewModel) {
                         putExtra(Intent.EXTRA_STREAM, uri)
                         addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                     }
-                    context.startActivity(Intent.createChooser(intent, "Export feeds"))
+                    context.startActivity(Intent.createChooser(intent, exportFeedsChooserTitle))
                 }
             },
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         ) {
-            Text("Export OPML")
+            Text(stringResource(R.string.settings_export_opml))
         }
         OutlinedButton(onClick = { confirmAction = ConfirmableAction.ClearPodcasts }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("Clear podcasts")
+            Text(stringResource(R.string.settings_clear_podcasts))
         }
         OutlinedButton(onClick = { confirmAction = ConfirmableAction.AddDefaultFeeds }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("Add default feeds")
+            Text(stringResource(R.string.settings_add_default_feeds))
         }
         Button(onClick = { confirmAction = ConfirmableAction.RemoveAllFeeds }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("Remove all feeds")
+            Text(stringResource(R.string.settings_remove_all_feeds))
         }
         Button(onClick = { confirmAction = ConfirmableAction.Reset }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
-            Text("Reset settings")
+            Text(stringResource(R.string.settings_reset_settings))
         }
     }
 
     confirmAction?.let { action ->
         AlertDialog(
             onDismissRequest = { confirmAction = null },
-            title = { Text(action.title) },
-            text = { Text(action.message) },
+            title = { Text(stringResource(action.titleRes)) },
+            text = { Text(stringResource(action.messageRes)) },
             confirmButton = {
                 TextButton(onClick = {
                     when (action) {
@@ -258,19 +276,19 @@ private fun ActionsSection(viewModel: SettingsViewModel) {
                     }
                     confirmAction = null
                 }) {
-                    Text("Confirm")
+                    Text(stringResource(R.string.action_confirm))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { confirmAction = null }) { Text("Cancel") }
+                TextButton(onClick = { confirmAction = null }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }
 }
 
-private enum class ConfirmableAction(val title: String, val message: String) {
-    ClearPodcasts("Clear podcasts?", "This clears saved playback positions for downloaded episodes."),
-    AddDefaultFeeds("Add default feeds?", "This adds the bundled starter feeds to your subscriptions."),
-    RemoveAllFeeds("Remove all feeds?", "This permanently deletes every subscribed feed and its articles."),
-    Reset("Reset settings?", "This restores all settings to their defaults. Feeds are not affected."),
+private enum class ConfirmableAction(@StringRes val titleRes: Int, @StringRes val messageRes: Int) {
+    ClearPodcasts(R.string.settings_confirm_clear_podcasts_title, R.string.settings_confirm_clear_podcasts_message),
+    AddDefaultFeeds(R.string.settings_confirm_add_default_feeds_title, R.string.settings_confirm_add_default_feeds_message),
+    RemoveAllFeeds(R.string.settings_confirm_remove_all_feeds_title, R.string.settings_confirm_remove_all_feeds_message),
+    Reset(R.string.settings_confirm_reset_title, R.string.settings_confirm_reset_message),
 }

@@ -50,11 +50,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import io.pitman.myfeeds.R
 import io.pitman.myfeeds.articlelist.ArticleDateFormatter
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.playback.PlaybackUiState
@@ -74,7 +76,7 @@ fun ReaderScreen(
     if (uiState.items.isEmpty()) {
         Scaffold(modifier = modifier) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text("No article to show")
+                Text(stringResource(R.string.reader_no_article_to_show))
             }
         }
         return
@@ -98,11 +100,11 @@ fun ReaderScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("${pagerState.currentPage + 1} of ${uiState.items.size}")
+                    Text(stringResource(R.string.reader_page_position, pagerState.currentPage + 1, uiState.items.size))
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
                 actions = {
@@ -110,7 +112,7 @@ fun ReaderScreen(
                         val url = currentItem?.url ?: return@IconButton
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
                     }) {
-                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Open in browser")
+                        Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = stringResource(R.string.cd_open_in_browser))
                     }
                     IconButton(onClick = {
                         val item = currentItem ?: return@IconButton
@@ -121,7 +123,7 @@ fun ReaderScreen(
                         }
                         context.startActivity(Intent.createChooser(sendIntent, null))
                     }) {
-                        Icon(Icons.Filled.Share, contentDescription = "Share")
+                        Icon(Icons.Filled.Share, contentDescription = stringResource(R.string.cd_share))
                     }
                 },
             )
@@ -240,16 +242,16 @@ private fun PodcastPlayerControls(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             IconButton(onClick = onSkipBackward) {
-                Icon(Icons.Filled.FastRewind, contentDescription = "Rewind 15 seconds")
+                Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.cd_rewind))
             }
             IconButton(onClick = onTogglePlayPause) {
                 Icon(
                     if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = if (isPlaying) "Pause" else "Play",
+                    contentDescription = stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play),
                 )
             }
             IconButton(onClick = onSkipForward) {
-                Icon(Icons.Filled.FastForward, contentDescription = "Forward 30 seconds")
+                Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.cd_forward))
             }
             when {
                 isDownloading -> {
@@ -268,12 +270,12 @@ private fun PodcastPlayerControls(
                 }
                 isDownloaded -> {
                     IconButton(onClick = onDelete) {
-                        Icon(Icons.Filled.Delete, contentDescription = "Delete download")
+                        Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_delete_download))
                     }
                 }
                 else -> {
                     IconButton(onClick = onDownload) {
-                        Icon(Icons.Filled.Download, contentDescription = "Download episode")
+                        Icon(Icons.Filled.Download, contentDescription = stringResource(R.string.cd_download_episode))
                     }
                 }
             }

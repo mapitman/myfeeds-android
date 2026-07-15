@@ -82,8 +82,14 @@ class FeedRefreshWorker @AssistedInject constructor(
         )
         val notification = NotificationCompat.Builder(applicationContext, MyFeedsApp.NEW_ITEMS_CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
-            .setContentTitle("New articles")
-            .setContentText("$newItemCount new article${if (newItemCount == 1) "" else "s"}")
+            .setContentTitle(applicationContext.getString(R.string.notification_new_items_title))
+            .setContentText(
+                applicationContext.resources.getQuantityString(
+                    R.plurals.notification_new_items_body,
+                    newItemCount,
+                    newItemCount,
+                ),
+            )
             .setContentIntent(contentIntent)
             .setAutoCancel(true)
             .build()

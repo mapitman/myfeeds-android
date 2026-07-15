@@ -26,8 +26,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.pitman.myfeeds.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -48,10 +50,10 @@ fun FeedPropertiesScreen(
         modifier = modifier,
         topBar = {
             TopAppBar(
-                title = { Text("Feed properties") },
+                title = { Text(stringResource(R.string.feed_properties_title)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                     }
                 },
             )
@@ -61,7 +63,7 @@ fun FeedPropertiesScreen(
             OutlinedTextField(
                 value = titleField ?: uiState.displayTitle,
                 onValueChange = { titleField = it },
-                label = { Text("Title") },
+                label = { Text(stringResource(R.string.feed_properties_title_label)) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
             )
@@ -69,12 +71,12 @@ fun FeedPropertiesScreen(
                 onClick = { titleField?.let(viewModel::setTitle) },
                 modifier = Modifier.padding(top = 8.dp),
             ) {
-                Text("Save title")
+                Text(stringResource(R.string.feed_properties_save_title))
             }
 
             val useGlobalMax = uiState.itemsToKeep == null
             Text(
-                text = "Use global max articles setting (${uiState.globalMaxArticles})",
+                text = stringResource(R.string.feed_properties_use_global_max, uiState.globalMaxArticles),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 24.dp),
             )
@@ -86,7 +88,10 @@ fun FeedPropertiesScreen(
             )
             if (!useGlobalMax) {
                 val itemsToKeep = uiState.itemsToKeep ?: uiState.globalMaxArticles
-                Text("Max articles for this feed: $itemsToKeep", style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.feed_properties_max_articles_for_feed, itemsToKeep),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
                 Slider(
                     value = itemsToKeep.toFloat(),
                     onValueChange = { viewModel.setItemsToKeep(it.toInt()) },
@@ -96,7 +101,7 @@ fun FeedPropertiesScreen(
             }
 
             Text(
-                text = "Auto-download new episodes",
+                text = stringResource(R.string.feed_properties_auto_download),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(top = 24.dp),
             )
@@ -109,7 +114,7 @@ fun FeedPropertiesScreen(
                 onClick = { showUnsubscribeConfirm = true },
                 modifier = Modifier.padding(top = 32.dp).fillMaxWidth(),
             ) {
-                Text("Unsubscribe")
+                Text(stringResource(R.string.feed_properties_unsubscribe))
             }
         }
     }
@@ -117,18 +122,18 @@ fun FeedPropertiesScreen(
     if (showUnsubscribeConfirm) {
         AlertDialog(
             onDismissRequest = { showUnsubscribeConfirm = false },
-            title = { Text("Unsubscribe from this feed?") },
-            text = { Text("This permanently deletes the feed and its articles.") },
+            title = { Text(stringResource(R.string.feed_properties_confirm_unsubscribe_title)) },
+            text = { Text(stringResource(R.string.feed_properties_confirm_unsubscribe_message)) },
             confirmButton = {
                 TextButton(onClick = {
                     showUnsubscribeConfirm = false
                     viewModel.unsubscribe()
                 }) {
-                    Text("Unsubscribe")
+                    Text(stringResource(R.string.feed_properties_unsubscribe))
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showUnsubscribeConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showUnsubscribeConfirm = false }) { Text(stringResource(R.string.action_cancel)) }
             },
         )
     }

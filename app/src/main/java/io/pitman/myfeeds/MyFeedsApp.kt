@@ -21,9 +21,9 @@ class MyFeedsApp : Application(), Configuration.Provider {
         super.onCreate()
         val channel = NotificationChannel(
             NEW_ITEMS_CHANNEL_ID,
-            "New articles",
+            getString(R.string.notification_new_items_channel_name),
             NotificationManager.IMPORTANCE_DEFAULT,
-        ).apply { description = "Notifies when a feed refresh finds new articles" }
+        ).apply { description = getString(R.string.notification_new_items_channel_description) }
         getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 

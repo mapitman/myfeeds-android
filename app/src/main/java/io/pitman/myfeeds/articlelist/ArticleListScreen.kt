@@ -33,10 +33,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
+import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.local.FeedItem
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -54,21 +56,21 @@ fun ArticleListScreen(
         topBar = {
             if (uiState.isSelectionMode) {
                 TopAppBar(
-                    title = { Text("${uiState.selectedIds.size} selected") },
+                    title = { Text(stringResource(R.string.article_list_selected, uiState.selectedIds.size)) },
                     navigationIcon = {
                         IconButton(onClick = viewModel::clearSelection) {
-                            Icon(Icons.Filled.Close, contentDescription = "Clear selection")
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_clear_selection))
                         }
                     },
                     actions = {
                         IconButton(onClick = { viewModel.markSelectedRead(true) }) {
-                            Icon(Icons.Filled.Done, contentDescription = "Mark read")
+                            Icon(Icons.Filled.Done, contentDescription = stringResource(R.string.cd_mark_read))
                         }
                         IconButton(onClick = { viewModel.markSelectedRead(false) }) {
-                            Icon(Icons.Filled.Refresh, contentDescription = "Mark unread")
+                            Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.cd_mark_unread))
                         }
                         IconButton(onClick = viewModel::deleteSelected) {
-                            Icon(Icons.Filled.Delete, contentDescription = "Delete")
+                            Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_delete))
                         }
                     },
                 )
@@ -78,14 +80,14 @@ fun ArticleListScreen(
                         Column {
                             Text(uiState.feedTitle)
                             Text(
-                                text = "${uiState.unreadCount} unread",
+                                text = stringResource(R.string.article_list_unread_count, uiState.unreadCount),
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         }
                     },
                     navigationIcon = {
                         IconButton(onClick = onBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
                         }
                     },
                 )
@@ -98,12 +100,12 @@ fun ArticleListScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { viewModel.setShowUnreadOnly(true) },
-                    text = { Text("Unread") },
+                    text = { Text(stringResource(R.string.article_list_tab_unread)) },
                 )
                 Tab(
                     selected = selectedTab == 1,
                     onClick = { viewModel.setShowUnreadOnly(false) },
-                    text = { Text("All") },
+                    text = { Text(stringResource(R.string.article_list_tab_all)) },
                 )
             }
             LazyColumn(modifier = Modifier.fillMaxSize()) {
