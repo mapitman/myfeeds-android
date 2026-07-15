@@ -3,6 +3,7 @@ package io.pitman.myfeeds.addfeed
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.data.directory.FeedDirectory
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
@@ -76,6 +77,7 @@ class AddFeedViewModelTest {
             categoryDao = db.categoryDao(),
             opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
             httpClient = httpClient,
+            feedDirectory = FeedDirectory(context),
             context = context,
         )
         viewModelStore.put("addFeed", viewModel)

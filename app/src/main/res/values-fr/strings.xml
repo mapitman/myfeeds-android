@@ -91,6 +91,10 @@
     <string name="add_feed_could_not_load_opml">Impossible de charger l\'OPML depuis %1$s</string>
     <string name="add_feed_imported_count">%1$d flux importés</string>
     <string name="add_feed_no_feeds_found_in_opml">Aucun flux trouvé dans l\'OPML</string>
+    <string name="add_feed_search_heading">Rechercher dans le répertoire de flux</string>
+    <string name="add_feed_search_label">Rechercher par thème ou titre</string>
+    <string name="add_feed_search_no_results">Aucun flux trouvé</string>
+    <string name="add_feed_search_add_button">Ajouter</string>
 
     <!-- Feed properties -->
     <string name="feed_properties_title">Propriétés du flux</string>
