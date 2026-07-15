@@ -30,6 +30,7 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
             allowPodcastDownloadOnCellular = prefs[Keys.ALLOW_PODCAST_DOWNLOAD_ON_CELLULAR]
                 ?: AppSettings().allowPodcastDownloadOnCellular,
             allowPodcastStreaming = prefs[Keys.ALLOW_PODCAST_STREAMING] ?: AppSettings().allowPodcastStreaming,
+            notifyOnNewItems = prefs[Keys.NOTIFY_ON_NEW_ITEMS] ?: AppSettings().notifyOnNewItems,
             lastImportUrl = prefs[Keys.LAST_IMPORT_URL],
             lastFeedUpdateEpochMillis = prefs[Keys.LAST_FEED_UPDATE_EPOCH_MILLIS],
         )
@@ -79,6 +80,10 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
         dataStore.edit { it[Keys.ALLOW_PODCAST_STREAMING] = value }
     }
 
+    suspend fun setNotifyOnNewItems(value: Boolean) {
+        dataStore.edit { it[Keys.NOTIFY_ON_NEW_ITEMS] = value }
+    }
+
     suspend fun setLastImportUrl(url: String?) {
         dataStore.edit {
             if (url == null) it.remove(Keys.LAST_IMPORT_URL) else it[Keys.LAST_IMPORT_URL] = url
@@ -106,6 +111,7 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
         val ALLOW_PODCAST_DOWNLOAD_ON_BATTERY = booleanPreferencesKey("allow_podcast_download_on_battery")
         val ALLOW_PODCAST_DOWNLOAD_ON_CELLULAR = booleanPreferencesKey("allow_podcast_download_on_cellular")
         val ALLOW_PODCAST_STREAMING = booleanPreferencesKey("allow_podcast_streaming")
+        val NOTIFY_ON_NEW_ITEMS = booleanPreferencesKey("notify_on_new_items")
         val LAST_IMPORT_URL = stringPreferencesKey("last_import_url")
         val LAST_FEED_UPDATE_EPOCH_MILLIS = longPreferencesKey("last_feed_update_epoch_millis")
     }

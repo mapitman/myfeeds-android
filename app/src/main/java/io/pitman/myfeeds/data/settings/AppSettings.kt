@@ -17,6 +17,7 @@ data class AppSettings(
     val allowPodcastDownloadOnBattery: Boolean = false,
     val allowPodcastDownloadOnCellular: Boolean = false,
     val allowPodcastStreaming: Boolean = true,
+    val notifyOnNewItems: Boolean = false,
     val lastImportUrl: String? = null,
     val lastFeedUpdateEpochMillis: Long? = null,
 )
