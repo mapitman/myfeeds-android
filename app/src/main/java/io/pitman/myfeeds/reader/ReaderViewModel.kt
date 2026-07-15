@@ -26,9 +26,6 @@ data class ReaderUiState(
     val feedTitle: String? = null,
 )
 
-private const val SKIP_FORWARD_MS = 30_000L
-private const val SKIP_BACKWARD_MS = 15_000L
-
 @HiltViewModel
 class ReaderViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
@@ -92,16 +89,6 @@ class ReaderViewModel @Inject constructor(
 
     fun seekTo(positionMs: Long) {
         playbackController.seekTo(positionMs)
-    }
-
-    fun skipForward() {
-        val playback = playbackState.value
-        playbackController.seekTo((playback.positionMs + SKIP_FORWARD_MS).coerceAtMost(playback.durationMs))
-    }
-
-    fun skipBackward() {
-        val playback = playbackState.value
-        playbackController.seekTo((playback.positionMs - SKIP_BACKWARD_MS).coerceAtLeast(0L))
     }
 
     fun downloadEnclosure(item: FeedItem) {

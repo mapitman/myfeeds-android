@@ -1,0 +1,34 @@
+package io.pitman.myfeeds.playback
+
+import androidx.lifecycle.ViewModel
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.StateFlow
+import javax.inject.Inject
+
+/**
+ * Activity-scoped wrapper around [PlaybackController.uiState] for the persistent mini-player
+ * (issue #66) -- separate from [io.pitman.myfeeds.reader.ReaderViewModel] since the mini-player
+ * lives outside the reader's SavedStateHandle-scoped feedId/itemId and only needs play/pause/skip/stop.
+ */
+@HiltViewModel
+class MiniPlayerViewModel @Inject constructor(
+    private val playbackController: PlaybackController,
+) : ViewModel() {
+    val playbackState: StateFlow<PlaybackUiState> = playbackController.uiState
+
+    fun togglePlayPause() {
+        if (playbackState.value.isPlaying) playbackController.pause() else playbackController.resume()
+    }
+
+    fun skipForward() {
+        playbackController.skipForward()
+    }
+
+    fun skipBackward() {
+        playbackController.skipBackward()
+    }
+
+    fun stop() {
+        playbackController.stop()
+    }
+}

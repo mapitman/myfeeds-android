@@ -20,9 +20,15 @@ import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val SKIP_FORWARD_MS = 30_000L
+private const val SKIP_BACKWARD_MS = 15_000L
+
 data class PlaybackUiState(
     val currentItemId: String? = null,
+    val feedId: Long? = null,
+    val title: String? = null,
     val isPlaying: Boolean = false,
+    val isBuffering: Boolean = false,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val isEnded: Boolean = false,
@@ -41,6 +47,11 @@ class PlaybackController @Inject constructor(
 ) {
     private var controller: MediaController? = null
 
+    // Media3's MediaItem/MediaMetadata have no first-class "feedId" field, so it's tracked
+    // alongside the controller and folded into PlaybackUiState -- the mini-player (issue #66)
+    // needs it to navigate to the reader route ("reader/{feedId}/{itemId}") on tap.
+    private var currentFeedId: Long? = null
+
     private val _uiState = MutableStateFlow(PlaybackUiState())
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
 
@@ -48,7 +59,10 @@ class PlaybackController @Inject constructor(
         override fun onEvents(player: Player, events: Player.Events) {
             _uiState.value = PlaybackUiState(
                 currentItemId = player.currentMediaItem?.mediaId,
+                feedId = currentFeedId,
+                title = player.currentMediaItem?.mediaMetadata?.title?.toString(),
                 isPlaying = player.isPlaying,
+                isBuffering = player.playbackState == Player.STATE_BUFFERING,
                 positionMs = player.currentPosition,
                 durationMs = player.duration.coerceAtLeast(0L),
                 isEnded = player.playbackState == Player.STATE_ENDED,
@@ -93,6 +107,7 @@ class PlaybackController @Inject constructor(
             )
             .build()
 
+        currentFeedId = item.feedId
         connect { controller ->
             controller.setMediaItem(mediaItem, item.enclosurePosition?.let { (it * 1000).toLong() } ?: 0L)
             controller.prepare()
@@ -113,8 +128,25 @@ class PlaybackController @Inject constructor(
         controller?.seekTo(positionMs)
     }
 
+    // Shared by the reader's inline controls and the mini-player (issue #66) so both skip by the
+    // same amount rather than each view re-implementing the offset/clamping logic.
+    fun skipForward() {
+        val playback = uiState.value
+        seekTo((playback.positionMs + SKIP_FORWARD_MS).coerceAtMost(playback.durationMs))
+    }
+
+    fun skipBackward() {
+        val playback = uiState.value
+        seekTo((playback.positionMs - SKIP_BACKWARD_MS).coerceAtLeast(0L))
+    }
+
     fun stop() {
+        // Player.stop() alone halts playback but retains currentMediaItem, which would leave
+        // the mini-player (issue #66) stuck on-screen -- clearMediaItems() is what actually
+        // drops it so currentItemId (and therefore mini-player visibility) goes back to null.
         controller?.stop()
+        controller?.clearMediaItems()
+        currentFeedId = null
     }
 
     fun release() {

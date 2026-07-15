@@ -22,8 +22,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -139,8 +137,6 @@ fun ReaderScreen(
                 playbackState = playbackState,
                 onTogglePlayPause = { viewModel.togglePlayPause(uiState.items[page]) },
                 onSeek = viewModel::seekTo,
-                onSkipForward = viewModel::skipForward,
-                onSkipBackward = viewModel::skipBackward,
                 onDownload = { viewModel.downloadEnclosure(uiState.items[page]) },
                 onDelete = { viewModel.deleteDownload(uiState.items[page]) },
             )
@@ -160,8 +156,6 @@ private fun ArticlePage(
     playbackState: PlaybackUiState,
     onTogglePlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
-    onSkipForward: () -> Unit,
-    onSkipBackward: () -> Unit,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -186,8 +180,6 @@ private fun ArticlePage(
                 enclosureLength = item.enclosureLength,
                 onTogglePlayPause = onTogglePlayPause,
                 onSeek = onSeek,
-                onSkipForward = onSkipForward,
-                onSkipBackward = onSkipBackward,
                 onDownload = onDownload,
                 onDelete = onDelete,
             )
@@ -216,13 +208,14 @@ private fun PodcastPlayerControls(
     enclosureLength: Long?,
     onTogglePlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
-    onSkipForward: () -> Unit,
-    onSkipBackward: () -> Unit,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    val positionMs = if (isCurrentItem) playbackState.positionMs else 0L
+    // Duration is unknown (0) until the stream actually starts buffering in; positionMs can
+    // already reflect a pending resume-seek target at that point (e.g. resuming a partially
+    // played episode), which would overflow the slider's 0..1 fallback range and render as full.
     val durationMs = if (isCurrentItem) playbackState.durationMs else 0L
+    val positionMs = if (isCurrentItem && durationMs > 0) playbackState.positionMs else 0L
     val isPlaying = isCurrentItem && playbackState.isPlaying
     val isDownloaded = downloadedFilePath != null
     val isDownloading = !isDownloaded && downloadedBytes != null
@@ -245,17 +238,15 @@ private fun PodcastPlayerControls(
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            IconButton(onClick = onSkipBackward) {
-                Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.cd_rewind))
-            }
             IconButton(onClick = onTogglePlayPause) {
-                Icon(
-                    if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                    contentDescription = stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play),
-                )
-            }
-            IconButton(onClick = onSkipForward) {
-                Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.cd_forward))
+                if (isCurrentItem && playbackState.isBuffering) {
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(
+                        if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play),
+                    )
+                }
             }
             when {
                 isDownloading -> {
