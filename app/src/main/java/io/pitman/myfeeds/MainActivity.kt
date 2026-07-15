@@ -4,6 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.glance.appwidget.GlanceAppWidgetManager
+import androidx.glance.appwidget.updateAll
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -20,6 +22,7 @@ import io.pitman.myfeeds.reader.ReaderScreen
 import io.pitman.myfeeds.refresh.FeedRefreshScheduler
 import io.pitman.myfeeds.settings.SettingsScreen
 import io.pitman.myfeeds.ui.theme.MyFeedsTheme
+import io.pitman.myfeeds.widget.UnreadWidget
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -45,10 +48,19 @@ class MainActivity : ComponentActivity() {
             feedRefreshScheduler.schedule(settingsDataStore.settings.first().updateIntervalMinutes)
         }
 
+        // Refreshes the home-screen widget's unread counts on every app launch (issue #24); the
+        // other trigger is FeedRefreshWorker completing a scheduled background refresh.
+        lifecycleScope.launch { UnreadWidget().updateAll(applicationContext) }
+
+        val startDestination = intent.getLongExtra(WIDGET_FEED_ID_EXTRA, -1L)
+            .takeIf { it >= 0 }
+            ?.let { feedId -> "articleList/$feedId" }
+            ?: "feedList"
+
         setContent {
             MyFeedsTheme {
                 val navController = rememberNavController()
-                NavHost(navController = navController, startDestination = "feedList") {
+                NavHost(navController = navController, startDestination = startDestination) {
                     composable("feedList") {
                         FeedListScreen(
                             onAddFeedClick = { navController.navigate("addFeed") },
@@ -94,5 +106,11 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    companion object {
+        /** Matches [io.pitman.myfeeds.widget.FeedIdParam]'s key name -- Glance's actionStartActivity
+         * puts ActionParameters into the launch Intent's extras keyed by parameter name. */
+        const val WIDGET_FEED_ID_EXTRA = "feedId"
     }
 }

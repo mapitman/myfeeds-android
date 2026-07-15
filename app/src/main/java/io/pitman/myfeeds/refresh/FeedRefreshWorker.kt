@@ -1,6 +1,7 @@
 package io.pitman.myfeeds.refresh
 
 import android.content.Context
+import androidx.glance.appwidget.updateAll
 import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
@@ -10,6 +11,7 @@ import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.feed.FeedUpdateResult
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
+import io.pitman.myfeeds.widget.UnreadWidget
 import kotlinx.coroutines.flow.first
 
 /**
@@ -19,6 +21,8 @@ import kotlinx.coroutines.flow.first
  *
  * User-requested addition (issue #23): for feeds flagged with `autoDownloadEnabled`, newly
  * ingested items with an enclosure are queued for background download.
+ *
+ * Also refreshes the home-screen widget's unread counts (issue #24) once the run completes.
  */
 @HiltWorker
 class FeedRefreshWorker @AssistedInject constructor(
@@ -41,6 +45,7 @@ class FeedRefreshWorker @AssistedInject constructor(
                 if (item.enclosureUrl != null) downloadRepository.startDownload(item)
             }
 
+        UnreadWidget().updateAll(applicationContext)
         return Result.success()
     }
 }
