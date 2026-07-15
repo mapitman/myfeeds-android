@@ -24,6 +24,7 @@ data class PlaybackUiState(
     val isPlaying: Boolean = false,
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
+    val isEnded: Boolean = false,
 )
 
 /**
@@ -49,6 +50,7 @@ class PlaybackController @Inject constructor(
                 isPlaying = player.isPlaying,
                 positionMs = player.currentPosition,
                 durationMs = player.duration.coerceAtLeast(0L),
+                isEnded = player.playbackState == Player.STATE_ENDED,
             )
         }
     }

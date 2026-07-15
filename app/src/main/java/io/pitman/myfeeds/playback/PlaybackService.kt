@@ -72,7 +72,12 @@ class PlaybackService : MediaSessionService() {
                 startPositionSaveLoop()
             } else {
                 positionSaveJob?.cancel()
-                saveCurrentPosition()
+                // Skip the final save on end-of-track: onPlaybackStateChanged's STATE_ENDED
+                // branch below already clears the position, and this callback can otherwise fire
+                // after it and overwrite the clear with the last (near-duration) position.
+                if (player.playbackState != Player.STATE_ENDED) {
+                    saveCurrentPosition()
+                }
             }
         }
 

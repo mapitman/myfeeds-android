@@ -11,6 +11,8 @@ import io.pitman.myfeeds.playback.PlaybackUiState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -42,6 +44,29 @@ class ReaderViewModel @Inject constructor(
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReaderUiState())
 
     val playbackState: StateFlow<PlaybackUiState> = playbackController.uiState
+
+    init {
+        // Ported from AudioPlayer.cs TrackEnded, which advanced to PlayList.GetNextTrack(): when
+        // the currently playing item in this reader session finishes, start the next one in the
+        // list (already ordered newest-first, matching the article pager).
+        viewModelScope.launch {
+            playbackState
+                .map { it.isEnded to it.currentItemId }
+                .distinctUntilChanged()
+                .collect { (isEnded, itemId) ->
+                    if (isEnded && itemId != null) advanceToNextItem(itemId)
+                }
+        }
+    }
+
+    private fun advanceToNextItem(finishedItemId: String) {
+        val items = uiState.value.items
+        val index = items.indexOfFirst { it.id == finishedItemId }
+        if (index == -1) return
+        val next = items.getOrNull(index + 1) ?: return
+        if (next.enclosureUrl == null) return
+        viewModelScope.launch { playbackController.play(next, uiState.value.feedTitle) }
+    }
 
     fun markRead(itemId: String) {
         viewModelScope.launch { feedRepository.markRead(itemId, true) }
