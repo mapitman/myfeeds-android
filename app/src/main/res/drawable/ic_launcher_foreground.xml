@@ -1,4 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Standard RSS-feed glyph (dot + two quarter-circle signal arcs), white on transparent, for
+     use as the adaptive launcher icon foreground and the splash screen icon. Drawn within the
+     center ~66dp "safe zone" of the 108dp viewport so it isn't clipped by adaptive icon masking.
+     See Marketing/ApplicationIcon.png in myfeeds-winphone for the source branding this mirrors. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp"
     android:height="108dp"
@@ -6,5 +10,7 @@
     android:viewportHeight="108">
     <path
         android:fillColor="#FFFFFF"
-        android:pathData="M54,24 C37.4,24 24,37.4 24,54 C24,70.6 37.4,84 54,84 C70.6,84 84,70.6 84,54 L74,54 C74,65.05 65.05,74 54,74 C42.95,74 34,65.05 34,54 C34,42.95 42.95,34 54,34 C59.5,34 64.48,36.24 68.07,39.86 L60.83,47.1 L82,50.5 L78.6,29.34 L71.14,36.8 C65.98,29.32 60.55,24 54,24 Z" />
+        android:pathData="M27,74 A7,7 0 1,0 41,74 A7,7 0 1,0 27,74 Z
+                           M55,74 A21,21 0 0,0 34,53 L34,60 A14,14 0 0,1 48,74 Z
+                           M69,74 A35,35 0 0,0 34,39 L34,46 A28,28 0 0,1 62,74 Z" />
 </vector>

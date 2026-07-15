@@ -1,3 +1,12 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.MyFeeds" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Shown while the app is cold-starting, before installSplashScreen() hands control back to
+         Theme.MyFeeds in MainActivity.onCreate(). Uses the same brand orange and RSS glyph as the
+         launcher icon; see ic_launcher_foreground.xml and colors.xml#splash_background. -->
+    <style name="Theme.MyFeeds.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/Theme.MyFeeds</item>
+    </style>
 </resources>
