@@ -71,10 +71,20 @@ class EnclosureDownloadRepositoryTest {
         db.close()
     }
 
-    private suspend fun seedFeedAndItem(enclosureUrl: String?): Long {
+    private suspend fun seedFeedAndItem(enclosureUrl: String?, enclosureType: String? = "audio/mpeg"): Long {
         val categoryId = db.categoryDao().insert(Category(name = "Tech"))
         val id = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
-        repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = id, itemGuid = "g1", enclosureUrl = enclosureUrl)))
+        repository.upsertItems(
+            listOf(
+                FeedItem(
+                    id = "item-1",
+                    feedId = id,
+                    itemGuid = "g1",
+                    enclosureUrl = enclosureUrl,
+                    enclosureType = enclosureUrl?.let { enclosureType },
+                ),
+            ),
+        )
         return id
     }
 
@@ -93,6 +103,17 @@ class EnclosureDownloadRepositoryTest {
     @Test
     fun startDownload_noEnclosureUrl_doesNothing() = runTest {
         seedFeedAndItem(enclosureUrl = null)
+        val item = repository.getItem("item-1")!!
+
+        downloadRepository.startDownload(item)
+
+        assertTrue(enqueuedCalls.isEmpty())
+    }
+
+    @Test
+    fun startDownload_nonAudioEnclosure_doesNothing() = runTest {
+        // e.g. a featured-image enclosure on a plain article, not a podcast episode.
+        seedFeedAndItem("https://example.com/cover.jpg", enclosureType = "image/jpeg")
         val item = repository.getItem("item-1")!!
 
         downloadRepository.startDownload(item)

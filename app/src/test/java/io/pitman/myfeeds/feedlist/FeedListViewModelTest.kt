@@ -86,7 +86,13 @@ class FeedListViewModelTest {
         val articleFeedId = repository.subscribe(Feed(categoryId = categoryId, title = "Article Feed"))
         repository.upsertItems(
             listOf(
-                FeedItem(id = "ep-1", feedId = podcastFeedId, itemGuid = "g1", enclosureUrl = "https://example.com/ep1.mp3"),
+                FeedItem(
+                    id = "ep-1",
+                    feedId = podcastFeedId,
+                    itemGuid = "g1",
+                    enclosureUrl = "https://example.com/ep1.mp3",
+                    enclosureType = "audio/mpeg",
+                ),
                 FeedItem(id = "art-1", feedId = articleFeedId, itemGuid = "g2"),
             ),
         )

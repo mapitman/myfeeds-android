@@ -1,6 +1,7 @@
 package io.pitman.myfeeds.download
 
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.flow.first
@@ -14,7 +15,7 @@ class EnclosureDownloadRepository @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
 ) {
     suspend fun startDownload(item: FeedItem) {
-        if (item.enclosureUrl == null) return
+        if (!item.isPodcastEpisode) return
         val settings = settingsDataStore.settings.first()
         downloadScheduling.enqueueDownload(
             itemId = item.id,

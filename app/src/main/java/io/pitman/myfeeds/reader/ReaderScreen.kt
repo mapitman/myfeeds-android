@@ -57,6 +57,7 @@ import coil.compose.AsyncImage
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.articlelist.ArticleDateFormatter
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.settings.scaleFactor
 import io.pitman.myfeeds.playback.PlaybackUiState
 import kotlinx.coroutines.flow.distinctUntilChanged
@@ -171,7 +172,7 @@ private fun ArticlePage(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(horizontal = 16.dp),
         )
-        if (item.enclosureUrl != null) {
+        if (item.isPodcastEpisode) {
             PodcastPlayerControls(
                 isCurrentItem = playbackState.currentItemId == item.id,
                 playbackState = playbackState,

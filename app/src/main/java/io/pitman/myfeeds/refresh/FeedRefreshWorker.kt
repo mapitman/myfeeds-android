@@ -18,6 +18,7 @@ import io.pitman.myfeeds.MyFeedsApp
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.feed.FeedUpdateResult
+import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
@@ -61,7 +62,7 @@ class FeedRefreshWorker @AssistedInject constructor(
             .flatMap { it.newItemIds }
             .forEach { itemId ->
                 val item = feedRepository.getItem(itemId) ?: return@forEach
-                if (item.enclosureUrl != null) downloadRepository.startDownload(item)
+                if (item.isPodcastEpisode) downloadRepository.startDownload(item)
             }
 
         UnreadWidget().updateAll(applicationContext)

@@ -46,3 +46,13 @@ data class FeedItem(
     val downloadedBytes: Long? = null,
     val downloadedFilePath: String? = null,
 )
+
+/**
+ * Whether this item is a playable podcast episode, as opposed to a plain article whose feed
+ * happens to set `<enclosure>` for something else (commonly a featured image -- e.g. Windows
+ * Central and Sky News both publish `type="image/jpeg"` enclosures on ordinary articles). Podcast
+ * RSS/Atom enclosures set a MIME type starting with `audio/`; that's the actual signal, not
+ * enclosure presence alone.
+ */
+val FeedItem.isPodcastEpisode: Boolean
+    get() = enclosureUrl != null && enclosureType?.startsWith("audio/", ignoreCase = true) == true
