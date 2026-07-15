@@ -11,3 +11,11 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("ALTER TABLE feed_items ADD COLUMN downloadedFilePath TEXT")
     }
 }
+
+/** Stores parsed `itunes:duration` per episode (issue #75), so the reader can show a saved resume
+ *  position proportionally without needing to buffer the episode first. */
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE feed_items ADD COLUMN enclosureDurationMs INTEGER")
+    }
+}

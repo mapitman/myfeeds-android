@@ -176,6 +176,8 @@ private fun ArticlePage(
             PodcastPlayerControls(
                 isCurrentItem = playbackState.currentItemId == item.id,
                 playbackState = playbackState,
+                savedPositionMs = item.enclosurePosition?.let { (it * 1000).toLong() },
+                savedDurationMs = item.enclosureDurationMs,
                 downloadedFilePath = item.downloadedFilePath,
                 downloadedBytes = item.downloadedBytes,
                 enclosureLength = item.enclosureLength,
@@ -204,6 +206,8 @@ private fun ArticlePage(
 private fun PodcastPlayerControls(
     isCurrentItem: Boolean,
     playbackState: PlaybackUiState,
+    savedPositionMs: Long?,
+    savedDurationMs: Long?,
     downloadedFilePath: String?,
     downloadedBytes: Long?,
     enclosureLength: Long?,
@@ -212,11 +216,23 @@ private fun PodcastPlayerControls(
     onDownload: () -> Unit,
     onDelete: () -> Unit,
 ) {
-    // Duration is unknown (0) until the stream actually starts buffering in; positionMs can
-    // already reflect a pending resume-seek target at that point (e.g. resuming a partially
-    // played episode), which would overflow the slider's 0..1 fallback range and render as full.
-    val durationMs = if (isCurrentItem) playbackState.durationMs else 0L
-    val positionMs = if (isCurrentItem && durationMs > 0) playbackState.positionMs else 0L
+    // While actively loaded *and* the player has a real duration, show the live player position.
+    // Otherwise -- not yet played this session, still buffering, or the mini-player was dismissed
+    // (issue #75) -- fall back to the saved resume position/duration (itunes:duration, where the
+    // feed provides it) so progress doesn't visually reset to 0:00. If duration truly isn't known
+    // (feed has no itunes:duration and playback hasn't buffered in), stay at 0 rather than
+    // overflowing the slider's fallback range with a positionMs the duration can't yet bound.
+    val hasLiveDuration = isCurrentItem && playbackState.durationMs > 0
+    val durationMs = when {
+        hasLiveDuration -> playbackState.durationMs
+        savedDurationMs != null && savedDurationMs > 0 -> savedDurationMs
+        else -> 0L
+    }
+    val positionMs = when {
+        hasLiveDuration -> playbackState.positionMs
+        durationMs > 0 -> (savedPositionMs ?: 0L).coerceIn(0L, durationMs)
+        else -> 0L
+    }
     val isPlaying = isCurrentItem && playbackState.isPlaying
     val isDownloaded = downloadedFilePath != null
     val isDownloading = !isDownloaded && downloadedBytes != null
@@ -226,6 +242,7 @@ private fun PodcastPlayerControls(
             value = positionMs.toFloat(),
             onValueChange = { onSeek(it.toLong()) },
             valueRange = 0f..durationMs.coerceAtLeast(1L).toFloat(),
+            enabled = isCurrentItem,
         )
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -281,9 +298,14 @@ private fun PodcastPlayerControls(
 
 private fun formatDuration(millis: Long): String {
     val totalSeconds = millis / 1000
-    val minutes = totalSeconds / 60
+    val hours = totalSeconds / 3600
+    val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
-    return "%d:%02d".format(minutes, seconds)
+    return if (hours > 0) {
+        "%d:%02d:%02d".format(hours, minutes, seconds)
+    } else {
+        "%d:%02d".format(minutes, seconds)
+    }
 }
 
 @Composable

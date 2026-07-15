@@ -63,6 +63,7 @@ class FeedUpdateEngine @Inject constructor(
                 enclosureType = parsedItem.enclosure?.type,
                 enclosureLength = parsedItem.enclosure?.length,
                 enclosurePosition = existing?.enclosurePosition,
+                enclosureDurationMs = parsedItem.durationMs,
             )
             feedRepository.upsertItems(listOf(entity))
             if (existing == null) newItemIds += id

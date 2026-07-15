@@ -56,6 +56,44 @@ class FeedParserTest {
     }
 
     @Test
+    fun parseRss_itunesDurationParsedToMillis() {
+        val feed = FeedParser.parse(fixture("rss-podcast.xml"))!!
+
+        // <itunes:duration>2:19:36</itunes:duration> -- 2h19m36s
+        assertEquals(8_376_000L, feed.items.single().durationMs)
+    }
+
+    @Test
+    fun parseRss_itunesDurationAcceptsMinutesSecondsAndPlainSeconds() {
+        assertEquals(1_176_000L, parseSingleItemDuration("19:36"))
+        assertEquals(8_396_000L, parseSingleItemDuration("8396"))
+    }
+
+    @Test
+    fun parseRss_itunesDurationMissingIsNull() {
+        assertNull(parseSingleItemDuration(null))
+    }
+
+    private fun parseSingleItemDuration(duration: String?): Long? {
+        val durationTag = duration?.let { "<itunes:duration>$it</itunes:duration>" }.orEmpty()
+        val xml = """
+            <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+              <channel>
+                <title>Test</title>
+                <item>
+                  <title>Item</title>
+                  <link>https://example.com/item</link>
+                  <guid>item-1</guid>
+                  <enclosure url="https://example.com/item.mp3" type="audio/mpeg" length="1" />
+                  $durationTag
+                </item>
+              </channel>
+            </rss>
+        """.trimIndent()
+        return FeedParser.parse(xml)!!.items.single().durationMs
+    }
+
+    @Test
     fun parseAtom_prefersContentOverSummaryInDocumentOrder() {
         val feed = FeedParser.parse(fixture("atom.xml"))!!
 
