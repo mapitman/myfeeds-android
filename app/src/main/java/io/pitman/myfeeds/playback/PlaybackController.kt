@@ -88,8 +88,25 @@ class PlaybackController @Inject constructor(
 
     private val playerListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
-            _uiState.value = snapshotState(player)
+            if (player.playbackState == Player.STATE_ENDED) {
+                handlePlaybackEnded(player)
+            } else {
+                _uiState.value = snapshotState(player)
+            }
         }
+    }
+
+    /**
+     * On completion the episode is no longer "current" (issue #107): position resets, the item
+     * stops being treated as playing, and the mini-player disappears -- the same as an explicit
+     * [stop], just triggered by reaching the end instead of the user tapping close.
+     */
+    private fun handlePlaybackEnded(player: Player) {
+        player.clearMediaItems()
+        currentFeedId = null
+        _uiState.value = PlaybackUiState()
+        positionTickerJob?.cancel()
+        positionTickerScope.launch(Dispatchers.IO) { settingsDataStore.setLastPlayingItem(null, null) }
     }
 
     private fun connect(onConnected: (MediaController) -> Unit) {
@@ -122,7 +139,25 @@ class PlaybackController @Inject constructor(
     }
 
     /** Returns false without starting playback if streaming is disallowed and nothing is downloaded. */
-    suspend fun play(item: FeedItem, feedTitle: String?): Boolean {
+    suspend fun play(item: FeedItem, feedTitle: String?): Boolean = loadMedia(item, feedTitle, autoPlay = true)
+
+    /**
+     * Restores the episode the player had loaded before the process died (issue #108), so the
+     * mini-player reappears ready to resume without auto-starting playback. A no-op if something
+     * is already loaded (e.g. this raced with the user starting playback some other way) or if
+     * nothing was persisted, already finished, or has since been removed from the feed.
+     */
+    suspend fun restoreLastPlayingItem() {
+        if (currentFeedId != null) return
+        val settings = settingsDataStore.settings.first()
+        val feedId = settings.lastPlayingFeedId ?: return
+        val itemId = settings.lastPlayingItemId ?: return
+        val item = feedRepository.getItem(itemId)?.takeIf { it.feedId == feedId && !it.isRead } ?: return
+        val feed = feedRepository.getFeed(feedId)
+        loadMedia(item, feed?.userTitle ?: feed?.title, autoPlay = false)
+    }
+
+    private suspend fun loadMedia(item: FeedItem, feedTitle: String?, autoPlay: Boolean): Boolean {
         val allowStreaming = settingsDataStore.settings.first().allowPodcastStreaming
         val downloadedFilePath = item.downloadedFilePath?.takeIf { File(it).exists() }
         val uri = PlaybackUrlResolver.resolve(item, downloadedFilePath, allowStreaming = allowStreaming)
@@ -148,8 +183,9 @@ class PlaybackController @Inject constructor(
             controller.setMediaItem(mediaItem, item.enclosurePosition?.let { (it * 1000).toLong() } ?: 0L)
             controller.setPlaybackSpeed(speed)
             controller.prepare()
-            controller.play()
+            if (autoPlay) controller.play()
         }
+        settingsDataStore.setLastPlayingItem(item.feedId, item.id)
         return true
     }
 
@@ -196,6 +232,7 @@ class PlaybackController @Inject constructor(
         controller?.stop()
         controller?.clearMediaItems()
         currentFeedId = null
+        positionTickerScope.launch(Dispatchers.IO) { settingsDataStore.setLastPlayingItem(null, null) }
     }
 
     fun release() {

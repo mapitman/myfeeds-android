@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.FastForward
@@ -227,6 +228,7 @@ private fun ArticlePage(
             if (item.isPodcastEpisode) {
                 PodcastPlayerControls(
                     isCurrentItem = playbackState.currentItemId == item.id,
+                    isPlayed = item.isRead,
                     playbackState = playbackState,
                     savedPositionMs = item.enclosurePosition?.let { (it * 1000).toLong() },
                     savedDurationMs = item.enclosureDurationMs,
@@ -268,6 +270,7 @@ private fun ArticlePage(
 @Composable
 private fun PodcastPlayerControls(
     isCurrentItem: Boolean,
+    isPlayed: Boolean,
     playbackState: PlaybackUiState,
     savedPositionMs: Long?,
     savedDurationMs: Long?,
@@ -304,6 +307,23 @@ private fun PodcastPlayerControls(
     val isDownloading = !isDownloaded && downloadedBytes != null
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
+        // The article list already shows played episodes greyed out (issue #89) -- this is the
+        // explicit "you've listened to this" signal, shown where it's actually being read (#107).
+        if (isPlayed) {
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(bottom = 4.dp)) {
+                Icon(
+                    Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                )
+                Text(
+                    text = stringResource(R.string.played_label),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
         Slider(
             value = positionMs.toFloat(),
             onValueChange = { onSeek(it.toLong()) },

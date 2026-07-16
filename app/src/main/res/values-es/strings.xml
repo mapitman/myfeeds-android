@@ -11,6 +11,7 @@
     <string name="cd_clear_selection">Borrar selección</string>
     <string name="cd_mark_read">Marcar como leído</string>
     <string name="cd_mark_unread">Marcar como no leído</string>
+    <string name="played_label">Reproducido</string>
     <string name="cd_delete">Eliminar</string>
     <string name="cd_open_in_browser">Abrir en el navegador</string>
     <string name="cd_share">Compartir</string>

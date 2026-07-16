@@ -6,6 +6,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -77,6 +78,7 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel()
                 val playbackState by miniPlayerViewModel.playbackState.collectAsState()
+                LaunchedEffect(Unit) { miniPlayerViewModel.restoreLastPlayingItem() }
                 val currentBackStackEntry by navController.currentBackStackEntryAsState()
                 var currentReaderItemId by remember { mutableStateOf<String?>(null) }
 
