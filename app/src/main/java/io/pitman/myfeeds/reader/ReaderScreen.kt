@@ -4,6 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -70,12 +73,15 @@ import io.pitman.myfeeds.articlelist.ArticleDateFormatter
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.settings.scaleFactor
+import io.pitman.myfeeds.playback.PLAYER_ARTWORK_KEY
 import io.pitman.myfeeds.playback.PlaybackUiState
 import kotlinx.coroutines.flow.distinctUntilChanged
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun ReaderScreen(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
     viewModel: ReaderViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
@@ -165,6 +171,8 @@ fun ReaderScreen(
                 onSpeedChange = viewModel::setPlaybackSpeed,
                 onSkipBackward = viewModel::skipBackward,
                 onSkipForward = viewModel::skipForward,
+                sharedTransitionScope = sharedTransitionScope,
+                animatedVisibilityScope = animatedVisibilityScope,
             )
         }
     }
@@ -174,6 +182,7 @@ fun ReaderScreen(
     }
 }
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 private fun ArticlePage(
     item: FeedItem,
@@ -188,6 +197,8 @@ private fun ArticlePage(
     onSpeedChange: (Float) -> Unit,
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
     val coverImageUrl = (item.imageUrl ?: feedImageUrl).takeIf { item.isPodcastEpisode }
     val scrollState = rememberScrollState()
@@ -212,11 +223,24 @@ private fun ArticlePage(
         }
         Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
             if (coverImageUrl != null) {
+                // Only the page that's actually playing takes part in the artwork shared element
+                // (issue #112) -- other pages in the pager show the same episode/feed artwork
+                // without it, since a key can only belong to one on-screen element at a time.
+                val heroModifier = if (item.id == playbackState.currentItemId) {
+                    with(sharedTransitionScope) {
+                        Modifier.sharedElement(
+                            rememberSharedContentState(key = PLAYER_ARTWORK_KEY),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        )
+                    }
+                } else {
+                    Modifier
+                }
                 AsyncImage(
                     model = coverImageUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Fit,
-                    modifier = Modifier.fillMaxWidth().height(heroHeight),
+                    modifier = Modifier.fillMaxWidth().height(heroHeight).then(heroModifier),
                 )
             }
             Text(

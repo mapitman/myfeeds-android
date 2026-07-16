@@ -4,6 +4,16 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
@@ -12,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -42,6 +53,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+@OptIn(ExperimentalSharedTransitionApi::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -75,104 +87,139 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MyFeedsTheme {
-                val navController = rememberNavController()
-                val miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel()
-                val playbackState by miniPlayerViewModel.playbackState.collectAsState()
-                LaunchedEffect(Unit) { miniPlayerViewModel.restoreLastPlayingItem() }
-                val currentBackStackEntry by navController.currentBackStackEntryAsState()
-                var currentReaderItemId by remember { mutableStateOf<String?>(null) }
+                // Backs the mini-player <-> full-player shared-element morph (issue #112): the
+                // artwork image and player container carry matching shared keys across
+                // MiniPlayerBar, ExpandedPlayerBar (Next Up), and the reader's hero image, so
+                // Compose animates bounds/position/size between whichever pair is transitioning
+                // in/out at once instead of an instant cut.
+                SharedTransitionLayout {
+                    val sharedTransitionScope = this
+                    val navController = rememberNavController()
+                    val miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel()
+                    val playbackState by miniPlayerViewModel.playbackState.collectAsState()
+                    LaunchedEffect(Unit) { miniPlayerViewModel.restoreLastPlayingItem() }
+                    val currentBackStackEntry by navController.currentBackStackEntryAsState()
+                    var currentReaderItemId by remember { mutableStateOf<String?>(null) }
 
-                // The reader screen has its own full player for the episode it's showing (issue #97),
-                // so the mini-player would be redundant there -- hide it only in that exact case, not
-                // just "some reader screen is open" (could be a different, non-playing episode). The
-                // nav route's itemId argument only reflects the episode the reader was *opened* on --
-                // HorizontalPager swipes don't renavigate -- so the on-screen item is tracked
-                // separately via ReaderScreen's onCurrentItemChange callback instead.
-                val isOnPlayingEpisodeReader = currentBackStackEntry?.destination?.route == "reader/{feedId}/{itemId}" &&
-                    currentBackStackEntry?.arguments?.getLong("feedId") == playbackState.feedId &&
-                    currentReaderItemId == playbackState.currentItemId
+                    // The reader screen has its own full player for the episode it's showing (issue #97),
+                    // so the mini-player would be redundant there -- hide it only in that exact case, not
+                    // just "some reader screen is open" (could be a different, non-playing episode). The
+                    // nav route's itemId argument only reflects the episode the reader was *opened* on --
+                    // HorizontalPager swipes don't renavigate -- so the on-screen item is tracked
+                    // separately via ReaderScreen's onCurrentItemChange callback instead.
+                    val isOnPlayingEpisodeReader = currentBackStackEntry?.destination?.route == "reader/{feedId}/{itemId}" &&
+                        currentBackStackEntry?.arguments?.getLong("feedId") == playbackState.feedId &&
+                        currentReaderItemId == playbackState.currentItemId
 
-                // Next Up (issue #106) shows the current episode as the top of its own list, with
-                // the full-size player, rather than needing the global bar rendered underneath it.
-                val isOnQueueScreen = currentBackStackEntry?.destination?.route == "queue"
+                    // Next Up (issue #106) shows the current episode as the top of its own list, with
+                    // the full-size player, rather than needing the global bar rendered underneath it.
+                    val isOnQueueScreen = currentBackStackEntry?.destination?.route == "queue"
 
-                Column(modifier = Modifier.fillMaxSize()) {
-                    NavHost(
-                        navController = navController,
-                        startDestination = startDestination,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        composable("feedList") {
-                            FeedListScreen(
-                                onAddFeedClick = { navController.navigate("addFeed") },
-                                onFeedClick = { feedId -> navController.navigate("articleList/$feedId") },
-                                onSettingsClick = { navController.navigate("settings") },
-                                onQueueClick = { navController.navigate("queue") },
-                                onFeedLongClick = { feedId -> navController.navigate("feedProperties/$feedId") },
-                            )
-                        }
-                        composable("queue") {
-                            QueueScreen(
-                                onBack = { navController.popBackStack() },
-                                onEpisodeClick = { feedId, itemId -> navController.navigate("reader/$feedId/$itemId") },
-                            )
-                        }
-                        composable(
-                            "feedProperties/{feedId}",
-                            arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
+                    Column(modifier = Modifier.fillMaxSize()) {
+                        NavHost(
+                            navController = navController,
+                            startDestination = startDestination,
+                            modifier = Modifier.weight(1f),
                         ) {
-                            FeedPropertiesScreen(onBack = { navController.popBackStack() })
+                            composable("feedList") {
+                                FeedListScreen(
+                                    onAddFeedClick = { navController.navigate("addFeed") },
+                                    onFeedClick = { feedId -> navController.navigate("articleList/$feedId") },
+                                    onSettingsClick = { navController.navigate("settings") },
+                                    onQueueClick = { navController.navigate("queue") },
+                                    onFeedLongClick = { feedId -> navController.navigate("feedProperties/$feedId") },
+                                )
+                            }
+                            composable(
+                                "queue",
+                                // None rather than a fade: the destination still gets a real,
+                                // timed AnimatedContentScope transition (so the shared player
+                                // elements have a window to interpolate through on both push and
+                                // pop), but the screen content itself doesn't *also* fade/scale --
+                                // doing both at once was fighting the shared-element motion and
+                                // reading as a jarring jump instead of a smooth morph.
+                                enterTransition = { EnterTransition.None },
+                                exitTransition = { ExitTransition.None },
+                                popEnterTransition = { EnterTransition.None },
+                                popExitTransition = { ExitTransition.None },
+                            ) {
+                                QueueScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onEpisodeClick = { feedId, itemId -> navController.navigate("reader/$feedId/$itemId") },
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = this,
+                                )
+                            }
+                            composable(
+                                "feedProperties/{feedId}",
+                                arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
+                            ) {
+                                FeedPropertiesScreen(onBack = { navController.popBackStack() })
+                            }
+                            composable("settings") {
+                                SettingsScreen(onBack = { navController.popBackStack() })
+                            }
+                            composable("addFeed") {
+                                AddFeedScreen(
+                                    onDone = { navController.popBackStack() },
+                                    onBack = { navController.popBackStack() },
+                                )
+                            }
+                            composable(
+                                "articleList/{feedId}",
+                                arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
+                            ) { backStackEntry ->
+                                val feedId = backStackEntry.arguments?.getLong("feedId") ?: 0L
+                                ArticleListScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onArticleClick = { itemId -> navController.navigate("reader/$feedId/$itemId") },
+                                    onQueueClick = { navController.navigate("queue") },
+                                )
+                            }
+                            composable(
+                                "reader/{feedId}/{itemId}",
+                                arguments = listOf(
+                                    navArgument("feedId") { type = NavType.LongType },
+                                    navArgument("itemId") { type = NavType.StringType },
+                                ),
+                                // The mini/expanded player already handles its own exit (issue #112),
+                                // so the reader page itself grows up from the bottom and fades in to
+                                // meet it, then shrinks back down on the way out.
+                                enterTransition = { expandVertically(tween(300), expandFrom = Alignment.Bottom) + fadeIn(tween(300)) },
+                                exitTransition = { fadeOut(tween(150)) },
+                                popEnterTransition = { fadeIn(tween(150)) },
+                                popExitTransition = { shrinkVertically(tween(300), shrinkTowards = Alignment.Bottom) + fadeOut(tween(300)) },
+                            ) {
+                                ReaderScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onCurrentItemChange = { currentReaderItemId = it },
+                                    onQueueClick = { navController.navigate("queue") },
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = this,
+                                )
+                            }
                         }
-                        composable("settings") {
-                            SettingsScreen(onBack = { navController.popBackStack() })
-                        }
-                        composable("addFeed") {
-                            AddFeedScreen(
-                                onDone = { navController.popBackStack() },
-                                onBack = { navController.popBackStack() },
-                            )
-                        }
-                        composable(
-                            "articleList/{feedId}",
-                            arguments = listOf(navArgument("feedId") { type = NavType.LongType }),
-                        ) { backStackEntry ->
-                            val feedId = backStackEntry.arguments?.getLong("feedId") ?: 0L
-                            ArticleListScreen(
-                                onBack = { navController.popBackStack() },
-                                onArticleClick = { itemId -> navController.navigate("reader/$feedId/$itemId") },
-                                onQueueClick = { navController.navigate("queue") },
-                            )
-                        }
-                        composable(
-                            "reader/{feedId}/{itemId}",
-                            arguments = listOf(
-                                navArgument("feedId") { type = NavType.LongType },
-                                navArgument("itemId") { type = NavType.StringType },
-                            ),
-                        ) {
-                            ReaderScreen(
-                                onBack = { navController.popBackStack() },
-                                onCurrentItemChange = { currentReaderItemId = it },
-                                onQueueClick = { navController.navigate("queue") },
-                            )
-                        }
-                    }
 
-                    if (playbackState.currentItemId != null && !isOnPlayingEpisodeReader && !isOnQueueScreen) {
-                        MiniPlayerBar(
-                            playbackState = playbackState,
-                            onClick = {
-                                val feedId = playbackState.feedId
-                                val itemId = playbackState.currentItemId
-                                if (feedId != null && itemId != null) {
-                                    navController.navigate("reader/$feedId/$itemId")
-                                }
-                            },
-                            onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
-                            onSkipBackward = miniPlayerViewModel::skipBackward,
-                            onSkipForward = miniPlayerViewModel::skipForward,
-                            onStop = miniPlayerViewModel::stop,
-                        )
+                        AnimatedVisibility(
+                            visible = playbackState.currentItemId != null && !isOnPlayingEpisodeReader && !isOnQueueScreen,
+                        ) {
+                            MiniPlayerBar(
+                                playbackState = playbackState,
+                                onClick = {
+                                    val feedId = playbackState.feedId
+                                    val itemId = playbackState.currentItemId
+                                    if (feedId != null && itemId != null) {
+                                        navController.navigate("reader/$feedId/$itemId")
+                                    }
+                                },
+                                onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
+                                onSkipBackward = miniPlayerViewModel::skipBackward,
+                                onSkipForward = miniPlayerViewModel::skipForward,
+                                onStop = miniPlayerViewModel::stop,
+                                sharedTransitionScope = sharedTransitionScope,
+                                animatedVisibilityScope = this,
+                            )
+                        }
                     }
                 }
             }

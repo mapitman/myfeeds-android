@@ -1,5 +1,8 @@
 package io.pitman.myfeeds.playback
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -37,10 +40,17 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.pitman.myfeeds.R
 
+/** Shared-element keys (issue #112) matching across [MiniPlayerBar], [ExpandedPlayerBar], and the
+ * reader's hero image -- only one of those three is ever on-screen carrying a given key at once
+ * (except mid-transition, which is exactly when Compose is meant to animate between them). */
+const val PLAYER_CONTAINER_KEY = "player-container"
+const val PLAYER_ARTWORK_KEY = "player-artwork"
+
 /**
  * Persistent "now playing" bar (issue #66) shown across the app whenever [PlaybackController] has
  * an episode loaded, so playback stays visible/controllable after navigating away from the reader.
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun MiniPlayerBar(
     playbackState: PlaybackUiState,
@@ -49,13 +59,20 @@ fun MiniPlayerBar(
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
     onStop: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
 ) {
-    Surface(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        tonalElevation = 3.dp,
-    ) {
+    with(sharedTransitionScope) {
+        Surface(
+            modifier = modifier.fillMaxWidth().clickable(onClick = onClick)
+                .sharedBounds(
+                    rememberSharedContentState(key = PLAYER_CONTAINER_KEY),
+                    animatedVisibilityScope = animatedVisibilityScope,
+                ),
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            tonalElevation = 3.dp,
+        ) {
         Column(modifier = Modifier.navigationBarsPadding()) {
             val progress = if (playbackState.durationMs > 0) {
                 (playbackState.positionMs.toFloat() / playbackState.durationMs).coerceIn(0f, 1f)
@@ -81,7 +98,11 @@ fun MiniPlayerBar(
                     AsyncImage(
                         model = playbackState.artworkUrl,
                         contentDescription = null,
-                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(4.dp)),
+                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(4.dp))
+                            .sharedElement(
+                                rememberSharedContentState(key = PLAYER_ARTWORK_KEY),
+                                animatedVisibilityScope = animatedVisibilityScope,
+                            ),
                     )
                 }
                 Text(
@@ -118,6 +139,7 @@ fun MiniPlayerBar(
                 }
             }
         }
+        }
     }
 }
 
@@ -126,6 +148,7 @@ fun MiniPlayerBar(
  * -- it's the screen most about "what's playing/coming up next", so it gets the full transport
  * controls and cover art background rather than the compact bar shown everywhere else.
  */
+@OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 fun ExpandedPlayerBar(
     playbackState: PlaybackUiState,
@@ -135,9 +158,20 @@ fun ExpandedPlayerBar(
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
     onStop: () -> Unit,
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
 ) {
-    Surface(modifier = modifier.fillMaxWidth(), color = MaterialTheme.colorScheme.surfaceContainerHighest, tonalElevation = 3.dp) {
+    with(sharedTransitionScope) {
+    Surface(
+        modifier = modifier.fillMaxWidth()
+            .sharedBounds(
+                rememberSharedContentState(key = PLAYER_CONTAINER_KEY),
+                animatedVisibilityScope = animatedVisibilityScope,
+            ),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 3.dp,
+    ) {
         Box(modifier = Modifier.fillMaxWidth()) {
             if (playbackState.artworkUrl != null) {
                 AsyncImage(
@@ -160,7 +194,11 @@ fun ExpandedPlayerBar(
                         AsyncImage(
                             model = playbackState.artworkUrl,
                             contentDescription = null,
-                            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)),
+                            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp))
+                                .sharedElement(
+                                    rememberSharedContentState(key = PLAYER_ARTWORK_KEY),
+                                    animatedVisibilityScope = animatedVisibilityScope,
+                                ),
                         )
                     }
                     Text(
@@ -210,6 +248,7 @@ fun ExpandedPlayerBar(
                 }
             }
         }
+    }
     }
 }
 
