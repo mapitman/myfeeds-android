@@ -6,7 +6,7 @@ import java.io.ByteArrayInputStream
 
 class OpmlParserTest {
     @Test
-    fun parse_nestedOutlines_mapToCategoriesAndFeeds() {
+    fun parse_nestedOutlines_mapToFoldersAndFeeds() {
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0">
@@ -24,14 +24,14 @@ class OpmlParserTest {
 
         val document = OpmlParser.parse(ByteArrayInputStream(opml.toByteArray()))
 
-        assertEquals(2, document.categories.size)
-        assertEquals("Tech", document.categories[0].name)
+        assertEquals(2, document.folders.size)
+        assertEquals("Tech", document.folders[0].name)
         assertEquals(
             listOf("Ars Technica", "Engadget"),
-            document.categories[0].feeds.map { it.title },
+            document.folders[0].feeds.map { it.title },
         )
-        assertEquals("News", document.categories[1].name)
-        assertEquals(listOf("BBC News"), document.categories[1].feeds.map { it.title })
+        assertEquals("News", document.folders[1].name)
+        assertEquals(listOf("BBC News"), document.folders[1].feeds.map { it.title })
     }
 
     @Test
@@ -50,15 +50,15 @@ class OpmlParserTest {
 
         val document = OpmlParser.parse(ByteArrayInputStream(opml.toByteArray()))
 
-        assertEquals(listOf("Tech", "Uncategorized"), document.categories.map { it.name })
+        assertEquals(listOf("Tech", "Uncategorized"), document.folders.map { it.name })
         assertEquals(
             listOf(OpmlFeed("Standalone Feed", "https://example.com/feed.xml")),
-            document.categories.last().feeds,
+            document.folders.last().feeds,
         )
     }
 
     @Test
-    fun parse_categoryWithNoFeeds_producesEmptyFeedList() {
+    fun parse_folderWithNoFeeds_producesEmptyFeedList() {
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0">
@@ -70,8 +70,8 @@ class OpmlParserTest {
 
         val document = OpmlParser.parse(ByteArrayInputStream(opml.toByteArray()))
 
-        assertEquals(listOf("Empty Category"), document.categories.map { it.name })
-        assertEquals(emptyList<OpmlFeed>(), document.categories.first().feeds)
+        assertEquals(listOf("Empty Category"), document.folders.map { it.name })
+        assertEquals(emptyList<OpmlFeed>(), document.folders.first().feeds)
     }
 
     @Test
@@ -81,8 +81,8 @@ class OpmlParserTest {
 
         val document = OpmlParser.parse(input)
 
-        assertEquals(3, document.categories.size)
-        assertEquals(setOf("Tech", "Mobile", "News"), document.categories.map { it.name }.toSet())
-        document.categories.forEach { category -> assertEquals(4, category.feeds.size) }
+        assertEquals(3, document.folders.size)
+        assertEquals(setOf("Tech", "Mobile", "News"), document.folders.map { it.name }.toSet())
+        document.folders.forEach { category -> assertEquals(4, category.feeds.size) }
     }
 }

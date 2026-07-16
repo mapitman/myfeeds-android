@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
@@ -62,8 +61,7 @@ class QueueViewModelTest {
         )
         playbackController = PlaybackController(context, SettingsDataStore(dataStore), feedRepository, queueRepository)
 
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        feedId = feedRepository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        feedId = feedRepository.subscribe(Feed(title = "A Feed"))
         feedRepository.upsertItems(
             listOf(
                 FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1"),

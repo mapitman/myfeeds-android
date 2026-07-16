@@ -10,7 +10,6 @@ import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
@@ -88,8 +87,7 @@ class ArticleListViewModelTest {
         settingsDataStore = SettingsDataStore(dataStore)
         feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
 
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        feedId = repository.subscribe(Feed(title = "A Feed"))
         repository.upsertItems(
             listOf(
                 FeedItem(id = "unread-1", feedId = feedId, title = "Unread One", itemGuid = "g1", isRead = false),

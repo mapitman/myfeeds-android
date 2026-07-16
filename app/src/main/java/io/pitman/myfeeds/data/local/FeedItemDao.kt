@@ -31,6 +31,12 @@ interface FeedItemDao {
     @Query("SELECT * FROM feed_items WHERE feedId = :feedId AND isRead = 0 ORDER BY publishDate DESC")
     fun observeUnreadByFeed(feedId: Long): Flow<List<FeedItem>>
 
+    @Query("SELECT * FROM feed_items WHERE feedId IN (:feedIds) ORDER BY publishDate DESC")
+    fun observeByFeeds(feedIds: List<Long>): Flow<List<FeedItem>>
+
+    @Query("SELECT * FROM feed_items WHERE feedId IN (:feedIds) AND isRead = 0 ORDER BY publishDate DESC")
+    fun observeUnreadByFeeds(feedIds: List<Long>): Flow<List<FeedItem>>
+
     @Query("SELECT * FROM feed_items WHERE feedId = :feedId AND itemGuid = :itemGuid LIMIT 1")
     suspend fun findByItemGuid(feedId: Long, itemGuid: String): FeedItem?
 
@@ -48,6 +54,9 @@ interface FeedItemDao {
 
     @Query("SELECT COUNT(*) FROM feed_items WHERE feedId = :feedId AND isRead = 0")
     fun observeUnreadCountForFeed(feedId: Long): Flow<Int>
+
+    @Query("SELECT COUNT(*) FROM feed_items WHERE feedId IN (:feedIds) AND isRead = 0")
+    fun observeUnreadCountForFeeds(feedIds: List<Long>): Flow<Int>
 
     @Query("SELECT COUNT(*) FROM feed_items WHERE isRead = 0")
     fun observeTotalUnreadCount(): Flow<Int>

@@ -18,9 +18,6 @@ interface FeedDao {
     @Delete
     suspend fun delete(feed: Feed)
 
-    @Query("SELECT * FROM feeds WHERE categoryId = :categoryId ORDER BY sortOrder, title")
-    fun observeByCategory(categoryId: Long): Flow<List<Feed>>
-
     @Query("SELECT * FROM feeds ORDER BY sortOrder, title")
     fun observeAll(): Flow<List<Feed>>
 

@@ -57,12 +57,12 @@ class FeedDirectory @Inject constructor(@ApplicationContext private val context:
             entries?.let { return it }
             val loaded = withContext(Dispatchers.IO) {
                 context.assets.open(DIRECTORY_ASSET).use { OpmlParser.parse(it) }
-                    .categories.flatMap { category ->
-                        category.feeds.map { feed ->
+                    .folders.flatMap { folder ->
+                        folder.feeds.map { feed ->
                             FeedDirectoryEntry(
                                 title = feed.title,
                                 xmlUrl = feed.xmlUrl,
-                                category = category.name,
+                                category = folder.name,
                                 description = feed.description,
                             )
                         }

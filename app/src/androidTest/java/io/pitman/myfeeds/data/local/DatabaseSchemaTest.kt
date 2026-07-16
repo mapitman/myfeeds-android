@@ -29,29 +29,25 @@ class DatabaseSchemaTest {
     }
 
     @Test
-    fun insertCategoryFeedAndFeedItem_readsBackViaFlows() = runBlocking {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech", sortOrder = 0))
-        val feedId = db.feedDao().insert(
-            Feed(categoryId = categoryId, title = "Windows Phone Blog", feedUrl = "https://example.com/feed"),
-        )
+    fun insertFeedAndFeedItem_readsBackViaFlows() = runBlocking {
+        val feedId = db.feedDao().insert(Feed(title = "Windows Phone Blog", feedUrl = "https://example.com/feed"))
         db.feedItemDao().insert(
             FeedItem(id = "item-1", feedId = feedId, title = "Hello world", itemGuid = "guid-1"),
         )
 
-        assertEquals(listOf(feedId), db.feedDao().observeByCategory(categoryId).first().map { it.id })
+        assertEquals(listOf(feedId), db.feedDao().observeAll().first().map { it.id })
         assertEquals(1, db.feedItemDao().observeByFeed(feedId).first().size)
         assertEquals(1, db.feedItemDao().observeUnreadCountForFeed(feedId).first())
         assertEquals(1, db.feedItemDao().observeTotalUnreadCount().first())
     }
 
     @Test
-    fun deletingCategory_cascadesToFeedsAndFeedItems() = runBlocking {
-        val category = Category(name = "Tech", sortOrder = 0)
-        val categoryId = db.categoryDao().insert(category)
-        val feedId = db.feedDao().insert(Feed(categoryId = categoryId, title = "A Feed"))
+    fun deletingFeed_cascadesToFeedItems() = runBlocking {
+        val feed = Feed(title = "A Feed")
+        val feedId = db.feedDao().insert(feed)
         db.feedItemDao().insert(FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1"))
 
-        db.categoryDao().delete(category.copy(id = categoryId))
+        db.feedDao().delete(feed.copy(id = feedId))
 
         assertNull(db.feedDao().getById(feedId))
         assertEquals(0, db.feedItemDao().observeByFeed(feedId).first().size)
@@ -59,8 +55,7 @@ class DatabaseSchemaTest {
 
     @Test
     fun findByItemGuid_dedupesWithinFeed() = runBlocking {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        val feedId = db.feedDao().insert(Feed(categoryId = categoryId, title = "A Feed"))
+        val feedId = db.feedDao().insert(Feed(title = "A Feed"))
         db.feedItemDao().insert(FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1"))
 
         val found = db.feedItemDao().findByItemGuid(feedId, "guid-1")
@@ -70,8 +65,7 @@ class DatabaseSchemaTest {
 
     @Test
     fun setRead_updatesUnreadCounts() = runBlocking {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        val feedId = db.feedDao().insert(Feed(categoryId = categoryId, title = "A Feed"))
+        val feedId = db.feedDao().insert(Feed(title = "A Feed"))
         db.feedItemDao().insert(FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1"))
 
         db.feedItemDao().setRead("item-1", true)

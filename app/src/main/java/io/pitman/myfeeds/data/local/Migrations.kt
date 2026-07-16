@@ -49,3 +49,41 @@ val MIGRATION_5_6 = object : Migration(5, 6) {
         db.execSQL("ALTER TABLE feeds ADD COLUMN playbackSpeed REAL NOT NULL DEFAULT 1.0")
     }
 }
+
+/** Removes categories (issue #118): the feed list collapses to two fixed lists (Podcasts, Feeds)
+ *  derived from item enclosure type, so the categories table and feeds.categoryId go away. */
+val MIGRATION_6_7 = object : Migration(6, 7) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL(
+            "CREATE TABLE feeds_new (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "title TEXT, " +
+                "userTitle TEXT, " +
+                "description TEXT, " +
+                "feedUrl TEXT, " +
+                "siteUrl TEXT, " +
+                "imageUrl TEXT, " +
+                "displayMode INTEGER, " +
+                "itemsToKeep INTEGER, " +
+                "lastGet INTEGER, " +
+                "sortOrder INTEGER, " +
+                "autoDownloadEnabled INTEGER NOT NULL DEFAULT 0, " +
+                "autoQueueEnabled INTEGER NOT NULL DEFAULT 0, " +
+                "autoQueueMaxCount INTEGER, " +
+                "playbackSpeed REAL NOT NULL DEFAULT 1.0)",
+        )
+        db.execSQL(
+            "INSERT INTO feeds_new (id, title, userTitle, description, feedUrl, siteUrl, imageUrl, " +
+                "displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, autoQueueEnabled, " +
+                "autoQueueMaxCount, playbackSpeed) " +
+                "SELECT id, title, userTitle, description, feedUrl, siteUrl, imageUrl, displayMode, " +
+                "itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, autoQueueEnabled, " +
+                "autoQueueMaxCount, playbackSpeed FROM feeds",
+        )
+        db.execSQL("DROP TABLE feeds")
+        db.execSQL("ALTER TABLE feeds_new RENAME TO feeds")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_feeds_userTitle ON feeds(userTitle)")
+        db.execSQL("CREATE INDEX IF NOT EXISTS index_feeds_title ON feeds(title)")
+        db.execSQL("DROP TABLE categories")
+    }
+}

@@ -1,23 +1,25 @@
 package io.pitman.myfeeds.data.opml
 
-import io.pitman.myfeeds.data.local.CategoryDao
+import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedDao
+import io.pitman.myfeeds.data.local.FeedItemDao
 import kotlinx.coroutines.flow.first
 import javax.inject.Inject
 
 /**
- * Mirror image of [OpmlParser]/[OpmlImporter], ported from MyFeeds/Opml.cs GenerateOpml: one
- * category-outline per Category (no xmlUrl attribute), with nested feed-outlines (text + xmlUrl)
- * underneath. Exports userTitle when set, falling back to the fetched title.
+ * Mirror image of [OpmlParser]/[OpmlImporter]. Categories are gone (issue #118), so feeds are
+ * grouped into the same two fixed folders the feed list uses -- "Podcasts" and "Feeds" -- rather
+ * than one outline per category. A folder is omitted entirely if it would be empty.
  */
 class OpmlExporter @Inject constructor(
-    private val categoryDao: CategoryDao,
     private val feedDao: FeedDao,
+    private val feedItemDao: FeedItemDao,
 ) {
     suspend fun export(): String {
-        val categories = categoryDao.observeAll().first()
         val feeds = feedDao.observeAll().first()
-        val feedsByCategory = feeds.groupBy { it.categoryId }
+        val podcastFeedIds = feedItemDao.observePodcastFeedIds().first().toSet()
+        val podcastFeeds = feeds.filter { it.id in podcastFeedIds }
+        val otherFeeds = feeds.filterNot { it.id in podcastFeedIds }
 
         return buildString {
             append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
@@ -26,20 +28,23 @@ class OpmlExporter @Inject constructor(
             append("    <title>MyFeeds Exported Feeds</title>\n")
             append("  </head>\n")
             append("  <body>\n")
-            categories.forEach { category ->
-                val categoryFeeds = feedsByCategory[category.id].orEmpty()
-                append("    <outline text=\"${category.name.xmlEscape()}\">\n")
-                categoryFeeds.forEach { feed ->
-                    val title = (feed.userTitle ?: feed.title).orEmpty()
-                    append(
-                        "      <outline text=\"${title.xmlEscape()}\" xmlUrl=\"${feed.feedUrl.orEmpty().xmlEscape()}\" />\n",
-                    )
-                }
-                append("    </outline>\n")
-            }
+            appendFolder("Podcasts", podcastFeeds)
+            appendFolder("Feeds", otherFeeds)
             append("  </body>\n")
             append("</opml>\n")
         }
+    }
+
+    private fun StringBuilder.appendFolder(name: String, feeds: List<Feed>) {
+        if (feeds.isEmpty()) return
+        append("    <outline text=\"${name.xmlEscape()}\">\n")
+        feeds.forEach { feed ->
+            val title = (feed.userTitle ?: feed.title).orEmpty()
+            append(
+                "      <outline text=\"${title.xmlEscape()}\" xmlUrl=\"${feed.feedUrl.orEmpty().xmlEscape()}\" />\n",
+            )
+        }
+        append("    </outline>\n")
     }
 
     private fun String.xmlEscape(): String =

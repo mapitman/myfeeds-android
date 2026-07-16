@@ -8,7 +8,6 @@ import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
@@ -72,8 +71,7 @@ class FeedPropertiesViewModelTest {
         )
         settingsDataStore = SettingsDataStore(dataStore)
 
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        feedId = repository.subscribe(Feed(title = "A Feed"))
     }
 
     @After

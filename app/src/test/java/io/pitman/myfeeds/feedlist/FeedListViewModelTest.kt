@@ -9,7 +9,6 @@ import io.pitman.myfeeds.data.DefaultFeedsSeeder
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
@@ -64,8 +63,7 @@ class FeedListViewModelTest {
         settingsDataStore.setFirstRunComplete()
 
         viewModel = FeedListViewModel(
-            seeder = DefaultFeedsSeeder(context, db.categoryDao(), db.feedDao(), settingsDataStore),
-            categoryDao = db.categoryDao(),
+            seeder = DefaultFeedsSeeder(context, db.feedDao(), settingsDataStore),
             feedRepository = repository,
             feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository),
             settingsDataStore = settingsDataStore,
@@ -80,10 +78,9 @@ class FeedListViewModelTest {
     }
 
     @Test
-    fun uiState_podcastFeedAppearsInBothItsCategoryAndPodcastsSection() = runTest(testDispatcher) {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        val podcastFeedId = repository.subscribe(Feed(categoryId = categoryId, title = "Podcast Feed"))
-        val articleFeedId = repository.subscribe(Feed(categoryId = categoryId, title = "Article Feed"))
+    fun uiState_splitsPodcastAndOtherFeedsIntoFixedSections() = runTest(testDispatcher) {
+        val podcastFeedId = repository.subscribe(Feed(title = "Podcast Feed"))
+        val articleFeedId = repository.subscribe(Feed(title = "Article Feed"))
         repository.upsertItems(
             listOf(
                 FeedItem(
@@ -97,23 +94,23 @@ class FeedListViewModelTest {
             ),
         )
 
-        val state = viewModel.uiState.first { it.categories.isNotEmpty() }
+        val state = viewModel.uiState.first { it.sections.any { section -> section.feeds.isNotEmpty() } }
 
-        val techSection = state.categories.first { !it.isPodcastsSection }
-        assertEquals(setOf(podcastFeedId, articleFeedId), techSection.feeds.map { it.feed.id }.toSet())
-
-        val podcastsSection = state.categories.first { it.isPodcastsSection }
+        val podcastsSection = state.sections.first { it.section == FeedListSection.PODCASTS }
         assertEquals(listOf(podcastFeedId), podcastsSection.feeds.map { it.feed.id })
+
+        val feedsSection = state.sections.first { it.section == FeedListSection.FEEDS }
+        assertEquals(listOf(articleFeedId), feedsSection.feeds.map { it.feed.id })
     }
 
     @Test
-    fun uiState_podcastsSectionPresentEvenWithNoPodcastFeeds() = runTest(testDispatcher) {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        repository.subscribe(Feed(categoryId = categoryId, title = "Article Feed"))
+    fun uiState_bothSectionsPresentEvenWithNoPodcastFeeds() = runTest(testDispatcher) {
+        repository.subscribe(Feed(title = "Article Feed"))
 
-        val state = viewModel.uiState.first { it.categories.isNotEmpty() }
+        val state = viewModel.uiState.first { it.sections.isNotEmpty() }
 
-        val podcastsSection = state.categories.first { it.isPodcastsSection }
+        assertEquals(setOf(FeedListSection.PODCASTS, FeedListSection.FEEDS), state.sections.map { it.section }.toSet())
+        val podcastsSection = state.sections.first { it.section == FeedListSection.PODCASTS }
         assertTrue(podcastsSection.feeds.isEmpty())
     }
 }

@@ -11,8 +11,6 @@ import io.pitman.myfeeds.data.directory.FeedDirectoryEntry
 import io.pitman.myfeeds.data.feed.FeedFetchResult
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
-import io.pitman.myfeeds.data.local.Category
-import io.pitman.myfeeds.data.local.CategoryDao
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.opml.OpmlDocument
 import io.pitman.myfeeds.data.opml.OpmlImporter
@@ -43,15 +41,11 @@ class AddFeedViewModel @Inject constructor(
     private val feedFetcher: FeedFetcher,
     private val feedUpdateEngine: FeedUpdateEngine,
     private val feedRepository: FeedRepository,
-    private val categoryDao: CategoryDao,
     private val opmlImporter: OpmlImporter,
     private val httpClient: OkHttpClient,
     private val feedDirectory: FeedDirectory,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
-    val categories: StateFlow<List<Category>> =
-        categoryDao.observeAll().stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
     private val _uiState = MutableStateFlow<AddFeedUiState>(AddFeedUiState.Idle)
     val uiState: StateFlow<AddFeedUiState> = _uiState
 
@@ -69,36 +63,32 @@ class AddFeedViewModel @Inject constructor(
         _searchQuery.value = query
     }
 
-    fun addFeedByUrl(url: String, categoryName: String) {
+    fun addFeedByUrl(url: String) {
         val trimmedUrl = url.trim()
         if (trimmedUrl.isEmpty()) {
             _uiState.value = AddFeedUiState.Error(context.getString(R.string.add_feed_enter_url_error))
             return
         }
-        val trimmedCategory = categoryName.trim().ifEmpty { context.getString(R.string.add_feed_uncategorized) }
 
         viewModelScope.launch {
             _uiState.value = AddFeedUiState.Loading
-            addFeed(normalizeUrl(trimmedUrl), trimmedCategory)
+            addFeed(normalizeUrl(trimmedUrl))
         }
     }
 
     fun addFromDirectory(entry: FeedDirectoryEntry) {
         viewModelScope.launch {
             _uiState.value = AddFeedUiState.Loading
-            addFeed(entry.xmlUrl, entry.category)
+            addFeed(entry.xmlUrl)
         }
     }
 
-    private suspend fun addFeed(url: String, categoryName: String) {
+    private suspend fun addFeed(url: String) {
         when (val result = feedFetcher.fetchFeed(url)) {
             is FeedFetchResult.Failure -> _uiState.value = AddFeedUiState.Error(result.message)
             is FeedFetchResult.Success -> {
-                val categoryId = categoryDao.getByName(categoryName)?.id
-                    ?: categoryDao.insert(Category(name = categoryName))
                 val feedId = feedRepository.subscribe(
                     Feed(
-                        categoryId = categoryId,
                         title = result.feed.title,
                         feedUrl = result.resolvedUrl,
                         siteUrl = result.feed.siteUrl,

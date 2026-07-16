@@ -33,6 +33,9 @@
     <string name="feed_list_section_unread">%1$d sin leer</string>
     <string name="feed_list_refresh_error">No se pudo actualizar: comprueba tu conexión</string>
     <string name="feed_list_podcasts_tab">Podcasts</string>
+    <string name="feed_list_feeds_tab">Feeds</string>
+    <string name="feed_list_read_all">Leer todo</string>
+    <string name="feed_river_item_source">%1$s • %2$s</string>
 
     <!-- Article list -->
     <string name="article_list_selected">%1$d seleccionados</string>
@@ -92,7 +95,6 @@
     <string name="add_feed_title">Añadir fuente</string>
     <string name="add_feed_by_url_heading">Añadir por URL</string>
     <string name="add_feed_url_label">URL de la fuente o del sitio</string>
-    <string name="add_feed_category_label">Categoría</string>
     <string name="add_feed_add_button">Añadir fuente</string>
     <string name="add_feed_import_from_opml_heading">Importar desde OPML</string>
     <string name="add_feed_choose_opml_file">Elegir archivo OPML</string>
@@ -102,7 +104,6 @@
     <string name="add_feed_import_from_text_button">Importar desde OPML pegado</string>
     <string name="add_feed_enter_opml_text_error">Pega el contenido OPML para importar</string>
     <string name="add_feed_enter_url_error">Introduce una URL de fuente o de sitio</string>
-    <string name="add_feed_uncategorized">Sin categoría</string>
     <string name="add_feed_added_message">%1$s añadido</string>
     <string name="add_feed_enter_opml_url_error">Introduce una URL de OPML</string>
     <string name="add_feed_could_not_load_opml">No se pudo cargar el OPML desde %1$s</string>

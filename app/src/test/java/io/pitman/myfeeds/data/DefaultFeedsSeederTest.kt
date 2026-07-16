@@ -40,7 +40,7 @@ class DefaultFeedsSeederTest {
                 produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
             ),
         )
-        seeder = DefaultFeedsSeeder(context, db.categoryDao(), db.feedDao(), settingsDataStore)
+        seeder = DefaultFeedsSeeder(context, db.feedDao(), settingsDataStore)
     }
 
     @After
@@ -49,17 +49,12 @@ class DefaultFeedsSeederTest {
     }
 
     @Test
-    fun seedIfFirstRun_populatesCategoriesAndFeedsFromBundledOpml() = runTest {
+    fun seedIfFirstRun_populatesFeedsFromBundledOpml() = runTest {
         seeder.seedIfFirstRun()
 
-        val categories = db.categoryDao().observeAll().first()
-        assertEquals(setOf("Tech", "Mobile", "News"), categories.map { it.name }.toSet())
-
-        categories.forEach { category ->
-            val feeds = db.feedDao().observeByCategory(category.id).first()
-            assertEquals(4, feeds.size)
-            feeds.forEach { feed -> assertTrue(feed.feedUrl?.startsWith("http") == true) }
-        }
+        val feeds = db.feedDao().observeAll().first()
+        assertEquals(12, feeds.size)
+        feeds.forEach { feed -> assertTrue(feed.feedUrl?.startsWith("http") == true) }
     }
 
     @Test
@@ -76,7 +71,7 @@ class DefaultFeedsSeederTest {
         seeder.seedIfFirstRun()
         seeder.seedIfFirstRun()
 
-        val categories = db.categoryDao().observeAll().first()
-        assertEquals(3, categories.size)
+        val feeds = db.feedDao().observeAll().first()
+        assertEquals(12, feeds.size)
     }
 }

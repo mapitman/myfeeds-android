@@ -17,8 +17,6 @@ class FeedRepository @Inject constructor(
     private val feedDao: FeedDao,
     private val feedItemDao: FeedItemDao,
 ) {
-    fun observeFeedsByCategory(categoryId: Long): Flow<List<Feed>> = feedDao.observeByCategory(categoryId)
-
     fun observeAllFeeds(): Flow<List<Feed>> = feedDao.observeAll()
 
     suspend fun getFeed(feedId: Long): Feed? = feedDao.getById(feedId)
@@ -35,7 +33,13 @@ class FeedRepository @Inject constructor(
 
     fun observeUnreadItems(feedId: Long): Flow<List<FeedItem>> = feedItemDao.observeUnreadByFeed(feedId)
 
+    fun observeItems(feedIds: List<Long>): Flow<List<FeedItem>> = feedItemDao.observeByFeeds(feedIds)
+
+    fun observeUnreadItems(feedIds: List<Long>): Flow<List<FeedItem>> = feedItemDao.observeUnreadByFeeds(feedIds)
+
     fun observeUnreadCount(feedId: Long): Flow<Int> = feedItemDao.observeUnreadCountForFeed(feedId)
+
+    fun observeUnreadCount(feedIds: List<Long>): Flow<Int> = feedItemDao.observeUnreadCountForFeeds(feedIds)
 
     fun observeTotalUnreadCount(): Flow<Int> = feedItemDao.observeTotalUnreadCount()
 
