@@ -1,5 +1,8 @@
 package io.pitman.myfeeds.queue
 
+import androidx.compose.animation.AnimatedVisibilityScope
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -47,9 +50,11 @@ import kotlin.math.roundToInt
 
 private val ROW_HEIGHT = 72.dp
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
 fun QueueScreen(
+    sharedTransitionScope: SharedTransitionScope,
+    animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
     viewModel: QueueViewModel = hiltViewModel(),
     miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel(),
@@ -96,6 +101,8 @@ fun QueueScreen(
                     onSkipBackward = miniPlayerViewModel::skipBackward,
                     onSkipForward = miniPlayerViewModel::skipForward,
                     onStop = miniPlayerViewModel::stop,
+                    sharedTransitionScope = sharedTransitionScope,
+                    animatedVisibilityScope = animatedVisibilityScope,
                 )
             }
             ReorderableQueueList(
