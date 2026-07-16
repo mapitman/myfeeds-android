@@ -48,11 +48,16 @@ object FeedParser {
     private fun parseRssChannel(channel: Element): ParsedFeed {
         val title = channel.textOf("title")
         val items = channel.childElements("item").map(::parseRssItem)
+        // Podcast feeds carry cover art as <itunes:image href="..."/> rather than the plain RSS
+        // <image><url> element, and most podcast feeds only have the itunes variant -- prefer it
+        // since it's typically the actual (higher-res, square) show artwork.
+        val itunesImageUrl = channel.childElements().firstOrNull { it.tagName == "itunes:image" }
+            ?.getAttribute("href")?.ifBlank { null }
         return ParsedFeed(
             title = title,
             siteUrl = channel.textOf("link"),
             description = channel.textOf("description").ifBlank { title },
-            imageUrl = channel.firstChildElement("image")?.textOf("url")?.ifBlank { null },
+            imageUrl = itunesImageUrl ?: channel.firstChildElement("image")?.textOf("url")?.ifBlank { null },
             items = items,
         )
     }

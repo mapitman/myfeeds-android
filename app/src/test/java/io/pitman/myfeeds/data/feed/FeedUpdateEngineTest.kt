@@ -125,6 +125,30 @@ class FeedUpdateEngineTest {
     }
 
     @Test
+    fun updateFeed_backfillsFeedImageUrlFromLatestParse() = runTest {
+        val feed = subscribeFeed()
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0"><channel>
+                  <title>Test Feed</title>
+                  <link>https://example.com</link>
+                  <description>desc</description>
+                  <image><url>https://example.com/logo.png</url></image>
+                  ${"<item><title>First</title><link>https://example.com/guid-1</link><guid>guid-1</guid>" +
+                    "<description>Body</description><pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate></item>"}
+                </channel></rss>
+                """.trimIndent(),
+            ),
+        )
+
+        engine.updateFeed(feed)
+
+        assertEquals("https://example.com/logo.png", repository.getFeed(feed.id)!!.imageUrl)
+    }
+
+    @Test
     fun updateFeed_trimsToItemsToKeepAfterPersisting() = runTest {
         val feed = subscribeFeed(itemsToKeep = 1)
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First", "guid-2" to "Second")))

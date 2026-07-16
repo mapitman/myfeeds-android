@@ -42,6 +42,7 @@ data class PlaybackUiState(
     val durationMs: Long = 0L,
     val isEnded: Boolean = false,
     val speed: Float = 1.0f,
+    val artworkUrl: String? = null,
 )
 
 /**
@@ -82,6 +83,7 @@ class PlaybackController @Inject constructor(
         durationMs = player.duration.coerceAtLeast(0L),
         isEnded = player.playbackState == Player.STATE_ENDED,
         speed = player.playbackParameters.speed,
+        artworkUrl = player.currentMediaItem?.mediaMetadata?.artworkUri?.toString(),
     )
 
     private val playerListener = object : Player.Listener {
@@ -125,7 +127,9 @@ class PlaybackController @Inject constructor(
         val downloadedFilePath = item.downloadedFilePath?.takeIf { File(it).exists() }
         val uri = PlaybackUrlResolver.resolve(item, downloadedFilePath, allowStreaming = allowStreaming)
             ?: return false
-        val speed = feedRepository.getFeed(item.feedId)?.playbackSpeed ?: 1.0f
+        val feed = feedRepository.getFeed(item.feedId)
+        val speed = feed?.playbackSpeed ?: 1.0f
+        val artworkUrl = item.imageUrl ?: feed?.imageUrl
 
         val mediaItem = MediaItem.Builder()
             .setMediaId(item.id)
@@ -134,7 +138,7 @@ class PlaybackController @Inject constructor(
                 MediaMetadata.Builder()
                     .setTitle(item.title)
                     .setArtist(feedTitle)
-                    .setArtworkUri(item.imageUrl?.let(Uri::parse))
+                    .setArtworkUri(artworkUrl?.let(Uri::parse))
                     .build(),
             )
             .build()

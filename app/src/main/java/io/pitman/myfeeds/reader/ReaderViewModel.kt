@@ -24,6 +24,7 @@ data class ReaderUiState(
     val items: List<FeedItem> = emptyList(),
     val initialIndex: Int = 0,
     val feedTitle: String? = null,
+    val feedImageUrl: String? = null,
 )
 
 @HiltViewModel
@@ -42,7 +43,7 @@ class ReaderViewModel @Inject constructor(
         feedRepository.observeFeed(feedId),
     ) { items, feed ->
         val index = items.indexOfFirst { it.id == initialItemId }.coerceAtLeast(0)
-        ReaderUiState(items = items, initialIndex = index, feedTitle = feed?.userTitle ?: feed?.title)
+        ReaderUiState(items = items, initialIndex = index, feedTitle = feed?.userTitle ?: feed?.title, feedImageUrl = feed?.imageUrl)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ReaderUiState())
 
     val playbackState: StateFlow<PlaybackUiState> = playbackController.uiState
@@ -71,6 +72,14 @@ class ReaderViewModel @Inject constructor(
 
     fun seekTo(positionMs: Long) {
         playbackController.seekTo(positionMs)
+    }
+
+    fun skipForward() {
+        playbackController.skipForward()
+    }
+
+    fun skipBackward() {
+        playbackController.skipBackward()
     }
 
     fun setPlaybackSpeed(speed: Float) {

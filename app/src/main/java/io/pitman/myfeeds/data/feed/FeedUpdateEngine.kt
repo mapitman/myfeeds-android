@@ -69,7 +69,9 @@ class FeedUpdateEngine @Inject constructor(
             if (existing == null) newItemIds += id
         }
 
-        feedRepository.updateFeed(feed.copy(lastGet = Instant.now().toEpochMilli()))
+        feedRepository.updateFeed(
+            feed.copy(lastGet = Instant.now().toEpochMilli(), imageUrl = parsed.imageUrl ?: feed.imageUrl),
+        )
         val evicted = feedRepository.trimToItemsToKeep(feed.id)
 
         return FeedUpdateResult.Success(feedId = feed.id, newItemIds = newItemIds, evictedItemIds = evicted.map { it.id })

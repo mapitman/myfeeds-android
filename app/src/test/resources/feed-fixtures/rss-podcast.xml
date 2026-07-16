@@ -4,6 +4,7 @@
     <title>Windows Weekly</title>
     <link>https://twit.tv/shows/windows-weekly</link>
     <description>The podcast about Windows.</description>
+    <itunes:image href="https://cdn.twit.tv/windows-weekly-cover.jpg" />
     <item>
       <title>Episode 900: Something Happened</title>
       <link>https://twit.tv/shows/windows-weekly/episodes/900</link>
