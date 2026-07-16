@@ -90,7 +90,7 @@ fun ReaderScreen(
         snapshotFlow { pagerState.settledPage }
             .distinctUntilChanged()
             .collect { page ->
-                uiState.items.getOrNull(page)?.let { viewModel.markRead(it.id) }
+                uiState.items.getOrNull(page)?.let { viewModel.markRead(it) }
             }
     }
 

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
@@ -50,8 +51,13 @@ class ReaderViewModel @Inject constructor(
         .map { it.articleFontSize }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.NORMAL)
 
-    fun markRead(itemId: String) {
-        viewModelScope.launch { feedRepository.markRead(itemId, true) }
+    /**
+     * Articles are marked read as soon as they're viewed. Podcast episodes are only marked
+     * read/played when playback finishes (see [io.pitman.myfeeds.playback.PlaybackService]).
+     */
+    fun markRead(item: FeedItem) {
+        if (item.isPodcastEpisode) return
+        viewModelScope.launch { feedRepository.markRead(item.id, true) }
     }
 
     fun togglePlayPause(item: FeedItem) {
