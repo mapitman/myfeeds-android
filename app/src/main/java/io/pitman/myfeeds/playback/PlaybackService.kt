@@ -2,12 +2,16 @@ package io.pitman.myfeeds.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import androidx.annotation.OptIn
 import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import dagger.hilt.android.AndroidEntryPoint
 import io.pitman.myfeeds.MainActivity
+import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.repository.FeedRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -37,10 +41,22 @@ class PlaybackService : MediaSessionService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var positionSaveJob: Job? = null
 
+    @OptIn(markerClass = [UnstableApi::class])
     override fun onCreate() {
         super.onCreate()
         player = ExoPlayer.Builder(this).build()
         player.addListener(playerListener)
+
+        // Without an explicit small icon, DefaultMediaNotificationProvider falls back to the
+        // app's adaptive launcher icon (android.R.attr.icon), which the system can't flatten
+        // into the monochrome silhouette a notification/lock-screen icon needs, so it renders
+        // blank. Reuse the same pre-flattened monochrome icon FeedRefreshWorker already uses for
+        // its notifications. (issue #116)
+        setMediaNotificationProvider(
+            DefaultMediaNotificationProvider.Builder(this).build().apply {
+                setSmallIcon(R.drawable.ic_notification)
+            },
+        )
 
         val sessionActivityIntent = PendingIntent.getActivity(
             this,
