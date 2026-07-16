@@ -68,7 +68,7 @@ class AddFeedViewModelTest {
         server.start()
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        val repository = FeedRepository(db.feedDao(), db.feedItemDao())
+        val repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
         val httpClient = OkHttpClient()
         viewModel = AddFeedViewModel(
             feedFetcher = FeedFetcher(httpClient),

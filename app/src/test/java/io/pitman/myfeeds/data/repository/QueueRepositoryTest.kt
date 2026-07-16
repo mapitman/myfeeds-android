@@ -32,7 +32,7 @@ class QueueRepositoryTest {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        feedRepository = FeedRepository(db.feedDao(), db.feedItemDao())
+        feedRepository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
         queueRepository = QueueRepository(db.queueDao())
 
         feedId = feedRepository.subscribe(Feed(title = "A Feed"))

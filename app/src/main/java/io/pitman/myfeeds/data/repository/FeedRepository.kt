@@ -4,6 +4,7 @@ import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedDao
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.local.FeedItemDao
+import io.pitman.myfeeds.data.local.QueueDao
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -16,6 +17,7 @@ import javax.inject.Inject
 class FeedRepository @Inject constructor(
     private val feedDao: FeedDao,
     private val feedItemDao: FeedItemDao,
+    private val queueDao: QueueDao,
 ) {
     fun observeAllFeeds(): Flow<List<Feed>> = feedDao.observeAll()
 
@@ -77,13 +79,19 @@ class FeedRepository @Inject constructor(
      * Deletes the oldest items beyond the feed's `itemsToKeep`, mirroring the original
      * FeedUpdater's trim-by-publish-date behavior. Returns the evicted items so callers can clean
      * up associated enclosure files (issue #12).
+     *
+     * Items currently in the Next Up queue are exempt, even if they'd otherwise be old enough to
+     * evict -- deleting a queued [FeedItem] cascades to its `queue_entries` row (issue #125:
+     * episodes a user had manually queued were being silently dropped from Next Up by this trim).
      */
     suspend fun trimToItemsToKeep(feedId: Long): List<FeedItem> {
         val itemsToKeep = feedDao.getById(feedId)?.itemsToKeep ?: return emptyList()
         val items = feedItemDao.observeByFeed(feedId).first()
         if (items.size <= itemsToKeep) return emptyList()
 
-        val evicted = items.drop(itemsToKeep)
+        val queuedItemIds = queueDao.orderedItemIdsForFeed(feedId).toSet()
+        val evicted = items.drop(itemsToKeep).filterNot { it.id in queuedItemIds }
+        if (evicted.isEmpty()) return emptyList()
         feedItemDao.deleteAll(evicted)
         return evicted
     }

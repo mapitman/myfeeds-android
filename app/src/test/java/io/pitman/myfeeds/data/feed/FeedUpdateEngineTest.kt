@@ -57,7 +57,7 @@ class FeedUpdateEngineTest {
         server.start()
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        repository = FeedRepository(db.feedDao(), db.feedItemDao())
+        repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
         engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
     }
 

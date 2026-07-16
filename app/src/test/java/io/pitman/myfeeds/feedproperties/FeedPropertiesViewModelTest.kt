@@ -65,7 +65,7 @@ class FeedPropertiesViewModelTest {
         Dispatchers.setMain(testDispatcher)
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        repository = FeedRepository(db.feedDao(), db.feedItemDao())
+        repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
