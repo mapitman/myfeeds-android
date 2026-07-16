@@ -71,7 +71,7 @@ class FeedPropertiesViewModelTest {
         )
         settingsDataStore = SettingsDataStore(dataStore)
 
-        feedId = repository.subscribe(Feed(title = "A Feed"))
+        feedId = repository.subscribe(Feed(title = "A Feed", feedUrl = "https://example.com/feed.xml"))
     }
 
     @After
@@ -89,6 +89,7 @@ class FeedPropertiesViewModelTest {
 
         assertNull(state.itemsToKeep)
         assertEquals(20, state.globalMaxArticles)
+        assertEquals("https://example.com/feed.xml", state.feedUrl)
     }
 
     @Test
