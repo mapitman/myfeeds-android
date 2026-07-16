@@ -7,6 +7,7 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -37,7 +38,12 @@ class PlaybackControllerTest {
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
-        playbackController = PlaybackController(context, SettingsDataStore(dataStore), FeedRepository(db.feedDao(), db.feedItemDao()))
+        playbackController = PlaybackController(
+            context,
+            SettingsDataStore(dataStore),
+            FeedRepository(db.feedDao(), db.feedItemDao()),
+            QueueRepository(db.queueDao()),
+        )
     }
 
     @After

@@ -12,6 +12,7 @@ import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.DownloadScheduling
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
@@ -72,7 +73,7 @@ class ReaderViewModelTest {
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
         settingsDataStore = SettingsDataStore(dataStore)
-        playbackController = PlaybackController(context, settingsDataStore, repository)
+        playbackController = PlaybackController(context, settingsDataStore, repository, QueueRepository(db.queueDao()))
         downloadRepository = EnclosureDownloadRepository(
             feedRepository = repository,
             downloadScheduling = object : DownloadScheduling {

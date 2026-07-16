@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -79,6 +80,7 @@ fun ReaderScreen(
     viewModel: ReaderViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
     onCurrentItemChange: (String?) -> Unit = {},
+    onQueueClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
@@ -125,6 +127,9 @@ fun ReaderScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onQueueClick) {
+                        Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = stringResource(R.string.cd_open_queue))
+                    }
                     IconButton(onClick = {
                         val url = currentItem?.url ?: return@IconButton
                         context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))

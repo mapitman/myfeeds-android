@@ -12,6 +12,7 @@ import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +57,7 @@ class PlaybackController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsDataStore: SettingsDataStore,
     private val feedRepository: FeedRepository,
+    private val queueRepository: QueueRepository,
 ) {
     private var controller: MediaController? = null
 
@@ -63,6 +65,11 @@ class PlaybackController @Inject constructor(
     // alongside the controller and folded into PlaybackUiState -- the mini-player (issue #66)
     // needs it to navigate to the reader route ("reader/{feedId}/{itemId}") on tap.
     private var currentFeedId: Long? = null
+
+    // Tracked separately from uiState.currentItemId (which only updates once the player listener
+    // fires) so loadMedia can synchronously tell what was playing right before a switch, to
+    // re-queue it (issue #106).
+    private var currentItemId: String? = null
 
     private val _uiState = MutableStateFlow(PlaybackUiState())
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
@@ -99,14 +106,30 @@ class PlaybackController @Inject constructor(
     /**
      * On completion the episode is no longer "current" (issue #107): position resets, the item
      * stops being treated as playing, and the mini-player disappears -- the same as an explicit
-     * [stop], just triggered by reaching the end instead of the user tapping close.
+     * [stop], just triggered by reaching the end instead of the user tapping close. Then, if
+     * anything is up next, playback continues automatically (issue #106).
      */
     private fun handlePlaybackEnded(player: Player) {
         player.clearMediaItems()
         currentFeedId = null
+        currentItemId = null
         _uiState.value = PlaybackUiState()
         positionTickerJob?.cancel()
-        positionTickerScope.launch(Dispatchers.IO) { settingsDataStore.setLastPlayingItem(null, null) }
+        // Left on the scope's default Main.immediate context (not dispatched to IO) because
+        // playNextQueued(), if the queue isn't empty, ends up calling into the MediaController --
+        // which, like all Media3 controller methods, must be called on the app's main thread.
+        positionTickerScope.launch {
+            settingsDataStore.setLastPlayingItem(null, null)
+            playNextQueued()
+        }
+    }
+
+    /** Auto-advances to whatever's next in "Next Up" when an episode finishes (issue #106). */
+    private suspend fun playNextQueued() {
+        val itemId = queueRepository.popNext() ?: return
+        val item = feedRepository.getItem(itemId) ?: return
+        val feed = feedRepository.getFeed(item.feedId)
+        loadMedia(item, feed?.userTitle ?: feed?.title, autoPlay = true)
     }
 
     private fun connect(onConnected: (MediaController) -> Unit) {
@@ -178,7 +201,13 @@ class PlaybackController @Inject constructor(
             )
             .build()
 
+        val previousItemId = currentItemId
+        if (previousItemId != null && previousItemId != item.id) {
+            requeuePreviousEpisode(previousItemId)
+        }
+
         currentFeedId = item.feedId
+        currentItemId = item.id
         connect { controller ->
             controller.setMediaItem(mediaItem, item.enclosurePosition?.let { (it * 1000).toLong() } ?: 0L)
             controller.setPlaybackSpeed(speed)
@@ -187,6 +216,16 @@ class PlaybackController @Inject constructor(
         }
         settingsDataStore.setLastPlayingItem(item.feedId, item.id)
         return true
+    }
+
+    /**
+     * Whatever was playing before a switch stays in "Next Up" as long as it wasn't finished
+     * (issue #106) -- mirrors [restoreLastPlayingItem]'s `!isRead` check for "not completed".
+     * A no-op if it's already queued (e.g. the user played straight from the queue).
+     */
+    private suspend fun requeuePreviousEpisode(itemId: String) {
+        val previous = feedRepository.getItem(itemId)?.takeIf { !it.isRead } ?: return
+        queueRepository.addToFront(previous.id)
     }
 
     fun pause() {
@@ -232,6 +271,7 @@ class PlaybackController @Inject constructor(
         controller?.stop()
         controller?.clearMediaItems()
         currentFeedId = null
+        currentItemId = null
         positionTickerScope.launch(Dispatchers.IO) { settingsDataStore.setLastPlayingItem(null, null) }
     }
 
