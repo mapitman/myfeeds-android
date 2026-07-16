@@ -3,4 +3,8 @@
          Marketing/ApplicationIcon.png in myfeeds-winphone and the comment in Color.kt. -->
     <color name="ic_launcher_background">#FF7D00</color>
     <color name="splash_background">#FF7D00</color>
+
+    <!-- Matches the default Material3 light colorScheme() surface color used by MyFeedsTheme,
+         so the activity window background doesn't flash a different shade before Compose draws. -->
+    <color name="window_background">#FFFBFE</color>
 </resources>
