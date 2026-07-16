@@ -104,7 +104,10 @@ fun ArticleListScreen(
                         Column {
                             Text(uiState.feedTitle)
                             Text(
-                                text = stringResource(R.string.article_list_unread_count, uiState.unreadCount),
+                                text = stringResource(
+                                    if (uiState.isPodcastFeed) R.string.article_list_unplayed_count else R.string.article_list_unread_count,
+                                    uiState.unreadCount,
+                                ),
                                 style = MaterialTheme.typography.labelSmall,
                             )
                         }
@@ -124,7 +127,13 @@ fun ArticleListScreen(
                 Tab(
                     selected = selectedTab == 0,
                     onClick = { viewModel.setShowUnreadOnly(true) },
-                    text = { Text(stringResource(R.string.article_list_tab_unread)) },
+                    text = {
+                        Text(
+                            stringResource(
+                                if (uiState.isPodcastFeed) R.string.article_list_tab_unplayed else R.string.article_list_tab_unread,
+                            ),
+                        )
+                    },
                 )
                 Tab(
                     selected = selectedTab == 1,
@@ -141,7 +150,11 @@ fun ArticleListScreen(
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(
                             stringResource(
-                                if (uiState.showUnreadOnly) R.string.article_list_no_unread_articles else R.string.article_list_no_articles,
+                                when {
+                                    !uiState.showUnreadOnly -> R.string.article_list_no_articles
+                                    uiState.isPodcastFeed -> R.string.article_list_no_unplayed_articles
+                                    else -> R.string.article_list_no_unread_articles
+                                },
                             ),
                         )
                     }
