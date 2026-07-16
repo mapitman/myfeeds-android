@@ -36,4 +36,8 @@ data class Feed(
     val sortOrder: Int? = null,
     /** New in this port (issue #23) -- the original MyFeeds only supported manual downloads. */
     val autoDownloadEnabled: Boolean = false,
+    /** New episodes auto-add to the Next Up queue (issue #68) when this feed refreshes. */
+    val autoQueueEnabled: Boolean = false,
+    /** Only enforced when [autoQueueEnabled]; null means unlimited (keep all auto-queued episodes). */
+    val autoQueueMaxCount: Int? = null,
 )

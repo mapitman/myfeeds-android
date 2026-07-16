@@ -129,6 +129,28 @@ class FeedPropertiesViewModelTest {
     }
 
     @Test
+    fun setAutoQueueEnabled_persists() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.uiState.first { it.displayTitle == "A Feed" }
+
+        viewModel.setAutoQueueEnabled(true)
+
+        val state = viewModel.uiState.first { it.autoQueueEnabled }
+        assertTrue(state.autoQueueEnabled)
+    }
+
+    @Test
+    fun setAutoQueueMaxCount_persists() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.uiState.first { it.displayTitle == "A Feed" }
+
+        viewModel.setAutoQueueMaxCount(3)
+
+        val state = viewModel.uiState.first { it.autoQueueMaxCount == 3 }
+        assertEquals(3, state.autoQueueMaxCount)
+    }
+
+    @Test
     fun unsubscribe_deletesFeedAndReflectsInUiState() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.uiState.first { it.displayTitle == "A Feed" }

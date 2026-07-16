@@ -96,6 +96,28 @@ class MigrationTest {
         migrated.close()
     }
 
+    @Test
+    fun migrate4To5_addsAutoQueueColumnsWithoutDataLoss() {
+        helper.createDatabase(TEST_DB, 4).apply {
+            execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
+            execSQL(
+                "INSERT INTO feeds (id, categoryId, title, userTitle, description, feedUrl, siteUrl, " +
+                    "imageUrl, displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled) " +
+                    "VALUES (1, 1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 5, true, MIGRATION_4_5)
+
+        migrated.query("SELECT autoQueueEnabled, autoQueueMaxCount FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+            assertTrue(cursor.isNull(1))
+        }
+        migrated.close()
+    }
+
     companion object {
         private const val TEST_DB = "migration-test"
     }

@@ -17,9 +17,11 @@ import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.DownloadScheduling
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -55,6 +57,7 @@ class FeedRefreshWorkerTest {
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
     private lateinit var downloadRepository: EnclosureDownloadRepository
+    private lateinit var queueRepository: QueueRepository
     private lateinit var settingsDataStore: SettingsDataStore
 
     @Before
@@ -74,6 +77,7 @@ class FeedRefreshWorkerTest {
             },
             settingsDataStore = settingsDataStore,
         )
+        queueRepository = QueueRepository(db.queueDao())
     }
 
     @After
@@ -89,7 +93,7 @@ class FeedRefreshWorkerTest {
         val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
 
         val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
-            .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, settingsDataStore))
+            .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, queueRepository, settingsDataStore))
             .build()
 
         val result = worker.doWork()
@@ -130,7 +134,7 @@ class FeedRefreshWorkerTest {
             val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
 
             val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
-                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, settingsDataStore))
+                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, queueRepository, settingsDataStore))
                 .build()
 
             worker.doWork()
@@ -174,7 +178,7 @@ class FeedRefreshWorkerTest {
             val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
 
             val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
-                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, settingsDataStore))
+                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, queueRepository, settingsDataStore))
                 .build()
 
             worker.doWork()
@@ -187,16 +191,123 @@ class FeedRefreshWorkerTest {
         }
     }
 
+    @Test
+    fun doWork_autoQueueEnabled_addsNewEpisodesAndEnforcesCap() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val server = MockWebServer()
+        server.start()
+        try {
+            val categoryId = db.categoryDao().insert(Category(name = "Tech"))
+            val url = server.url("/feed.xml").toString()
+            val feedId = repository.subscribe(
+                Feed(categoryId = categoryId, title = "A Podcast", feedUrl = url, autoQueueEnabled = true, autoQueueMaxCount = 1),
+            )
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0"><channel>
+                      <title>A Podcast</title>
+                      <link>https://example.com</link>
+                      <description>desc</description>
+                      <item>
+                        <title>Episode 1</title>
+                        <link>https://example.com/1</link>
+                        <guid>guid-1</guid>
+                        <description>Body</description>
+                        <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+                        <enclosure url="https://example.com/ep1.mp3" type="audio/mpeg" length="1" />
+                      </item>
+                      <item>
+                        <title>Episode 2</title>
+                        <link>https://example.com/2</link>
+                        <guid>guid-2</guid>
+                        <description>Body</description>
+                        <pubDate>Tue, 04 Jun 2013 11:05:30 GMT</pubDate>
+                        <enclosure url="https://example.com/ep2.mp3" type="audio/mpeg" length="1" />
+                      </item>
+                    </channel></rss>
+                    """.trimIndent(),
+                ),
+            )
+            val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
+
+            val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
+                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, queueRepository, settingsDataStore))
+                .build()
+            worker.doWork()
+
+            // Cap = 1: both new episodes get auto-queued, then eviction trims back down to 1 --
+            // whichever survives, it must belong to this feed and the queue must not exceed the cap.
+            val queue = queueRepository.observeQueue().first()
+            assertEquals(1, queue.size)
+            assertEquals(feedId, queue.single().item.feedId)
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun doWork_autoQueueDisabled_doesNotQueueNewEpisodes() = runTest {
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val server = MockWebServer()
+        server.start()
+        try {
+            val categoryId = db.categoryDao().insert(Category(name = "Tech"))
+            val url = server.url("/feed.xml").toString()
+            repository.subscribe(Feed(categoryId = categoryId, title = "A Podcast", feedUrl = url))
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0"><channel>
+                      <title>A Podcast</title>
+                      <link>https://example.com</link>
+                      <description>desc</description>
+                      <item>
+                        <title>Episode 1</title>
+                        <link>https://example.com/1</link>
+                        <guid>guid-1</guid>
+                        <description>Body</description>
+                        <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+                        <enclosure url="https://example.com/ep1.mp3" type="audio/mpeg" length="1" />
+                      </item>
+                    </channel></rss>
+                    """.trimIndent(),
+                ),
+            )
+            val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
+
+            val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
+                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, queueRepository, settingsDataStore))
+                .build()
+            worker.doWork()
+
+            assertTrue(queueRepository.observeQueue().first().isEmpty())
+        } finally {
+            server.shutdown()
+        }
+    }
+
     private class TestWorkerFactory(
         private val repository: FeedRepository,
         private val engine: FeedUpdateEngine,
         private val downloadRepository: EnclosureDownloadRepository,
+        private val queueRepository: QueueRepository,
         private val settingsDataStore: SettingsDataStore,
     ) : WorkerFactory() {
         override fun createWorker(
             appContext: Context,
             workerClassName: String,
             workerParameters: WorkerParameters,
-        ) = FeedRefreshWorker(appContext, workerParameters, repository, engine, downloadRepository, settingsDataStore)
+        ) = FeedRefreshWorker(
+            appContext,
+            workerParameters,
+            repository,
+            engine,
+            downloadRepository,
+            queueRepository,
+            settingsDataStore,
+        )
     }
 }

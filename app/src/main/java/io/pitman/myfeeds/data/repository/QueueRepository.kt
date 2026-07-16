@@ -39,4 +39,17 @@ class QueueRepository @Inject constructor(
         queueDao.remove(next)
         return next
     }
+
+    /**
+     * Evicts this feed's oldest-queued episodes (earliest added, not earliest published) down to
+     * [maxCount] (issue #68) -- applies to the whole queue for that feed, auto- and manually-queued
+     * alike, since [QueueEntry] doesn't distinguish how an entry got there. Only removes from the
+     * queue; does not touch the episode, its download, or read state.
+     */
+    suspend fun enforceFeedCap(feedId: Long, maxCount: Int) {
+        val ordered = queueDao.orderedItemIdsForFeed(feedId)
+        val excess = ordered.size - maxCount
+        if (excess <= 0) return
+        ordered.take(excess).forEach { queueDao.remove(it) }
+    }
 }
