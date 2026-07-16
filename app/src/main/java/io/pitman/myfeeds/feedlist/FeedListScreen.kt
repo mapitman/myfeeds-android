@@ -9,6 +9,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -49,6 +50,7 @@ fun FeedListScreen(
     onFeedClick: (Long) -> Unit = {},
     onAddFeedClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
+    onQueueClick: () -> Unit = {},
     onFeedLongClick: (Long) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -78,6 +80,9 @@ fun FeedListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onQueueClick) {
+                        Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = stringResource(R.string.cd_open_queue))
+                    }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.cd_settings))
                     }

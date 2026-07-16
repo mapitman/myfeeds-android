@@ -13,6 +13,8 @@ import io.pitman.myfeeds.data.local.FeedDao
 import io.pitman.myfeeds.data.local.FeedItemDao
 import io.pitman.myfeeds.data.local.MIGRATION_1_2
 import io.pitman.myfeeds.data.local.MIGRATION_2_3
+import io.pitman.myfeeds.data.local.MIGRATION_3_4
+import io.pitman.myfeeds.data.local.QueueDao
 import javax.inject.Singleton
 
 @Module
@@ -22,7 +24,7 @@ object DatabaseModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
             .build()
 
     @Provides
@@ -33,4 +35,7 @@ object DatabaseModule {
 
     @Provides
     fun provideFeedItemDao(database: AppDatabase): FeedItemDao = database.feedItemDao()
+
+    @Provides
+    fun provideQueueDao(database: AppDatabase): QueueDao = database.queueDao()
 }

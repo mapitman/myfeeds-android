@@ -1,0 +1,42 @@
+package io.pitman.myfeeds.data.repository
+
+import io.pitman.myfeeds.data.local.QueueDao
+import io.pitman.myfeeds.data.local.QueueEntry
+import io.pitman.myfeeds.data.local.QueuedEpisode
+import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
+
+/** The "Next Up" playback queue (issue #67), over [QueueDao]. */
+class QueueRepository @Inject constructor(
+    private val queueDao: QueueDao,
+) {
+    fun observeQueue(): Flow<List<QueuedEpisode>> = queueDao.observeQueue()
+
+    suspend fun isQueued(itemId: String): Boolean = queueDao.findItemId(itemId) != null
+
+    /** No-op if already queued -- an episode can only be queued once. */
+    suspend fun addToEnd(itemId: String) {
+        if (queueDao.findItemId(itemId) != null) return
+        queueDao.insert(QueueEntry(itemId, position = queueDao.maxPosition() + 1, addedAt = System.currentTimeMillis()))
+    }
+
+    /** No-op if already queued -- an episode can only be queued once. */
+    suspend fun addToFront(itemId: String) {
+        if (queueDao.findItemId(itemId) != null) return
+        queueDao.insert(QueueEntry(itemId, position = queueDao.minPosition() - 1, addedAt = System.currentTimeMillis()))
+    }
+
+    suspend fun remove(itemId: String) = queueDao.remove(itemId)
+
+    /** Renumbers positions to match [orderedItemIds] exactly, for drag-to-reorder in the queue screen. */
+    suspend fun reorder(orderedItemIds: List<String>) {
+        orderedItemIds.forEachIndexed { index, itemId -> queueDao.setPosition(itemId, index) }
+    }
+
+    /** Removes and returns the item at the front of the queue, or null if the queue is empty. */
+    suspend fun popNext(): String? {
+        val next = queueDao.firstItemId() ?: return null
+        queueDao.remove(next)
+        return next
+    }
+}

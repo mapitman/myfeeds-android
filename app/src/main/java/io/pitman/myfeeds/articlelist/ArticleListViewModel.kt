@@ -11,6 +11,7 @@ import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.feed.FeedUpdateResult
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -42,6 +43,7 @@ class ArticleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val feedRepository: FeedRepository,
     private val feedUpdateEngine: FeedUpdateEngine,
+    private val queueRepository: QueueRepository,
     settingsDataStore: SettingsDataStore,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
@@ -130,5 +132,9 @@ class ArticleListViewModel @Inject constructor(
             feedRepository.deleteItems(items)
             clearSelection()
         }
+    }
+
+    fun addToQueue(itemId: String) {
+        viewModelScope.launch { queueRepository.addToEnd(itemId) }
     }
 }
