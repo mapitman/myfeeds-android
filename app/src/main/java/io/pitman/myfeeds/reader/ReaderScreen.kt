@@ -320,6 +320,7 @@ private fun ArticleBody(html: String, baseUrl: String?, fontScale: Float) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp),
         factory = { ctx ->
             WebView(ctx).apply {
+                setBackgroundColor(android.graphics.Color.TRANSPARENT)
                 settings.javaScriptEnabled = false
                 webViewClient = object : WebViewClient() {
                     override fun shouldOverrideUrlLoading(view: WebView?, url: String?): Boolean {

@@ -1,0 +1,5 @@
+<resources>
+    <!-- Matches the default Material3 dark colorScheme() surface color used by MyFeedsTheme,
+         so the activity window background doesn't flash white before Compose draws. -->
+    <color name="window_background">#1C1B1F</color>
+</resources>
