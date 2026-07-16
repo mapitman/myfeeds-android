@@ -20,4 +20,7 @@ data class AppSettings(
     val notifyOnNewItems: Boolean = false,
     val lastImportUrl: String? = null,
     val lastFeedUpdateEpochMillis: Long? = null,
+    /** The episode last loaded into the player, restored on app relaunch (issue #108). */
+    val lastPlayingFeedId: Long? = null,
+    val lastPlayingItemId: String? = null,
 )

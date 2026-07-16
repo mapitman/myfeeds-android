@@ -33,6 +33,8 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
             notifyOnNewItems = prefs[Keys.NOTIFY_ON_NEW_ITEMS] ?: AppSettings().notifyOnNewItems,
             lastImportUrl = prefs[Keys.LAST_IMPORT_URL],
             lastFeedUpdateEpochMillis = prefs[Keys.LAST_FEED_UPDATE_EPOCH_MILLIS],
+            lastPlayingFeedId = prefs[Keys.LAST_PLAYING_FEED_ID],
+            lastPlayingItemId = prefs[Keys.LAST_PLAYING_ITEM_ID],
         )
     }
 
@@ -94,6 +96,19 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
         dataStore.edit { it[Keys.LAST_FEED_UPDATE_EPOCH_MILLIS] = epochMillis }
     }
 
+    /** Tracks the episode loaded into the player so it can be restored on relaunch (issue #108). */
+    suspend fun setLastPlayingItem(feedId: Long?, itemId: String?) {
+        dataStore.edit {
+            if (feedId == null || itemId == null) {
+                it.remove(Keys.LAST_PLAYING_FEED_ID)
+                it.remove(Keys.LAST_PLAYING_ITEM_ID)
+            } else {
+                it[Keys.LAST_PLAYING_FEED_ID] = feedId
+                it[Keys.LAST_PLAYING_ITEM_ID] = itemId
+            }
+        }
+    }
+
     /** Mirrors the original SettingsViewModel.Reset(): clears all settings back to defaults. */
     suspend fun reset() {
         dataStore.edit { it.clear() }
@@ -114,5 +129,7 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
         val NOTIFY_ON_NEW_ITEMS = booleanPreferencesKey("notify_on_new_items")
         val LAST_IMPORT_URL = stringPreferencesKey("last_import_url")
         val LAST_FEED_UPDATE_EPOCH_MILLIS = longPreferencesKey("last_feed_update_epoch_millis")
+        val LAST_PLAYING_FEED_ID = longPreferencesKey("last_playing_feed_id")
+        val LAST_PLAYING_ITEM_ID = stringPreferencesKey("last_playing_item_id")
     }
 }

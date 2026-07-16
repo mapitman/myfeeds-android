@@ -1,8 +1,10 @@
 package io.pitman.myfeeds.playback
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -15,6 +17,11 @@ class MiniPlayerViewModel @Inject constructor(
     private val playbackController: PlaybackController,
 ) : ViewModel() {
     val playbackState: StateFlow<PlaybackUiState> = playbackController.uiState
+
+    /** Restores the last-playing episode (issue #108); safe to call every app launch. */
+    fun restoreLastPlayingItem() {
+        viewModelScope.launch { playbackController.restoreLastPlayingItem() }
+    }
 
     fun togglePlayPause() {
         if (playbackState.value.isPlaying) playbackController.pause() else playbackController.resume()

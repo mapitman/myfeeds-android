@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
@@ -204,18 +205,30 @@ private fun ArticleRow(
             Checkbox(checked = selected, onCheckedChange = null)
         }
         Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-            Text(
-                text = article.title.orEmpty(),
-                style = MaterialTheme.typography.titleMedium.let {
-                    if (titleFontScale == 1f) it else it.copy(fontSize = it.fontSize * titleFontScale)
-                },
-                fontWeight = if (article.isRead) FontWeight.Normal else FontWeight.Bold,
-                color = if (article.isRead) {
-                    MaterialTheme.colorScheme.onSurfaceVariant
-                } else {
-                    MaterialTheme.colorScheme.onSurface
-                },
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Distinct from the bold/unbold read-state styling below -- a clearer at-a-glance
+                // "you've listened to this" signal for podcast episodes specifically (issue #107).
+                if (article.isPodcastEpisode && article.isRead) {
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = stringResource(R.string.cd_played),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(16.dp).padding(end = 4.dp),
+                    )
+                }
+                Text(
+                    text = article.title.orEmpty(),
+                    style = MaterialTheme.typography.titleMedium.let {
+                        if (titleFontScale == 1f) it else it.copy(fontSize = it.fontSize * titleFontScale)
+                    },
+                    fontWeight = if (article.isRead) FontWeight.Normal else FontWeight.Bold,
+                    color = if (article.isRead) {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+            }
             Text(
                 text = ArticleDateFormatter.format(article.publishDate),
                 style = MaterialTheme.typography.bodySmall,
