@@ -186,6 +186,36 @@ class ArticleListViewModelTest {
     }
 
     @Test
+    fun defaultState_regularFeed_isNotPodcastFeed() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+
+        val state = viewModel.uiState.first { it.feedTitle == "A Feed" }
+
+        assertFalse(state.isPodcastFeed)
+    }
+
+    @Test
+    fun defaultState_podcastFeed_isPodcastFeed() = runTest(testDispatcher) {
+        repository.upsertItems(
+            listOf(
+                FeedItem(
+                    id = "episode-1",
+                    feedId = feedId,
+                    title = "Episode",
+                    itemGuid = "g-episode",
+                    enclosureUrl = "https://example.com/episode.mp3",
+                    enclosureType = "audio/mpeg",
+                ),
+            ),
+        )
+        val viewModel = createViewModel()
+
+        val state = viewModel.uiState.first { it.feedTitle == "A Feed" && it.isPodcastFeed }
+
+        assertTrue(state.isPodcastFeed)
+    }
+
+    @Test
     fun deleteSelected_removesItemsAndClearsSelection() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.setShowUnreadOnly(false)

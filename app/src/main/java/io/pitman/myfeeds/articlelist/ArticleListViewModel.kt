@@ -33,6 +33,7 @@ data class ArticleListUiState(
     val unreadCount: Int = 0,
     val selectedIds: Set<String> = emptySet(),
     val isRefreshing: Boolean = false,
+    val isPodcastFeed: Boolean = false,
 ) {
     val isSelectionMode: Boolean get() = selectedIds.isNotEmpty()
 }
@@ -70,6 +71,8 @@ class ArticleListViewModel @Inject constructor(
         ArticleListUiState(title, unreadOnly, articles, unreadCount, selected)
     }.combine(isRefreshing) { state, refreshing ->
         state.copy(isRefreshing = refreshing)
+    }.combine(feedRepository.observePodcastFeedIds()) { state, podcastFeedIds ->
+        state.copy(isPodcastFeed = feedId in podcastFeedIds)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ArticleListUiState())
 
     init {
