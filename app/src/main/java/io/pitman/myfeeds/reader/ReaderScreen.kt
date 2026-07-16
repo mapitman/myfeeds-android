@@ -125,7 +125,13 @@ fun ReaderScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(stringResource(R.string.reader_page_position, pagerState.currentPage + 1, uiState.items.size))
+                    Column {
+                        uiState.feedTitle?.let { Text(it) }
+                        Text(
+                            text = stringResource(R.string.reader_page_position, pagerState.currentPage + 1, uiState.items.size),
+                            style = MaterialTheme.typography.labelSmall,
+                        )
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
