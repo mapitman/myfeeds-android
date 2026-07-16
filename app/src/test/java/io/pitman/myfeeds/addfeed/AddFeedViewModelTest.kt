@@ -164,4 +164,32 @@ class AddFeedViewModelTest {
         val categories = db.categoryDao().observeAll().first()
         assertEquals(listOf("Imported"), categories.map { it.name })
     }
+
+    @Test
+    fun importOpmlFromText_populatesCategoriesAndFeeds() = runTest(testDispatcher) {
+        val opml = """
+            <?xml version="1.0" encoding="utf-8"?>
+            <opml version="1.0"><body>
+              <outline text="Imported">
+                <outline text="Feed A" xmlUrl="https://a.example/feed" />
+              </outline>
+            </body></opml>
+        """.trimIndent()
+
+        viewModel.importOpmlFromText(opml)
+        val state = awaitTerminalState()
+
+        assertTrue("expected Success but got $state", state is AddFeedUiState.Success)
+        val categories = db.categoryDao().observeAll().first()
+        assertEquals(listOf("Imported"), categories.map { it.name })
+    }
+
+    @Test
+    fun importOpmlFromText_blankText_showsErrorWithoutParsing() = runTest(testDispatcher) {
+        viewModel.importOpmlFromText("   ")
+        val state = awaitTerminalState()
+
+        assertTrue(state is AddFeedUiState.Error)
+        assertEquals(0, db.categoryDao().observeAll().first().size)
+    }
 }
