@@ -6,14 +6,22 @@ import javax.xml.parsers.DocumentBuilderFactory
 
 data class OpmlFeed(val title: String, val xmlUrl: String, val description: String? = null)
 
-data class OpmlCategory(val name: String, val feeds: List<OpmlFeed>)
+/**
+ * A folder-level outline grouping feeds. Not the app's (removed, issue #118) `Category` entity --
+ * subscribing (via [OpmlImporter]/[io.pitman.myfeeds.data.DefaultFeedsSeeder]) ignores [name] and
+ * just flattens every folder's feeds; only [io.pitman.myfeeds.data.directory.FeedDirectory] (a
+ * different feature, issue #62) uses [name] as a topic label for its offline keyword search.
+ */
+data class OpmlFolder(val name: String, val feeds: List<OpmlFeed>)
 
-data class OpmlDocument(val categories: List<OpmlCategory>)
+data class OpmlDocument(val folders: List<OpmlFolder>) {
+    val feeds: List<OpmlFeed> get() = folders.flatMap { it.feeds }
+}
 
 /**
- * Ported rule from MyFeeds/Opml.cs: an outline without `xmlUrl` is a category, a nested outline
- * with `xmlUrl` is a feed within it, and a feed outline directly under `<body>` (no parent
- * category) falls into "Uncategorized".
+ * Ported rule from MyFeeds/Opml.cs: an outline without `xmlUrl` is a folder, a nested outline with
+ * `xmlUrl` is a feed within it, and a feed outline directly under `<body>` (no parent folder)
+ * falls into "Uncategorized".
  */
 object OpmlParser {
     private const val UNCATEGORIZED = "Uncategorized"
@@ -23,17 +31,17 @@ object OpmlParser {
         val body = document.getElementsByTagName("body").item(0) as? Element
             ?: return OpmlDocument(emptyList())
 
-        val categories = mutableListOf<OpmlCategory>()
-        val uncategorizedFeeds = mutableListOf<OpmlFeed>()
+        val folders = mutableListOf<OpmlFolder>()
+        val looseFeeds = mutableListOf<OpmlFeed>()
 
         for (outline in body.childElements("outline")) {
             val xmlUrl = outline.getAttribute("xmlUrl")
             if (xmlUrl.isNullOrBlank()) {
                 val feeds = outline.childElements("outline")
                     .mapNotNull { it.toOpmlFeedOrNull() }
-                categories += OpmlCategory(name = outline.outlineTitle(), feeds = feeds)
+                folders += OpmlFolder(name = outline.outlineTitle(), feeds = feeds)
             } else {
-                uncategorizedFeeds += OpmlFeed(
+                looseFeeds += OpmlFeed(
                     title = outline.outlineTitle(),
                     xmlUrl = xmlUrl,
                     description = outline.getAttribute("description").ifBlank { null },
@@ -41,11 +49,11 @@ object OpmlParser {
             }
         }
 
-        if (uncategorizedFeeds.isNotEmpty()) {
-            categories += OpmlCategory(name = UNCATEGORIZED, feeds = uncategorizedFeeds)
+        if (looseFeeds.isNotEmpty()) {
+            folders += OpmlFolder(name = UNCATEGORIZED, feeds = looseFeeds)
         }
 
-        return OpmlDocument(categories)
+        return OpmlDocument(folders)
     }
 
     private fun Element.childElements(tagName: String): List<Element> {

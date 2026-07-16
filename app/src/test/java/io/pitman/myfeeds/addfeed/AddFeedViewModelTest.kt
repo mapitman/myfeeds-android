@@ -74,8 +74,7 @@ class AddFeedViewModelTest {
             feedFetcher = FeedFetcher(httpClient),
             feedUpdateEngine = FeedUpdateEngine(FeedFetcher(httpClient), repository),
             feedRepository = repository,
-            categoryDao = db.categoryDao(),
-            opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
+            opmlImporter = OpmlImporter(db.feedDao()),
             httpClient = httpClient,
             feedDirectory = FeedDirectory(context),
             context = context,
@@ -101,13 +100,11 @@ class AddFeedViewModelTest {
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
 
-        viewModel.addFeedByUrl(server.url("/feed.xml").toString(), "Tech")
+        viewModel.addFeedByUrl(server.url("/feed.xml").toString())
         val state = awaitTerminalState()
 
         assertTrue("expected Success but got $state", state is AddFeedUiState.Success)
-        val categories = db.categoryDao().observeAll().first()
-        assertEquals(listOf("Tech"), categories.map { it.name })
-        val feeds = db.feedDao().observeByCategory(categories.single().id).first()
+        val feeds = db.feedDao().observeAll().first()
         assertEquals(1, feeds.size)
         assertEquals("A New Feed", feeds.single().title)
         val items = db.feedItemDao().observeByFeed(feeds.single().id).first()
@@ -116,7 +113,7 @@ class AddFeedViewModelTest {
 
     @Test
     fun addFeedByUrl_blankUrl_showsErrorWithoutFetching() = runTest(testDispatcher) {
-        viewModel.addFeedByUrl("  ", "Tech")
+        viewModel.addFeedByUrl("  ")
         val state = awaitTerminalState()
 
         assertTrue(state is AddFeedUiState.Error)
@@ -127,7 +124,7 @@ class AddFeedViewModelTest {
     fun addFeedByUrl_fetchFailure_showsErrorAndDoesNotSubscribe() = runTest(testDispatcher) {
         server.enqueue(MockResponse().setResponseCode(404))
 
-        viewModel.addFeedByUrl(server.url("/missing.xml").toString(), "Tech")
+        viewModel.addFeedByUrl(server.url("/missing.xml").toString())
         val state = awaitTerminalState()
 
         assertTrue(state is AddFeedUiState.Error)
@@ -135,19 +132,7 @@ class AddFeedViewModelTest {
     }
 
     @Test
-    fun addFeedByUrl_blankCategory_fallsBackToUncategorized() = runTest(testDispatcher) {
-        server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
-        server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
-
-        viewModel.addFeedByUrl(server.url("/feed.xml").toString(), "")
-        awaitTerminalState()
-
-        val categories = db.categoryDao().observeAll().first()
-        assertEquals(listOf("Uncategorized"), categories.map { it.name })
-    }
-
-    @Test
-    fun importOpml_populatesCategoriesAndFeeds() = runTest(testDispatcher) {
+    fun importOpml_populatesFeeds() = runTest(testDispatcher) {
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0"><body>
@@ -161,12 +146,12 @@ class AddFeedViewModelTest {
         val state = awaitTerminalState()
 
         assertTrue("expected Success but got $state", state is AddFeedUiState.Success)
-        val categories = db.categoryDao().observeAll().first()
-        assertEquals(listOf("Imported"), categories.map { it.name })
+        val feeds = db.feedDao().observeAll().first()
+        assertEquals(listOf("Feed A"), feeds.map { it.title })
     }
 
     @Test
-    fun importOpmlFromText_populatesCategoriesAndFeeds() = runTest(testDispatcher) {
+    fun importOpmlFromText_populatesFeeds() = runTest(testDispatcher) {
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0"><body>
@@ -180,8 +165,8 @@ class AddFeedViewModelTest {
         val state = awaitTerminalState()
 
         assertTrue("expected Success but got $state", state is AddFeedUiState.Success)
-        val categories = db.categoryDao().observeAll().first()
-        assertEquals(listOf("Imported"), categories.map { it.name })
+        val feeds = db.feedDao().observeAll().first()
+        assertEquals(listOf("Feed A"), feeds.map { it.title })
     }
 
     @Test
@@ -190,6 +175,6 @@ class AddFeedViewModelTest {
         val state = awaitTerminalState()
 
         assertTrue(state is AddFeedUiState.Error)
-        assertEquals(0, db.categoryDao().observeAll().first().size)
+        assertEquals(0, db.feedDao().observeAll().first().size)
     }
 }

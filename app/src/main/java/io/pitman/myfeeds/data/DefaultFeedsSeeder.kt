@@ -2,8 +2,6 @@ package io.pitman.myfeeds.data
 
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
-import io.pitman.myfeeds.data.local.Category
-import io.pitman.myfeeds.data.local.CategoryDao
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedDao
 import io.pitman.myfeeds.data.opml.OpmlParser
@@ -13,11 +11,12 @@ import javax.inject.Inject
 
 /**
  * Loads the bundled default_feeds.opml (refreshed from the WinPhone app's stale DefaultFeeds.xml
- * -- see MyFeeds/DefaultFeeds.xml) into Category/Feed on first run.
+ * -- see MyFeeds/DefaultFeeds.xml) into Feed on first run. The asset still nests feeds under
+ * folder outlines for readability, but [OpmlParser] flattens those (issue #118 -- categories no
+ * longer exist), so every feed lands in the same unordered list.
  */
 class DefaultFeedsSeeder @Inject constructor(
     @ApplicationContext private val context: Context,
-    private val categoryDao: CategoryDao,
     private val feedDao: FeedDao,
     private val settingsDataStore: SettingsDataStore,
 ) {
@@ -25,13 +24,8 @@ class DefaultFeedsSeeder @Inject constructor(
         if (!settingsDataStore.settings.first().isFirstRun) return
 
         val opml = context.assets.open(DEFAULT_FEEDS_ASSET).use { OpmlParser.parse(it) }
-        opml.categories.forEachIndexed { categoryIndex, category ->
-            val categoryId = categoryDao.insert(Category(name = category.name, sortOrder = categoryIndex))
-            category.feeds.forEachIndexed { feedIndex, feed ->
-                feedDao.insert(
-                    Feed(categoryId = categoryId, title = feed.title, feedUrl = feed.xmlUrl, sortOrder = feedIndex),
-                )
-            }
+        opml.feeds.forEachIndexed { feedIndex, feed ->
+            feedDao.insert(Feed(title = feed.title, feedUrl = feed.xmlUrl, sortOrder = feedIndex))
         }
 
         settingsDataStore.setFirstRunComplete()

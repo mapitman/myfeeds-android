@@ -14,7 +14,6 @@ import androidx.work.testing.TestListenableWorkerBuilder
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.repository.QueueRepository
@@ -88,8 +87,7 @@ class FeedRefreshWorkerTest {
     @Test
     fun doWork_toleratesPerFeedFailureAndStillSucceeds() = runTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        repository.subscribe(Feed(categoryId = categoryId, title = "A Feed", feedUrl = "http://localhost:1/feed.xml"))
+        repository.subscribe(Feed(title = "A Feed", feedUrl = "http://localhost:1/feed.xml"))
         val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
 
         val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
@@ -109,9 +107,8 @@ class FeedRefreshWorkerTest {
         val server = MockWebServer()
         server.start()
         try {
-            val categoryId = db.categoryDao().insert(Category(name = "Tech"))
             val url = server.url("/feed.xml").toString()
-            repository.subscribe(Feed(categoryId = categoryId, title = "A Feed", feedUrl = url))
+            repository.subscribe(Feed(title = "A Feed", feedUrl = url))
             server.enqueue(
                 MockResponse().setResponseCode(200).setBody(
                     """
@@ -153,9 +150,8 @@ class FeedRefreshWorkerTest {
         val server = MockWebServer()
         server.start()
         try {
-            val categoryId = db.categoryDao().insert(Category(name = "Tech"))
             val url = server.url("/feed.xml").toString()
-            repository.subscribe(Feed(categoryId = categoryId, title = "A Feed", feedUrl = url))
+            repository.subscribe(Feed(title = "A Feed", feedUrl = url))
             server.enqueue(
                 MockResponse().setResponseCode(200).setBody(
                     """
@@ -197,10 +193,9 @@ class FeedRefreshWorkerTest {
         val server = MockWebServer()
         server.start()
         try {
-            val categoryId = db.categoryDao().insert(Category(name = "Tech"))
             val url = server.url("/feed.xml").toString()
             val feedId = repository.subscribe(
-                Feed(categoryId = categoryId, title = "A Podcast", feedUrl = url, autoQueueEnabled = true, autoQueueMaxCount = 1),
+                Feed(title = "A Podcast", feedUrl = url, autoQueueEnabled = true, autoQueueMaxCount = 1),
             )
             server.enqueue(
                 MockResponse().setResponseCode(200).setBody(
@@ -253,9 +248,8 @@ class FeedRefreshWorkerTest {
         val server = MockWebServer()
         server.start()
         try {
-            val categoryId = db.categoryDao().insert(Category(name = "Tech"))
             val url = server.url("/feed.xml").toString()
-            repository.subscribe(Feed(categoryId = categoryId, title = "A Podcast", feedUrl = url))
+            repository.subscribe(Feed(title = "A Podcast", feedUrl = url))
             server.enqueue(
                 MockResponse().setResponseCode(200).setBody(
                     """

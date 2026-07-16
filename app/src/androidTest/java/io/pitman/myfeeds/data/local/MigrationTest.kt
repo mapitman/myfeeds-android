@@ -27,6 +27,11 @@ class MigrationTest {
     }
 
     @Test
+    fun version7Schema_opensSuccessfully() {
+        helper.createDatabase(TEST_DB, 7).close()
+    }
+
+    @Test
     fun migrate1To2_addsDownloadColumnsWithoutDataLoss() {
         helper.createDatabase(TEST_DB, 1).apply {
             execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
@@ -136,6 +141,31 @@ class MigrationTest {
         migrated.query("SELECT playbackSpeed FROM feeds WHERE id = 1").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals(1.0, cursor.getDouble(0), 0.0001)
+        }
+        migrated.close()
+    }
+
+    @Test
+    fun migrate6To7_dropsCategoriesTableAndColumnWithoutDataLoss() {
+        helper.createDatabase(TEST_DB, 6).apply {
+            execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
+            execSQL(
+                "INSERT INTO feeds (id, categoryId, title, userTitle, description, feedUrl, siteUrl, " +
+                    "imageUrl, displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, " +
+                    "autoQueueEnabled, autoQueueMaxCount, playbackSpeed) " +
+                    "VALUES (1, 1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, 1.0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 7, true, MIGRATION_6_7)
+
+        migrated.query("SELECT title FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("A Feed", cursor.getString(0))
+        }
+        migrated.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'categories'").use { cursor ->
+            assertTrue(!cursor.moveToFirst())
         }
         migrated.close()
     }

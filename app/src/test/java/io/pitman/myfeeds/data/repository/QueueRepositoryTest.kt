@@ -3,7 +3,6 @@ package io.pitman.myfeeds.data.repository
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import kotlinx.coroutines.flow.first
@@ -36,8 +35,7 @@ class QueueRepositoryTest {
         feedRepository = FeedRepository(db.feedDao(), db.feedItemDao())
         queueRepository = QueueRepository(db.queueDao())
 
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        feedId = feedRepository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        feedId = feedRepository.subscribe(Feed(title = "A Feed"))
         feedRepository.upsertItems(
             listOf(
                 FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1"),
@@ -152,7 +150,7 @@ class QueueRepositoryTest {
 
     @Test
     fun enforceFeedCap_evictsOldestQueuedFromThatFeedOnly() = runTest {
-        val otherFeedId = feedRepository.subscribe(Feed(categoryId = db.feedDao().getById(feedId)!!.categoryId, title = "Other Feed"))
+        val otherFeedId = feedRepository.subscribe(Feed(title = "Other Feed"))
         feedRepository.upsertItems(listOf(FeedItem(id = "other-1", feedId = otherFeedId, title = "Other Episode", itemGuid = "og1")))
         queueRepository.addToEnd("ep-1")
         queueRepository.addToEnd("ep-2")

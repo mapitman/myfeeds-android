@@ -13,14 +13,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
@@ -54,14 +51,11 @@ fun AddFeedScreen(
     onBack: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val categories by viewModel.categories.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
     val context = LocalContext.current
 
     var url by remember { mutableStateOf("") }
-    var categoryName by remember { mutableStateOf("") }
-    var categoryMenuExpanded by remember { mutableStateOf(false) }
     var opmlUrl by remember { mutableStateOf("") }
     var opmlText by remember { mutableStateOf("") }
 
@@ -132,31 +126,8 @@ fun AddFeedScreen(
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             )
-            ExposedDropdownMenuBox(
-                expanded = categoryMenuExpanded,
-                onExpandedChange = { categoryMenuExpanded = it },
-                modifier = Modifier.padding(top = 8.dp),
-            ) {
-                OutlinedTextField(
-                    value = categoryName,
-                    onValueChange = { categoryName = it },
-                    label = { Text(stringResource(R.string.add_feed_category_label)) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(MenuAnchorType.PrimaryEditable),
-                )
-                ExposedDropdownMenu(expanded = categoryMenuExpanded, onDismissRequest = { categoryMenuExpanded = false }) {
-                    categories.forEach { category ->
-                        DropdownMenuItem(
-                            text = { Text(category.name) },
-                            onClick = {
-                                categoryName = category.name
-                                categoryMenuExpanded = false
-                            },
-                        )
-                    }
-                }
-            }
             Button(
-                onClick = { viewModel.addFeedByUrl(url, categoryName) },
+                onClick = { viewModel.addFeedByUrl(url) },
                 enabled = uiState !is AddFeedUiState.Loading,
                 modifier = Modifier.fillMaxWidth().padding(top = 12.dp),
             ) {

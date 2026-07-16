@@ -6,7 +6,6 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
@@ -72,8 +71,7 @@ class EnclosureDownloadRepositoryTest {
     }
 
     private suspend fun seedFeedAndItem(enclosureUrl: String?, enclosureType: String? = "audio/mpeg"): Long {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        val id = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        val id = repository.subscribe(Feed(title = "A Feed"))
         repository.upsertItems(
             listOf(
                 FeedItem(

@@ -41,6 +41,7 @@ import io.pitman.myfeeds.articlelist.ArticleListScreen
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.feedlist.FeedListScreen
 import io.pitman.myfeeds.feedproperties.FeedPropertiesScreen
+import io.pitman.myfeeds.feedriver.FeedRiverScreen
 import io.pitman.myfeeds.playback.MiniPlayerBar
 import io.pitman.myfeeds.playback.MiniPlayerViewModel
 import io.pitman.myfeeds.queue.QueueScreen
@@ -128,6 +129,14 @@ class MainActivity : ComponentActivity() {
                                     onSettingsClick = { navController.navigate("settings") },
                                     onQueueClick = { navController.navigate("queue") },
                                     onFeedLongClick = { feedId -> navController.navigate("feedProperties/$feedId") },
+                                    onReadAllFeedsClick = { navController.navigate("feedRiver") },
+                                )
+                            }
+                            composable("feedRiver") {
+                                FeedRiverScreen(
+                                    onBack = { navController.popBackStack() },
+                                    onArticleClick = { feedId, itemId -> navController.navigate("reader/$feedId/$itemId") },
+                                    onQueueClick = { navController.navigate("queue") },
                                 )
                             }
                             composable(

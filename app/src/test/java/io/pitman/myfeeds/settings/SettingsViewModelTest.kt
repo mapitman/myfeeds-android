@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.opml.OpmlExporter
@@ -94,8 +93,8 @@ class SettingsViewModelTest {
         viewModel = SettingsViewModel(
             settingsDataStore = settingsDataStore,
             feedRepository = repository,
-            opmlImporter = OpmlImporter(db.categoryDao(), db.feedDao()),
-            opmlExporter = OpmlExporter(db.categoryDao(), db.feedDao()),
+            opmlImporter = OpmlImporter(db.feedDao()),
+            opmlExporter = OpmlExporter(db.feedDao(), db.feedItemDao()),
             feedRefreshScheduler = object : FeedRefreshScheduling {
                 override fun schedule(intervalMinutes: Long) {}
             },
@@ -134,16 +133,13 @@ class SettingsViewModelTest {
     fun addDefaultFeeds_importsBundledOpml() = runTest(testDispatcher, timeout = 120.seconds) {
         viewModel.addDefaultFeeds()
 
-        val categories = db.categoryDao().observeAll().first { it.size == 3 }
-        assertEquals(setOf("Tech", "Mobile", "News"), categories.map { it.name }.toSet())
         val feeds = db.feedDao().observeAll().first { it.size == 12 }
         assertEquals(12, feeds.size)
     }
 
     @Test
     fun removeAllFeeds_deletesAllFeedsAndCascadesItems() = runTest(testDispatcher, timeout = 120.seconds) {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        val feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        val feedId = repository.subscribe(Feed(title = "A Feed"))
         repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
 
         viewModel.removeAllFeeds()
@@ -155,8 +151,7 @@ class SettingsViewModelTest {
 
     @Test
     fun clearPodcasts_clearsEnclosurePositions() = runTest(testDispatcher, timeout = 120.seconds) {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        val feedId = repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        val feedId = repository.subscribe(Feed(title = "A Feed"))
         repository.upsertItems(
             listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1", enclosurePosition = 42.0)),
         )
@@ -169,8 +164,7 @@ class SettingsViewModelTest {
 
     @Test
     fun resetSettings_restoresDefaultsWithoutTouchingFeeds() = runTest(testDispatcher, timeout = 120.seconds) {
-        val categoryId = db.categoryDao().insert(Category(name = "Tech"))
-        repository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))
+        repository.subscribe(Feed(title = "A Feed"))
         viewModel.setMaxArticles(99)
         viewModel.settings.first { it.maxArticles == 99 }
 

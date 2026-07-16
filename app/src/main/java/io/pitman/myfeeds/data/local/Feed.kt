@@ -1,7 +1,6 @@
 package io.pitman.myfeeds.data.local
 
 import androidx.room.Entity
-import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 
@@ -11,19 +10,10 @@ import androidx.room.PrimaryKey
  */
 @Entity(
     tableName = "feeds",
-    foreignKeys = [
-        ForeignKey(
-            entity = Category::class,
-            parentColumns = ["id"],
-            childColumns = ["categoryId"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
-    indices = [Index("userTitle"), Index("title"), Index("categoryId")],
+    indices = [Index("userTitle"), Index("title")],
 )
 data class Feed(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val categoryId: Long,
     val title: String? = null,
     val userTitle: String? = null,
     val description: String? = null,

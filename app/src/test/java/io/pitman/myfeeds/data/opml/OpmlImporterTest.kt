@@ -3,7 +3,6 @@ package io.pitman.myfeeds.data.opml
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -25,7 +24,7 @@ class OpmlImporterTest {
     fun setUp() {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        importer = OpmlImporter(db.categoryDao(), db.feedDao())
+        importer = OpmlImporter(db.feedDao())
     }
 
     @After
@@ -34,45 +33,26 @@ class OpmlImporterTest {
     }
 
     @Test
-    fun import_createsNewCategoriesAndFeeds() = runTest {
+    fun import_createsFeeds() = runTest {
         val document = OpmlDocument(
-            categories = listOf(
-                OpmlCategory("Tech", listOf(OpmlFeed("Ars Technica", "https://arstechnica.com/feed"))),
+            folders = listOf(
+                OpmlFolder("Tech", listOf(OpmlFeed("Ars Technica", "https://arstechnica.com/feed"))),
             ),
         )
 
         val count = importer.import(document)
 
         assertEquals(1, count)
-        val categories = db.categoryDao().observeAll().first()
-        assertEquals(listOf("Tech"), categories.map { it.name })
-        val feeds = db.feedDao().observeByCategory(categories.single().id).first()
+        val feeds = db.feedDao().observeAll().first()
         assertEquals(listOf("Ars Technica"), feeds.map { it.title })
     }
 
     @Test
-    fun import_reusesExistingCategoryByName() = runTest {
-        val existingCategoryId = db.categoryDao().insert(Category(name = "Tech"))
-
-        importer.import(
-            OpmlDocument(
-                categories = listOf(
-                    OpmlCategory("Tech", listOf(OpmlFeed("Engadget", "https://engadget.com/feed"))),
-                ),
-            ),
-        )
-
-        val categories = db.categoryDao().observeAll().first()
-        assertEquals(1, categories.size)
-        assertEquals(existingCategoryId, categories.single().id)
-    }
-
-    @Test
-    fun import_multipleCategories_returnsTotalFeedCount() = runTest {
+    fun import_multipleFolders_returnsTotalFeedCount() = runTest {
         val document = OpmlDocument(
-            categories = listOf(
-                OpmlCategory("Tech", listOf(OpmlFeed("A", "https://a.example/feed"), OpmlFeed("B", "https://b.example/feed"))),
-                OpmlCategory("News", listOf(OpmlFeed("C", "https://c.example/feed"))),
+            folders = listOf(
+                OpmlFolder("Tech", listOf(OpmlFeed("A", "https://a.example/feed"), OpmlFeed("B", "https://b.example/feed"))),
+                OpmlFolder("News", listOf(OpmlFeed("C", "https://c.example/feed"))),
             ),
         )
 
@@ -83,7 +63,7 @@ class OpmlImporterTest {
 
     @Test
     fun import_emptyDocument_returnsZero() = runTest {
-        val count = importer.import(OpmlDocument(categories = emptyList()))
+        val count = importer.import(OpmlDocument(folders = emptyList()))
 
         assertEquals(0, count)
     }

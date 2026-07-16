@@ -3,11 +3,9 @@ package io.pitman.myfeeds.data.feed
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
-import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.repository.FeedRepository
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.MockResponse
@@ -29,7 +27,6 @@ class FeedUpdateEngineTest {
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
     private lateinit var engine: FeedUpdateEngine
-    private var categoryId: Long = 0
 
     private fun rssWithItems(vararg items: Pair<String, String>): String {
         val itemsXml = items.joinToString("\n") { (guid, title) ->
@@ -62,7 +59,6 @@ class FeedUpdateEngineTest {
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao())
         engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
-        categoryId = runBlocking { db.categoryDao().insert(Category(name = "Tech")) }
     }
 
     @After
@@ -73,7 +69,7 @@ class FeedUpdateEngineTest {
 
     private suspend fun subscribeFeed(itemsToKeep: Int? = null): Feed {
         val url = server.url("/feed.xml").toString()
-        val feedId = repository.subscribe(Feed(categoryId = categoryId, title = "Test Feed", feedUrl = url, itemsToKeep = itemsToKeep))
+        val feedId = repository.subscribe(Feed(title = "Test Feed", feedUrl = url, itemsToKeep = itemsToKeep))
         return repository.getFeed(feedId)!!
     }
 

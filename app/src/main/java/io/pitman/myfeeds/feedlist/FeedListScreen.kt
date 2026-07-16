@@ -1,5 +1,6 @@
 package io.pitman.myfeeds.feedlist
 
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,6 +9,8 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
@@ -24,6 +27,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
@@ -52,6 +56,7 @@ fun FeedListScreen(
     onSettingsClick: () -> Unit = {},
     onQueueClick: () -> Unit = {},
     onFeedLongClick: (Long) -> Unit = {},
+    onReadAllFeedsClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val feedListFontSize by viewModel.feedListFontSize.collectAsState()
@@ -95,7 +100,7 @@ fun FeedListScreen(
             }
         },
     ) { innerPadding ->
-        if (uiState.categories.isEmpty()) {
+        if (uiState.sections.all { it.feeds.isEmpty() }) {
             Box(
                 modifier = Modifier.fillMaxSize().padding(innerPadding),
                 contentAlignment = Alignment.Center,
@@ -105,16 +110,15 @@ fun FeedListScreen(
             return@Scaffold
         }
 
-        val pagerState = rememberPagerState(pageCount = { uiState.categories.size })
+        val pagerState = rememberPagerState(pageCount = { uiState.sections.size })
         val scope = rememberCoroutineScope()
 
         Column(modifier = Modifier.padding(innerPadding)) {
             ScrollableTabRow(selectedTabIndex = pagerState.currentPage) {
-                uiState.categories.forEachIndexed { index, section ->
-                    val tabTitle = if (section.isPodcastsSection) {
-                        stringResource(R.string.feed_list_podcasts_tab)
-                    } else {
-                        section.category.name
+                uiState.sections.forEachIndexed { index, section ->
+                    val tabTitle = when (section.section) {
+                        FeedListSection.PODCASTS -> stringResource(R.string.feed_list_podcasts_tab)
+                        FeedListSection.FEEDS -> stringResource(R.string.feed_list_feeds_tab)
                     }
                     Tab(
                         selected = pagerState.currentPage == index,
@@ -124,13 +128,15 @@ fun FeedListScreen(
                 }
             }
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                CategoryFeedList(
-                    section = uiState.categories[page],
+                val section = uiState.sections[page]
+                FeedSectionList(
+                    section = section,
                     isRefreshing = uiState.isRefreshing,
                     titleFontScale = feedListFontSize.scaleFactor,
                     onRefresh = viewModel::refresh,
                     onFeedClick = onFeedClick,
                     onFeedLongClick = onFeedLongClick,
+                    onReadAllClick = if (section.section == FeedListSection.FEEDS) onReadAllFeedsClick else null,
                 )
             }
         }
@@ -139,23 +145,33 @@ fun FeedListScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun CategoryFeedList(
-    section: CategorySectionUiState,
+private fun FeedSectionList(
+    section: FeedListSectionUiState,
     isRefreshing: Boolean,
     titleFontScale: Float,
     onRefresh: () -> Unit,
     onFeedClick: (Long) -> Unit,
     onFeedLongClick: (Long) -> Unit,
+    onReadAllClick: (() -> Unit)?,
 ) {
     PullToRefreshBox(isRefreshing = isRefreshing, onRefresh = onRefresh, modifier = Modifier.fillMaxSize()) {
         LazyColumn(modifier = Modifier.fillMaxSize()) {
             item {
-                Text(
-                    text = stringResource(R.string.feed_list_section_unread, section.totalUnread),
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(
+                        text = stringResource(R.string.feed_list_section_unread, section.totalUnread),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    if (onReadAllClick != null && section.feeds.isNotEmpty()) {
+                        TextButton(onClick = onReadAllClick) {
+                            Text(stringResource(R.string.feed_list_read_all))
+                        }
+                    }
+                }
             }
             items(section.feeds, key = { it.feed.id }) { item ->
                 ListItemRow(
