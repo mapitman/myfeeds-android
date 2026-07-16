@@ -120,6 +120,8 @@
     <string name="feed_properties_title">Feed properties</string>
     <string name="feed_properties_title_label">Title</string>
     <string name="feed_properties_save_title">Save title</string>
+    <string name="feed_properties_url_label">Feed URL (tap to copy)</string>
+    <string name="feed_properties_url_copied">Feed URL copied to clipboard</string>
     <string name="feed_properties_use_global_max">Use global max articles setting (%1$d)</string>
     <string name="feed_properties_max_articles_for_feed">Max articles for this feed: %1$d</string>
     <string name="feed_properties_auto_download">Auto-download new episodes</string>

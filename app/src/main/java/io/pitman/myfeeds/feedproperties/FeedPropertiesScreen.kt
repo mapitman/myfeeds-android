@@ -1,5 +1,6 @@
 package io.pitman.myfeeds.feedproperties
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,6 +20,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -29,13 +33,17 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.pitman.myfeeds.R
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -47,6 +55,10 @@ fun FeedPropertiesScreen(
     val uiState by viewModel.uiState.collectAsState()
     var showUnsubscribeConfirm by remember { mutableStateOf(false) }
     var titleField by remember { mutableStateOf<String?>(null) }
+    val clipboardManager = LocalClipboardManager.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val coroutineScope = rememberCoroutineScope()
+    val urlCopiedMessage = stringResource(R.string.feed_properties_url_copied)
 
     LaunchedEffect(uiState.isUnsubscribed) {
         if (uiState.isUnsubscribed) onBack()
@@ -54,6 +66,7 @@ fun FeedPropertiesScreen(
 
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) { Snackbar(it) } },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.feed_properties_title)) },
@@ -78,6 +91,27 @@ fun FeedPropertiesScreen(
                 modifier = Modifier.padding(top = 8.dp),
             ) {
                 Text(stringResource(R.string.feed_properties_save_title))
+            }
+
+            // issue #104: surface the underlying feed URL, since it's otherwise invisible to users
+            val feedUrl = uiState.feedUrl
+            if (feedUrl != null) {
+                Text(
+                    text = stringResource(R.string.feed_properties_url_label),
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(top = 16.dp),
+                )
+                Text(
+                    text = feedUrl,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            clipboardManager.setText(AnnotatedString(feedUrl))
+                            coroutineScope.launch { snackbarHostState.showSnackbar(urlCopiedMessage) }
+                        }
+                        .padding(top = 4.dp),
+                )
             }
 
             val useGlobalMax = uiState.itemsToKeep == null

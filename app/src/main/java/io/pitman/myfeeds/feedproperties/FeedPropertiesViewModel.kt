@@ -16,6 +16,7 @@ import javax.inject.Inject
 data class FeedPropertiesUiState(
     val title: String = "",
     val displayTitle: String = "",
+    val feedUrl: String? = null,
     val itemsToKeep: Int? = null,
     val globalMaxArticles: Int = 20,
     val autoDownloadEnabled: Boolean = false,
@@ -43,6 +44,7 @@ class FeedPropertiesViewModel @Inject constructor(
             FeedPropertiesUiState(
                 title = feed.userTitle ?: feed.title.orEmpty(),
                 displayTitle = feed.userTitle ?: feed.title.orEmpty(),
+                feedUrl = feed.feedUrl,
                 itemsToKeep = feed.itemsToKeep,
                 globalMaxArticles = settings.maxArticles,
                 autoDownloadEnabled = feed.autoDownloadEnabled,
