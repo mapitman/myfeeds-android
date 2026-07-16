@@ -41,7 +41,7 @@ class PlaybackControllerTest {
         playbackController = PlaybackController(
             context,
             SettingsDataStore(dataStore),
-            FeedRepository(db.feedDao(), db.feedItemDao()),
+            FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao()),
             QueueRepository(db.queueDao()),
         )
     }

@@ -5,6 +5,7 @@ import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.local.QueueEntry
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -29,7 +30,7 @@ class FeedRepositoryTest {
         db = Room.inMemoryDatabaseBuilder(ApplicationProvider.getApplicationContext(), AppDatabase::class.java)
             .allowMainThreadQueries()
             .build()
-        repository = FeedRepository(db.feedDao(), db.feedItemDao())
+        repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
     }
 
     @After
@@ -108,6 +109,28 @@ class FeedRepositoryTest {
         val remaining = repository.observeItems(feedId).first().map { it.id }
         assertTrue(remaining.containsAll(listOf("middle", "newest")))
         assertEquals(2, remaining.size)
+    }
+
+    @Test
+    fun trimToItemsToKeep_doesNotEvictQueuedItems() = runTest {
+        // issue #125: episodes a user manually added to Next Up were being silently dropped
+        // because trimToItemsToKeep deleted the underlying FeedItem, which cascade-deleted the
+        // queue_entries row too.
+        val feedId = repository.subscribe(Feed(title = "A Feed", itemsToKeep = 2))
+        repository.upsertItems(
+            listOf(
+                FeedItem(id = "oldest", feedId = feedId, itemGuid = "g1", publishDate = 1L),
+                FeedItem(id = "middle", feedId = feedId, itemGuid = "g2", publishDate = 2L),
+                FeedItem(id = "newest", feedId = feedId, itemGuid = "g3", publishDate = 3L),
+            ),
+        )
+        db.queueDao().insert(QueueEntry(itemId = "oldest", position = 0, addedAt = 0L))
+
+        val evicted = repository.trimToItemsToKeep(feedId)
+
+        assertEquals(emptyList<String>(), evicted.map { it.id })
+        val remaining = repository.observeItems(feedId).first().map { it.id }
+        assertTrue(remaining.containsAll(listOf("oldest", "middle", "newest")))
     }
 
     @Test

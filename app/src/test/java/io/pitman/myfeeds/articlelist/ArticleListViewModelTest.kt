@@ -79,7 +79,7 @@ class ArticleListViewModelTest {
         Dispatchers.setMain(testDispatcher)
         context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
-        repository = FeedRepository(db.feedDao(), db.feedItemDao())
+        repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
         queueRepository = QueueRepository(db.queueDao())
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
