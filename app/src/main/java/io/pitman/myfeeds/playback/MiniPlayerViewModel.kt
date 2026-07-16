@@ -35,6 +35,10 @@ class MiniPlayerViewModel @Inject constructor(
         playbackController.skipBackward()
     }
 
+    fun seekTo(positionMs: Long) {
+        playbackController.seekTo(positionMs)
+    }
+
     fun stop() {
         playbackController.stop()
     }

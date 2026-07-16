@@ -92,6 +92,10 @@ class MainActivity : ComponentActivity() {
                     currentBackStackEntry?.arguments?.getLong("feedId") == playbackState.feedId &&
                     currentReaderItemId == playbackState.currentItemId
 
+                // Next Up (issue #106) shows the current episode as the top of its own list, with
+                // the full-size player, rather than needing the global bar rendered underneath it.
+                val isOnQueueScreen = currentBackStackEntry?.destination?.route == "queue"
+
                 Column(modifier = Modifier.fillMaxSize()) {
                     NavHost(
                         navController = navController,
@@ -136,6 +140,7 @@ class MainActivity : ComponentActivity() {
                             ArticleListScreen(
                                 onBack = { navController.popBackStack() },
                                 onArticleClick = { itemId -> navController.navigate("reader/$feedId/$itemId") },
+                                onQueueClick = { navController.navigate("queue") },
                             )
                         }
                         composable(
@@ -148,11 +153,12 @@ class MainActivity : ComponentActivity() {
                             ReaderScreen(
                                 onBack = { navController.popBackStack() },
                                 onCurrentItemChange = { currentReaderItemId = it },
+                                onQueueClick = { navController.navigate("queue") },
                             )
                         }
                     }
 
-                    if (playbackState.currentItemId != null && !isOnPlayingEpisodeReader) {
+                    if (playbackState.currentItemId != null && !isOnPlayingEpisodeReader && !isOnQueueScreen) {
                         MiniPlayerBar(
                             playbackState = playbackState,
                             onClick = {

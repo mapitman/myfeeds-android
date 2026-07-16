@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
@@ -61,6 +62,7 @@ fun ArticleListScreen(
     viewModel: ArticleListViewModel = hiltViewModel(),
     onArticleClick: (String) -> Unit = {},
     onBack: () -> Unit = {},
+    onQueueClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listFontSize by viewModel.listFontSize.collectAsState()
@@ -115,6 +117,11 @@ fun ArticleListScreen(
                     navigationIcon = {
                         IconButton(onClick = onBack) {
                             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onQueueClick) {
+                            Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = stringResource(R.string.cd_open_queue))
                         }
                     },
                 )

@@ -34,6 +34,7 @@ class QueueViewModel @Inject constructor(
     /** Plays this episode immediately, removing it from the queue since it's no longer "up next". */
     fun playNow(episode: QueuedEpisode) {
         viewModelScope.launch {
+            if (playbackController.uiState.value.currentItemId == episode.item.id) return@launch
             queueRepository.remove(episode.item.id)
             val feed = feedRepository.getFeed(episode.item.feedId)
             playbackController.play(episode.item, feed?.userTitle ?: feed?.title)

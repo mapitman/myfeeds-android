@@ -2,7 +2,7 @@ package io.pitman.myfeeds.queue
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -41,6 +41,8 @@ import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.local.QueuedEpisode
+import io.pitman.myfeeds.playback.ExpandedPlayerBar
+import io.pitman.myfeeds.playback.MiniPlayerViewModel
 import kotlin.math.roundToInt
 
 private val ROW_HEIGHT = 72.dp
@@ -50,10 +52,12 @@ private val ROW_HEIGHT = 72.dp
 fun QueueScreen(
     modifier: Modifier = Modifier,
     viewModel: QueueViewModel = hiltViewModel(),
+    miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel(),
     onEpisodeClick: (Long, String) -> Unit = { _, _ -> },
     onBack: () -> Unit = {},
 ) {
     val queue by viewModel.queue.collectAsState()
+    val playbackState by miniPlayerViewModel.playbackState.collectAsState()
 
     Scaffold(
         modifier = modifier,
@@ -68,23 +72,43 @@ fun QueueScreen(
             )
         },
     ) { innerPadding ->
-        if (queue.isEmpty()) {
+        if (queue.isEmpty() && playbackState.currentItemId == null) {
             Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
                 Text(stringResource(R.string.queue_empty))
             }
             return@Scaffold
         }
 
-        ReorderableQueueList(
-            modifier = Modifier.padding(innerPadding),
-            queue = queue,
-            onReorder = viewModel::reorder,
-            onRemove = viewModel::remove,
-            onClick = { episode ->
-                viewModel.playNow(episode)
-                onEpisodeClick(episode.item.feedId, episode.item.id)
-            },
-        )
+        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            // Next Up (issue #106) is the screen most about "what's playing", so the currently
+            // playing episode gets the full player -- with cover art and transport controls --
+            // as the top of the list, rather than a plain pinned row.
+            if (playbackState.currentItemId != null) {
+                ExpandedPlayerBar(
+                    playbackState = playbackState,
+                    onClick = {
+                        val feedId = playbackState.feedId
+                        val itemId = playbackState.currentItemId
+                        if (feedId != null && itemId != null) onEpisodeClick(feedId, itemId)
+                    },
+                    onSeek = miniPlayerViewModel::seekTo,
+                    onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
+                    onSkipBackward = miniPlayerViewModel::skipBackward,
+                    onSkipForward = miniPlayerViewModel::skipForward,
+                    onStop = miniPlayerViewModel::stop,
+                )
+            }
+            ReorderableQueueList(
+                modifier = Modifier.weight(1f),
+                queue = queue,
+                onReorder = viewModel::reorder,
+                onRemove = viewModel::remove,
+                onClick = { episode ->
+                    viewModel.playNow(episode)
+                    onEpisodeClick(episode.item.feedId, episode.item.id)
+                },
+            )
+        }
     }
 }
 
@@ -136,7 +160,10 @@ private fun ReorderableQueueList(
                         .padding(end = 12.dp)
                         .pointerInput(episode.item.id) {
                             var offsetY = 0f
-                            detectDragGesturesAfterLongPress(
+                            // Dragging starts immediately here (no long-press) -- unlike a
+                            // draggable row with no separate handle, this icon isn't also a tap
+                            // target, so there's nothing to disambiguate from.
+                            detectDragGestures(
                                 onDragStart = {
                                     offsetY = 0f
                                     draggedItemId = episode.item.id
@@ -157,7 +184,7 @@ private fun ReorderableQueueList(
                                     dragOffsetY = offsetY
 
                                     val currentIndex = items.indexOfFirst { it.item.id == episode.item.id }
-                                    if (currentIndex == -1) return@detectDragGesturesAfterLongPress
+                                    if (currentIndex == -1) return@detectDragGestures
                                     val targetIndex = (currentIndex + (offsetY / itemHeightPx).roundToInt())
                                         .coerceIn(0, items.lastIndex)
                                     if (targetIndex != currentIndex) {
