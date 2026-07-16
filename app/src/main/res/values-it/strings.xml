@@ -113,6 +113,9 @@
     <string name="feed_properties_use_global_max">Usa impostazione globale di articoli massimi (%1$d)</string>
     <string name="feed_properties_max_articles_for_feed">Articoli massimi per questo feed: %1$d</string>
     <string name="feed_properties_auto_download">Scarica automaticamente i nuovi episodi</string>
+    <string name="feed_properties_auto_queue">Aggiungi automaticamente i nuovi episodi alla coda</string>
+    <string name="feed_properties_auto_queue_max_count">Numero massimo di episodi in coda per questo feed</string>
+    <string name="feed_properties_auto_queue_unlimited">Illimitato</string>
     <string name="feed_properties_unsubscribe">Annulla iscrizione</string>
     <string name="feed_properties_confirm_unsubscribe_title">Annullare l\'iscrizione a questo feed?</string>
     <string name="feed_properties_confirm_unsubscribe_message">Questo elimina definitivamente il feed e i suoi articoli.</string>

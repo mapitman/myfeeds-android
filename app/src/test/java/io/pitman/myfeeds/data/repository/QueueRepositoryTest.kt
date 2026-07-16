@@ -149,4 +149,30 @@ class QueueRepositoryTest {
 
         assertTrue(queueRepository.observeQueue().first().isEmpty())
     }
+
+    @Test
+    fun enforceFeedCap_evictsOldestQueuedFromThatFeedOnly() = runTest {
+        val otherFeedId = feedRepository.subscribe(Feed(categoryId = db.feedDao().getById(feedId)!!.categoryId, title = "Other Feed"))
+        feedRepository.upsertItems(listOf(FeedItem(id = "other-1", feedId = otherFeedId, title = "Other Episode", itemGuid = "og1")))
+        queueRepository.addToEnd("ep-1")
+        queueRepository.addToEnd("ep-2")
+        queueRepository.addToEnd("ep-3")
+        queueRepository.addToEnd("other-1")
+
+        queueRepository.enforceFeedCap(feedId, maxCount = 1)
+
+        val queue = queueRepository.observeQueue().first()
+        assertEquals(listOf("ep-3", "other-1"), queue.map { it.item.id })
+    }
+
+    @Test
+    fun enforceFeedCap_underCap_isNoOp() = runTest {
+        queueRepository.addToEnd("ep-1")
+        queueRepository.addToEnd("ep-2")
+
+        queueRepository.enforceFeedCap(feedId, maxCount = 5)
+
+        val queue = queueRepository.observeQueue().first()
+        assertEquals(listOf("ep-1", "ep-2"), queue.map { it.item.id })
+    }
 }

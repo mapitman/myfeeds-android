@@ -115,6 +115,9 @@
     <string name="feed_properties_use_global_max">Use global max articles setting (%1$d)</string>
     <string name="feed_properties_max_articles_for_feed">Max articles for this feed: %1$d</string>
     <string name="feed_properties_auto_download">Auto-download new episodes</string>
+    <string name="feed_properties_auto_queue">Automatically add new episodes to queue</string>
+    <string name="feed_properties_auto_queue_max_count">Max episodes to keep queued for this feed</string>
+    <string name="feed_properties_auto_queue_unlimited">Unlimited</string>
     <string name="feed_properties_unsubscribe">Unsubscribe</string>
     <string name="feed_properties_confirm_unsubscribe_title">Unsubscribe from this feed?</string>
     <string name="feed_properties_confirm_unsubscribe_message">This permanently deletes the feed and its articles.</string>

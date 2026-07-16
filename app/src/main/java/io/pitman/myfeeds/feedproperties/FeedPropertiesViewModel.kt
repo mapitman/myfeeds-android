@@ -19,6 +19,8 @@ data class FeedPropertiesUiState(
     val itemsToKeep: Int? = null,
     val globalMaxArticles: Int = 20,
     val autoDownloadEnabled: Boolean = false,
+    val autoQueueEnabled: Boolean = false,
+    val autoQueueMaxCount: Int? = null,
     val isUnsubscribed: Boolean = false,
 )
 
@@ -43,6 +45,8 @@ class FeedPropertiesViewModel @Inject constructor(
                 itemsToKeep = feed.itemsToKeep,
                 globalMaxArticles = settings.maxArticles,
                 autoDownloadEnabled = feed.autoDownloadEnabled,
+                autoQueueEnabled = feed.autoQueueEnabled,
+                autoQueueMaxCount = feed.autoQueueMaxCount,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedPropertiesUiState())
@@ -67,6 +71,20 @@ class FeedPropertiesViewModel @Inject constructor(
         viewModelScope.launch {
             val feed = feedRepository.getFeed(feedId) ?: return@launch
             feedRepository.updateFeed(feed.copy(autoDownloadEnabled = enabled))
+        }
+    }
+
+    fun setAutoQueueEnabled(enabled: Boolean) {
+        viewModelScope.launch {
+            val feed = feedRepository.getFeed(feedId) ?: return@launch
+            feedRepository.updateFeed(feed.copy(autoQueueEnabled = enabled))
+        }
+    }
+
+    fun setAutoQueueMaxCount(maxCount: Int?) {
+        viewModelScope.launch {
+            val feed = feedRepository.getFeed(feedId) ?: return@launch
+            feedRepository.updateFeed(feed.copy(autoQueueMaxCount = maxCount))
         }
     }
 

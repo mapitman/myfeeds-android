@@ -35,6 +35,17 @@ interface QueueDao {
     @Query("UPDATE queue_entries SET position = :position WHERE itemId = :itemId")
     suspend fun setPosition(itemId: String, position: Int)
 
+    // Oldest-queued first (lowest position = added earliest), for per-feed cap eviction (issue #68).
+    @Query(
+        """
+        SELECT queue_entries.itemId FROM queue_entries
+        INNER JOIN feed_items ON feed_items.id = queue_entries.itemId
+        WHERE feed_items.feedId = :feedId
+        ORDER BY queue_entries.position
+        """,
+    )
+    suspend fun orderedItemIdsForFeed(feedId: Long): List<String>
+
     @Query(
         """
         SELECT feed_items.*, COALESCE(feeds.userTitle, feeds.title) AS feedTitle

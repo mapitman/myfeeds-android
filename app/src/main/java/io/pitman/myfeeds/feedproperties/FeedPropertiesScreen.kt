@@ -1,6 +1,7 @@
 package io.pitman.myfeeds.feedproperties
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.toggleable
@@ -9,6 +10,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -121,6 +123,45 @@ fun FeedPropertiesScreen(
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Switch(checked = uiState.autoDownloadEnabled, onCheckedChange = null)
+            }
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .toggleable(
+                        value = uiState.autoQueueEnabled,
+                        onValueChange = viewModel::setAutoQueueEnabled,
+                        role = Role.Switch,
+                    )
+                    .padding(top = 24.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.feed_properties_auto_queue),
+                    style = MaterialTheme.typography.bodyLarge,
+                )
+                Switch(checked = uiState.autoQueueEnabled, onCheckedChange = null)
+            }
+            if (uiState.autoQueueEnabled) {
+                Text(
+                    text = stringResource(R.string.feed_properties_auto_queue_max_count),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                Row(modifier = Modifier.padding(top = 4.dp)) {
+                    listOf(1, 3, 5, 10, null).forEach { maxCount ->
+                        FilterChip(
+                            selected = uiState.autoQueueMaxCount == maxCount,
+                            onClick = { viewModel.setAutoQueueMaxCount(maxCount) },
+                            label = {
+                                Text(
+                                    maxCount?.toString()
+                                        ?: stringResource(R.string.feed_properties_auto_queue_unlimited),
+                                )
+                            },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
+                }
             }
 
             Button(

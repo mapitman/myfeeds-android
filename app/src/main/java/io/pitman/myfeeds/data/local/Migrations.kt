@@ -33,3 +33,12 @@ val MIGRATION_3_4 = object : Migration(3, 4) {
         db.execSQL("CREATE INDEX IF NOT EXISTS index_queue_entries_position ON queue_entries(position)")
     }
 }
+
+/** Adds per-feed auto-queue settings (issue #68): opt-in auto-add of new episodes to the Next Up
+ *  queue, with an optional cap on how many of that feed's episodes stay queued at once. */
+val MIGRATION_4_5 = object : Migration(4, 5) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE feeds ADD COLUMN autoQueueEnabled INTEGER NOT NULL DEFAULT 0")
+        db.execSQL("ALTER TABLE feeds ADD COLUMN autoQueueMaxCount INTEGER")
+    }
+}
