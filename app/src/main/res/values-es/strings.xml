@@ -21,6 +21,10 @@
     <string name="cd_delete_download">Eliminar descarga</string>
     <string name="cd_download_episode">Descargar episodio</string>
     <string name="cd_stop_playback">Detener reproducción</string>
+    <string name="cd_add_to_queue">Añadir a Reproducir a continuación</string>
+    <string name="cd_open_queue">Reproducir a continuación</string>
+    <string name="cd_remove_from_queue">Quitar de la cola</string>
+    <string name="cd_reorder_queue_item">Arrastra para reordenar</string>
 
     <!-- Feed list -->
     <string name="feed_list_no_feeds_yet">Aún no hay fuentes</string>
@@ -36,6 +40,10 @@
     <string name="article_list_tab_all">Todos</string>
     <string name="article_list_no_articles">No hay artículos</string>
     <string name="article_list_no_unread_articles">No hay artículos sin leer</string>
+
+    <!-- Next Up queue -->
+    <string name="queue_title">Reproducir a continuación</string>
+    <string name="queue_empty">Nada en cola</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">No hay ningún artículo que mostrar</string>

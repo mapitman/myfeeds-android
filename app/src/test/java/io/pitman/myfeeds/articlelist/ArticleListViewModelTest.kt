@@ -14,6 +14,7 @@ import io.pitman.myfeeds.data.local.Category
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -50,6 +51,7 @@ class ArticleListViewModelTest {
 
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
+    private lateinit var queueRepository: QueueRepository
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var feedUpdateEngine: FeedUpdateEngine
     private lateinit var context: android.content.Context
@@ -68,6 +70,7 @@ class ArticleListViewModelTest {
             savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId)),
             feedRepository = repository,
             feedUpdateEngine = feedUpdateEngine,
+            queueRepository = queueRepository,
             settingsDataStore = settingsDataStore,
             context = context,
         ).also { viewModelStore.put("articleList-${nextViewModelKey++}", it) }
@@ -78,6 +81,7 @@ class ArticleListViewModelTest {
         context = ApplicationProvider.getApplicationContext()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao())
+        queueRepository = QueueRepository(db.queueDao())
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )

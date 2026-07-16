@@ -23,6 +23,10 @@
     <string name="cd_delete_download">Delete download</string>
     <string name="cd_download_episode">Download episode</string>
     <string name="cd_stop_playback">Stop playback</string>
+    <string name="cd_add_to_queue">Add to Next Up</string>
+    <string name="cd_open_queue">Next Up</string>
+    <string name="cd_remove_from_queue">Remove from queue</string>
+    <string name="cd_reorder_queue_item">Drag to reorder</string>
 
     <!-- Feed list -->
     <string name="feed_list_no_feeds_yet">No feeds yet</string>
@@ -38,6 +42,10 @@
     <string name="article_list_tab_all">All</string>
     <string name="article_list_no_articles">No articles</string>
     <string name="article_list_no_unread_articles">No unread articles</string>
+
+    <!-- Next Up queue -->
+    <string name="queue_title">Next Up</string>
+    <string name="queue_empty">Nothing queued</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">No article to show</string>

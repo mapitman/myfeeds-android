@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
@@ -50,6 +51,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.settings.scaleFactor
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -155,6 +157,7 @@ fun ArticleListScreen(
                                     if (uiState.isSelectionMode) viewModel.toggleSelection(article.id) else onArticleClick(article.id)
                                 },
                                 onLongClick = { viewModel.toggleSelection(article.id) },
+                                onAddToQueue = { viewModel.addToQueue(article.id) },
                             )
                         }
                     }
@@ -173,6 +176,7 @@ private fun ArticleRow(
     titleFontScale: Float,
     onClick: () -> Unit,
     onLongClick: () -> Unit,
+    onAddToQueue: () -> Unit,
 ) {
     val isRowSelected = selected
     Row(
@@ -215,6 +219,11 @@ private fun ArticleRow(
                 contentDescription = null,
                 modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp)),
             )
+        }
+        if (!selectionMode && article.isPodcastEpisode) {
+            IconButton(onClick = onAddToQueue) {
+                Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = stringResource(R.string.cd_add_to_queue))
+            }
         }
     }
 }
