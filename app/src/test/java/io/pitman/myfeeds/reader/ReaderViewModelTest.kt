@@ -72,7 +72,7 @@ class ReaderViewModelTest {
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
         settingsDataStore = SettingsDataStore(dataStore)
-        playbackController = PlaybackController(context, settingsDataStore)
+        playbackController = PlaybackController(context, settingsDataStore, repository)
         downloadRepository = EnclosureDownloadRepository(
             feedRepository = repository,
             downloadScheduling = object : DownloadScheduling {

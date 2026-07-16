@@ -11,6 +11,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -40,6 +41,7 @@ data class PlaybackUiState(
     val positionMs: Long = 0L,
     val durationMs: Long = 0L,
     val isEnded: Boolean = false,
+    val speed: Float = 1.0f,
 )
 
 /**
@@ -52,6 +54,7 @@ data class PlaybackUiState(
 class PlaybackController @Inject constructor(
     @ApplicationContext private val context: Context,
     private val settingsDataStore: SettingsDataStore,
+    private val feedRepository: FeedRepository,
 ) {
     private var controller: MediaController? = null
 
@@ -78,6 +81,7 @@ class PlaybackController @Inject constructor(
         positionMs = player.currentPosition,
         durationMs = player.duration.coerceAtLeast(0L),
         isEnded = player.playbackState == Player.STATE_ENDED,
+        speed = player.playbackParameters.speed,
     )
 
     private val playerListener = object : Player.Listener {
@@ -121,6 +125,7 @@ class PlaybackController @Inject constructor(
         val downloadedFilePath = item.downloadedFilePath?.takeIf { File(it).exists() }
         val uri = PlaybackUrlResolver.resolve(item, downloadedFilePath, allowStreaming = allowStreaming)
             ?: return false
+        val speed = feedRepository.getFeed(item.feedId)?.playbackSpeed ?: 1.0f
 
         val mediaItem = MediaItem.Builder()
             .setMediaId(item.id)
@@ -137,6 +142,7 @@ class PlaybackController @Inject constructor(
         currentFeedId = item.feedId
         connect { controller ->
             controller.setMediaItem(mediaItem, item.enclosurePosition?.let { (it * 1000).toLong() } ?: 0L)
+            controller.setPlaybackSpeed(speed)
             controller.prepare()
             controller.play()
         }
@@ -153,6 +159,18 @@ class PlaybackController @Inject constructor(
 
     fun seekTo(positionMs: Long) {
         controller?.seekTo(positionMs)
+    }
+
+    /**
+     * Changes speed for the current playback session and persists it as the playing episode's
+     * feed's default (issue #70), so future episodes from that feed start at the chosen speed.
+     */
+    fun setSpeed(speed: Float) {
+        controller?.setPlaybackSpeed(speed)
+        val feedId = currentFeedId ?: return
+        positionTickerScope.launch(Dispatchers.IO) {
+            feedRepository.getFeed(feedId)?.let { feedRepository.updateFeed(it.copy(playbackSpeed = speed)) }
+        }
     }
 
     // Shared by the reader's inline controls and the mini-player (issue #66) so both skip by the

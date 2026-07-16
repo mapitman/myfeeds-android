@@ -33,6 +33,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -140,6 +141,7 @@ fun ReaderScreen(
                 onSeek = viewModel::seekTo,
                 onDownload = { viewModel.downloadEnclosure(uiState.items[page]) },
                 onDelete = { viewModel.deleteDownload(uiState.items[page]) },
+                onSpeedChange = viewModel::setPlaybackSpeed,
             )
         }
     }
@@ -159,6 +161,7 @@ private fun ArticlePage(
     onSeek: (Long) -> Unit,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
+    onSpeedChange: (Float) -> Unit,
 ) {
     Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
         Text(
@@ -185,6 +188,7 @@ private fun ArticlePage(
                 onSeek = onSeek,
                 onDownload = onDownload,
                 onDelete = onDelete,
+                onSpeedChange = onSpeedChange,
             )
         }
         val imageUrl = item.imageUrl
@@ -215,6 +219,7 @@ private fun PodcastPlayerControls(
     onSeek: (Long) -> Unit,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
+    onSpeedChange: (Float) -> Unit,
 ) {
     // While actively loaded *and* the player has a real duration, show the live player position.
     // Otherwise -- not yet played this session, still buffering, or the mini-player was dismissed
@@ -256,6 +261,14 @@ private fun PodcastPlayerControls(
             horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            if (isCurrentItem) {
+                TextButton(onClick = {
+                    val currentIndex = PLAYBACK_SPEEDS.indexOfFirst { it >= playbackState.speed }.coerceAtLeast(0)
+                    onSpeedChange(PLAYBACK_SPEEDS[(currentIndex + 1) % PLAYBACK_SPEEDS.size])
+                }) {
+                    Text(formatSpeed(playbackState.speed))
+                }
+            }
             IconButton(onClick = onTogglePlayPause) {
                 if (isCurrentItem && playbackState.isBuffering) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -295,6 +308,11 @@ private fun PodcastPlayerControls(
         }
     }
 }
+
+private val PLAYBACK_SPEEDS = listOf(0.8f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f)
+
+private fun formatSpeed(speed: Float): String =
+    "${"%.2f".format(speed).trimEnd('0').trimEnd('.')}x"
 
 private fun formatDuration(millis: Long): String {
     val totalSeconds = millis / 1000

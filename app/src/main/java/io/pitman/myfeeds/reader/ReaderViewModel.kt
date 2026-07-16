@@ -73,6 +73,10 @@ class ReaderViewModel @Inject constructor(
         playbackController.seekTo(positionMs)
     }
 
+    fun setPlaybackSpeed(speed: Float) {
+        playbackController.setSpeed(speed)
+    }
+
     fun downloadEnclosure(item: FeedItem) {
         viewModelScope.launch { downloadRepository.startDownload(item) }
     }

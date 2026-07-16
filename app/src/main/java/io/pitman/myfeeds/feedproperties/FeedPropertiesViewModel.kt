@@ -21,6 +21,7 @@ data class FeedPropertiesUiState(
     val autoDownloadEnabled: Boolean = false,
     val autoQueueEnabled: Boolean = false,
     val autoQueueMaxCount: Int? = null,
+    val playbackSpeed: Float = 1.0f,
     val isUnsubscribed: Boolean = false,
 )
 
@@ -47,6 +48,7 @@ class FeedPropertiesViewModel @Inject constructor(
                 autoDownloadEnabled = feed.autoDownloadEnabled,
                 autoQueueEnabled = feed.autoQueueEnabled,
                 autoQueueMaxCount = feed.autoQueueMaxCount,
+                playbackSpeed = feed.playbackSpeed,
             )
         }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedPropertiesUiState())
@@ -85,6 +87,13 @@ class FeedPropertiesViewModel @Inject constructor(
         viewModelScope.launch {
             val feed = feedRepository.getFeed(feedId) ?: return@launch
             feedRepository.updateFeed(feed.copy(autoQueueMaxCount = maxCount))
+        }
+    }
+
+    fun setPlaybackSpeed(speed: Float) {
+        viewModelScope.launch {
+            val feed = feedRepository.getFeed(feedId) ?: return@launch
+            feedRepository.updateFeed(feed.copy(playbackSpeed = speed))
         }
     }
 

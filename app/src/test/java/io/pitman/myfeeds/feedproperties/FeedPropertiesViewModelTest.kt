@@ -151,6 +151,17 @@ class FeedPropertiesViewModelTest {
     }
 
     @Test
+    fun setPlaybackSpeed_persists() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.uiState.first { it.displayTitle == "A Feed" }
+
+        viewModel.setPlaybackSpeed(1.5f)
+
+        val state = viewModel.uiState.first { it.playbackSpeed == 1.5f }
+        assertEquals(1.5f, state.playbackSpeed)
+    }
+
+    @Test
     fun unsubscribe_deletesFeedAndReflectsInUiState() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.uiState.first { it.displayTitle == "A Feed" }

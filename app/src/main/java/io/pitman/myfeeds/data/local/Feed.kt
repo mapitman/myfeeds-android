@@ -40,4 +40,6 @@ data class Feed(
     val autoQueueEnabled: Boolean = false,
     /** Only enforced when [autoQueueEnabled]; null means unlimited (keep all auto-queued episodes). */
     val autoQueueMaxCount: Int? = null,
+    /** Playback speed applied when starting an episode of this feed (issue #70). */
+    val playbackSpeed: Float = 1.0f,
 )

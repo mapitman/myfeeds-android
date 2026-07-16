@@ -42,3 +42,10 @@ val MIGRATION_4_5 = object : Migration(4, 5) {
         db.execSQL("ALTER TABLE feeds ADD COLUMN autoQueueMaxCount INTEGER")
     }
 }
+
+/** Adds per-feed playback speed (issue #70), applied when starting an episode of that feed. */
+val MIGRATION_5_6 = object : Migration(5, 6) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE feeds ADD COLUMN playbackSpeed REAL NOT NULL DEFAULT 1.0")
+    }
+}

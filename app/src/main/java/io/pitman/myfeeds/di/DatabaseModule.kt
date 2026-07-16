@@ -15,6 +15,7 @@ import io.pitman.myfeeds.data.local.MIGRATION_1_2
 import io.pitman.myfeeds.data.local.MIGRATION_2_3
 import io.pitman.myfeeds.data.local.MIGRATION_3_4
 import io.pitman.myfeeds.data.local.MIGRATION_4_5
+import io.pitman.myfeeds.data.local.MIGRATION_5_6
 import io.pitman.myfeeds.data.local.QueueDao
 import javax.inject.Singleton
 
@@ -25,7 +26,7 @@ object DatabaseModule {
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase =
         Room.databaseBuilder(context, AppDatabase::class.java, AppDatabase.NAME)
-            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
             .build()
 
     @Provides

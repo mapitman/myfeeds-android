@@ -124,6 +124,7 @@
     <string name="feed_properties_auto_queue">Automatically add new episodes to queue</string>
     <string name="feed_properties_auto_queue_max_count">Max episodes to keep queued for this feed</string>
     <string name="feed_properties_auto_queue_unlimited">Unlimited</string>
+    <string name="feed_properties_playback_speed">Playback speed</string>
     <string name="feed_properties_unsubscribe">Unsubscribe</string>
     <string name="feed_properties_confirm_unsubscribe_title">Unsubscribe from this feed?</string>
     <string name="feed_properties_confirm_unsubscribe_message">This permanently deletes the feed and its articles.</string>
