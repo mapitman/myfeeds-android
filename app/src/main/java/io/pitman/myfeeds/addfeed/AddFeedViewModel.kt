@@ -123,6 +123,19 @@ class AddFeedViewModel @Inject constructor(
         }
     }
 
+    fun importOpmlFromText(text: String) {
+        if (text.isBlank()) {
+            _uiState.value = AddFeedUiState.Error(context.getString(R.string.add_feed_enter_opml_text_error))
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = AddFeedUiState.Loading
+            val document = withContext(Dispatchers.IO) { text.byteInputStream().use { OpmlParser.parse(it) } }
+            finishImport(document)
+        }
+    }
+
     fun importOpmlFromUrl(url: String) {
         val trimmedUrl = url.trim()
         if (trimmedUrl.isEmpty()) {

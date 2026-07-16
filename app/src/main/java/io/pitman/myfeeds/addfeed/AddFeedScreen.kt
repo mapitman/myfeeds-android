@@ -63,6 +63,7 @@ fun AddFeedScreen(
     var categoryName by remember { mutableStateOf("") }
     var categoryMenuExpanded by remember { mutableStateOf(false) }
     var opmlUrl by remember { mutableStateOf("") }
+    var opmlText by remember { mutableStateOf("") }
 
     val filePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
         if (uri != null) {
@@ -185,6 +186,20 @@ fun AddFeedScreen(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
             ) {
                 Text(stringResource(R.string.add_feed_import_from_url_button))
+            }
+            OutlinedTextField(
+                value = opmlText,
+                onValueChange = { opmlText = it },
+                label = { Text(stringResource(R.string.add_feed_or_paste_opml_label)) },
+                minLines = 4,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            )
+            Button(
+                onClick = { viewModel.importOpmlFromText(opmlText) },
+                enabled = uiState !is AddFeedUiState.Loading,
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+            ) {
+                Text(stringResource(R.string.add_feed_import_from_text_button))
             }
 
             when (val state = uiState) {

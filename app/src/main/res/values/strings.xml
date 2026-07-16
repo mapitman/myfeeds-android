@@ -96,6 +96,9 @@
     <string name="add_feed_choose_opml_file">Choose OPML File</string>
     <string name="add_feed_or_opml_url_label">Or OPML URL</string>
     <string name="add_feed_import_from_url_button">Import from URL</string>
+    <string name="add_feed_or_paste_opml_label">Or paste OPML content</string>
+    <string name="add_feed_import_from_text_button">Import from pasted OPML</string>
+    <string name="add_feed_enter_opml_text_error">Paste OPML content to import</string>
     <string name="add_feed_enter_url_error">Enter a feed or site URL</string>
     <string name="add_feed_uncategorized">Uncategorized</string>
     <string name="add_feed_added_message">Added %1$s</string>
