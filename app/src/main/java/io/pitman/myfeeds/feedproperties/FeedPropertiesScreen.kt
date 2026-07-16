@@ -1,9 +1,11 @@
 package io.pitman.myfeeds.feedproperties
 
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -161,6 +163,22 @@ fun FeedPropertiesScreen(
                             modifier = Modifier.padding(end = 8.dp),
                         )
                     }
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.feed_properties_playback_speed),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(top = 24.dp),
+            )
+            Row(modifier = Modifier.padding(top = 4.dp).horizontalScroll(rememberScrollState())) {
+                listOf(0.8f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f).forEach { speed ->
+                    FilterChip(
+                        selected = uiState.playbackSpeed == speed,
+                        onClick = { viewModel.setPlaybackSpeed(speed) },
+                        label = { Text("${"%.2f".format(speed).trimEnd('0').trimEnd('.')}x") },
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
                 }
             }
 

@@ -60,7 +60,7 @@ class QueueViewModelTest {
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
-        playbackController = PlaybackController(context, SettingsDataStore(dataStore))
+        playbackController = PlaybackController(context, SettingsDataStore(dataStore), feedRepository)
 
         val categoryId = db.categoryDao().insert(Category(name = "Tech"))
         feedId = feedRepository.subscribe(Feed(categoryId = categoryId, title = "A Feed"))

@@ -118,6 +118,28 @@ class MigrationTest {
         migrated.close()
     }
 
+    @Test
+    fun migrate5To6_addsPlaybackSpeedColumnWithoutDataLoss() {
+        helper.createDatabase(TEST_DB, 5).apply {
+            execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
+            execSQL(
+                "INSERT INTO feeds (id, categoryId, title, userTitle, description, feedUrl, siteUrl, " +
+                    "imageUrl, displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, " +
+                    "autoQueueEnabled, autoQueueMaxCount) " +
+                    "VALUES (1, 1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 6, true, MIGRATION_5_6)
+
+        migrated.query("SELECT playbackSpeed FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(1.0, cursor.getDouble(0), 0.0001)
+        }
+        migrated.close()
+    }
+
     companion object {
         private const val TEST_DB = "migration-test"
     }
