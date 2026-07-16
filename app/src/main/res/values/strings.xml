@@ -13,7 +13,7 @@
     <string name="cd_clear_selection">Clear selection</string>
     <string name="cd_mark_read">Mark read</string>
     <string name="cd_mark_unread">Mark unread</string>
-    <string name="cd_played">Played</string>
+    <string name="played_label">Played</string>
     <string name="cd_delete">Delete</string>
     <string name="cd_open_in_browser">Open in browser</string>
     <string name="cd_share">Share</string>
