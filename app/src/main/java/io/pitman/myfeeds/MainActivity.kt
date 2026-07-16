@@ -8,6 +8,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -17,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import dagger.hilt.android.AndroidEntryPoint
@@ -73,6 +77,18 @@ class MainActivity : ComponentActivity() {
                 val navController = rememberNavController()
                 val miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel()
                 val playbackState by miniPlayerViewModel.playbackState.collectAsState()
+                val currentBackStackEntry by navController.currentBackStackEntryAsState()
+                var currentReaderItemId by remember { mutableStateOf<String?>(null) }
+
+                // The reader screen has its own full player for the episode it's showing (issue #97),
+                // so the mini-player would be redundant there -- hide it only in that exact case, not
+                // just "some reader screen is open" (could be a different, non-playing episode). The
+                // nav route's itemId argument only reflects the episode the reader was *opened* on --
+                // HorizontalPager swipes don't renavigate -- so the on-screen item is tracked
+                // separately via ReaderScreen's onCurrentItemChange callback instead.
+                val isOnPlayingEpisodeReader = currentBackStackEntry?.destination?.route == "reader/{feedId}/{itemId}" &&
+                    currentBackStackEntry?.arguments?.getLong("feedId") == playbackState.feedId &&
+                    currentReaderItemId == playbackState.currentItemId
 
                 Column(modifier = Modifier.fillMaxSize()) {
                     NavHost(
@@ -127,11 +143,14 @@ class MainActivity : ComponentActivity() {
                                 navArgument("itemId") { type = NavType.StringType },
                             ),
                         ) {
-                            ReaderScreen(onBack = { navController.popBackStack() })
+                            ReaderScreen(
+                                onBack = { navController.popBackStack() },
+                                onCurrentItemChange = { currentReaderItemId = it },
+                            )
                         }
                     }
 
-                    if (playbackState.currentItemId != null) {
+                    if (playbackState.currentItemId != null && !isOnPlayingEpisodeReader) {
                         MiniPlayerBar(
                             playbackState = playbackState,
                             onClick = {

@@ -56,6 +56,13 @@ class FeedParserTest {
     }
 
     @Test
+    fun parseRss_itunesImagePreferredOverPlainRssImage() {
+        val feed = FeedParser.parse(fixture("rss-podcast.xml"))!!
+
+        assertEquals("https://cdn.twit.tv/windows-weekly-cover.jpg", feed.imageUrl)
+    }
+
+    @Test
     fun parseRss_itunesDurationParsedToMillis() {
         val feed = FeedParser.parse(fixture("rss-podcast.xml"))!!
 

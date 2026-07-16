@@ -4,12 +4,14 @@ import android.content.Intent
 import android.net.Uri
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.pager.HorizontalPager
@@ -22,6 +24,8 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
+import androidx.compose.material.icons.filled.FastForward
+import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
@@ -45,10 +49,14 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -69,6 +77,7 @@ fun ReaderScreen(
     modifier: Modifier = Modifier,
     viewModel: ReaderViewModel = hiltViewModel(),
     onBack: () -> Unit = {},
+    onCurrentItemChange: (String?) -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
@@ -96,6 +105,11 @@ fun ReaderScreen(
     }
 
     val currentItem = uiState.items.getOrNull(pagerState.currentPage)
+
+    // Lets MainActivity hide the mini-player only while the on-screen page is the episode that's
+    // actually playing (issue #97) -- HorizontalPager swipes don't renavigate, so the nav route's
+    // itemId argument stays fixed at whichever episode was first opened and can't be used for this.
+    LaunchedEffect(currentItem?.id) { onCurrentItemChange(currentItem?.id) }
 
     Scaffold(
         modifier = modifier,
@@ -137,11 +151,14 @@ fun ReaderScreen(
                 onImageClick = { zoomedImageUrl = it },
                 fontScale = articleFontSize.scaleFactor,
                 playbackState = playbackState,
+                feedImageUrl = uiState.feedImageUrl,
                 onTogglePlayPause = { viewModel.togglePlayPause(uiState.items[page]) },
                 onSeek = viewModel::seekTo,
                 onDownload = { viewModel.downloadEnclosure(uiState.items[page]) },
                 onDelete = { viewModel.deleteDownload(uiState.items[page]) },
                 onSpeedChange = viewModel::setPlaybackSpeed,
+                onSkipBackward = viewModel::skipBackward,
+                onSkipForward = viewModel::skipForward,
             )
         }
     }
@@ -157,52 +174,94 @@ private fun ArticlePage(
     onImageClick: (String) -> Unit,
     fontScale: Float,
     playbackState: PlaybackUiState,
+    feedImageUrl: String?,
     onTogglePlayPause: () -> Unit,
     onSeek: (Long) -> Unit,
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onSpeedChange: (Float) -> Unit,
+    onSkipBackward: () -> Unit,
+    onSkipForward: () -> Unit,
 ) {
-    Column(modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-        Text(
-            text = item.title.orEmpty(),
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(16.dp),
-        )
-        Text(
-            text = ArticleDateFormatter.format(item.publishDate),
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.padding(horizontal = 16.dp),
-        )
-        if (item.isPodcastEpisode) {
-            PodcastPlayerControls(
-                isCurrentItem = playbackState.currentItemId == item.id,
-                playbackState = playbackState,
-                savedPositionMs = item.enclosurePosition?.let { (it * 1000).toLong() },
-                savedDurationMs = item.enclosureDurationMs,
-                downloadedFilePath = item.downloadedFilePath,
-                downloadedBytes = item.downloadedBytes,
-                enclosureLength = item.enclosureLength,
-                onTogglePlayPause = onTogglePlayPause,
-                onSeek = onSeek,
-                onDownload = onDownload,
-                onDelete = onDelete,
-                onSpeedChange = onSpeedChange,
-            )
-        }
-        val imageUrl = item.imageUrl
-        if (imageUrl != null) {
+    val coverImageUrl = (item.imageUrl ?: feedImageUrl).takeIf { item.isPodcastEpisode }
+    val scrollState = rememberScrollState()
+    val heroHeight = 220.dp
+    val heroHeightPx = with(LocalDensity.current) { heroHeight.toPx() }
+    // 0f while the hero image at the top is still fully in view; ramps up to 1f as it scrolls
+    // out, so the same image fades in as a blurred backdrop instead of just disappearing.
+    val scrolledPastHero = if (heroHeightPx > 0f) (scrollState.value / heroHeightPx).coerceIn(0f, 1f) else 0f
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (coverImageUrl != null && scrolledPastHero > 0f) {
             AsyncImage(
-                model = imageUrl,
+                model = coverImageUrl,
                 contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp)
-                    .clickable { onImageClick(imageUrl) },
+                contentScale = ContentScale.Crop,
+                modifier = Modifier.fillMaxSize().blur(24.dp).alpha(scrolledPastHero * 0.85f),
+            )
+            Box(
+                modifier = Modifier.fillMaxSize()
+                    .background(MaterialTheme.colorScheme.surface.copy(alpha = scrolledPastHero * 0.25f)),
             )
         }
-        ArticleBody(html = item.description.orEmpty(), baseUrl = item.url, fontScale = fontScale)
+        Column(modifier = Modifier.fillMaxSize().verticalScroll(scrollState)) {
+            if (coverImageUrl != null) {
+                AsyncImage(
+                    model = coverImageUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxWidth().height(heroHeight),
+                )
+            }
+            Text(
+                text = item.title.orEmpty(),
+                style = MaterialTheme.typography.titleLarge,
+                modifier = Modifier.padding(16.dp),
+            )
+            Text(
+                text = ArticleDateFormatter.format(item.publishDate),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+            if (item.isPodcastEpisode) {
+                PodcastPlayerControls(
+                    isCurrentItem = playbackState.currentItemId == item.id,
+                    playbackState = playbackState,
+                    savedPositionMs = item.enclosurePosition?.let { (it * 1000).toLong() },
+                    savedDurationMs = item.enclosureDurationMs,
+                    downloadedFilePath = item.downloadedFilePath,
+                    downloadedBytes = item.downloadedBytes,
+                    enclosureLength = item.enclosureLength,
+                    onTogglePlayPause = onTogglePlayPause,
+                    onSeek = onSeek,
+                    onDownload = onDownload,
+                    onDelete = onDelete,
+                    onSpeedChange = onSpeedChange,
+                    onSkipBackward = onSkipBackward,
+                    onSkipForward = onSkipForward,
+                )
+            }
+            val imageUrl = item.imageUrl
+            // The page background above already shows this as cover art -- skip the generic
+            // article-image block for episodes so it isn't rendered twice on the page.
+            if (imageUrl != null && !item.isPodcastEpisode) {
+                AsyncImage(
+                    model = imageUrl,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .clickable { onImageClick(imageUrl) },
+                )
+            }
+            ArticleBody(
+                html = item.description.orEmpty(),
+                baseUrl = item.url,
+                fontScale = fontScale,
+                translucentBackground = coverImageUrl != null,
+            )
+        }
     }
 }
 
@@ -220,6 +279,8 @@ private fun PodcastPlayerControls(
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onSpeedChange: (Float) -> Unit,
+    onSkipBackward: () -> Unit,
+    onSkipForward: () -> Unit,
 ) {
     // While actively loaded *and* the player has a real duration, show the live player position.
     // Otherwise -- not yet played this session, still buffering, or the mini-player was dismissed
@@ -269,6 +330,9 @@ private fun PodcastPlayerControls(
                     Text(formatSpeed(playbackState.speed))
                 }
             }
+            IconButton(onClick = onSkipBackward, enabled = isCurrentItem) {
+                Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.cd_rewind))
+            }
             IconButton(onClick = onTogglePlayPause) {
                 if (isCurrentItem && playbackState.isBuffering) {
                     CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
@@ -278,6 +342,9 @@ private fun PodcastPlayerControls(
                         contentDescription = stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play),
                     )
                 }
+            }
+            IconButton(onClick = onSkipForward, enabled = isCurrentItem) {
+                Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.cd_forward))
             }
             when {
                 isDownloading -> {
@@ -327,7 +394,7 @@ private fun formatDuration(millis: Long): String {
 }
 
 @Composable
-private fun ArticleBody(html: String, baseUrl: String?, fontScale: Float) {
+private fun ArticleBody(html: String, baseUrl: String?, fontScale: Float, translucentBackground: Boolean = false) {
     val context = LocalContext.current
     val sanitized = remember(html) { HtmlSanitizer.sanitize(html) }
     val textColor = MaterialTheme.colorScheme.onSurface
@@ -351,11 +418,19 @@ private fun ArticleBody(html: String, baseUrl: String?, fontScale: Float) {
         },
         update = { webView ->
             val textColorHex = String.format("#%06X", 0xFFFFFF and textColor.toArgb())
-            val backgroundColorHex = String.format("#%06X", 0xFFFFFF and backgroundColor.toArgb())
+            // Podcast pages have a cover-art backdrop behind the whole page (issue #97) -- let it
+            // bleed through the article body's background too instead of the WebView masking it
+            // with a fully opaque surface color once the page scrolls into the text.
+            val bgColor = backgroundColor.toArgb()
+            val backgroundCss = if (translucentBackground) {
+                "rgba(${(bgColor shr 16) and 0xFF}, ${(bgColor shr 8) and 0xFF}, ${bgColor and 0xFF}, 0.75)"
+            } else {
+                String.format("#%06X", 0xFFFFFF and bgColor)
+            }
             val styledHtml = """
                 <html><head><meta name="viewport" content="width=device-width, initial-scale=1.0">
                 <style>
-                  body { color: $textColorHex; background-color: $backgroundColorHex; font-family: sans-serif; font-size: ${bodyFontSizePx}px; }
+                  body { color: $textColorHex; background-color: $backgroundCss; font-family: sans-serif; font-size: ${bodyFontSizePx}px; }
                   img { max-width: 100%; height: auto; }
                   a { color: $textColorHex; }
                 </style></head><body>$sanitized</body></html>
