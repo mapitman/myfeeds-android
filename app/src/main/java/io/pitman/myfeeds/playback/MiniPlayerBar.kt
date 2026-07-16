@@ -64,6 +64,16 @@ fun MiniPlayerBar(
             }
             LinearProgressIndicator(progress = { progress }, modifier = Modifier.fillMaxWidth())
             Row(
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 2.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
+            ) {
+                Text(formatDuration(playbackState.positionMs), style = MaterialTheme.typography.labelSmall)
+                Text(
+                    formatDuration((playbackState.durationMs - playbackState.positionMs).coerceAtLeast(0L)),
+                    style = MaterialTheme.typography.labelSmall,
+                )
+            }
+            Row(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
