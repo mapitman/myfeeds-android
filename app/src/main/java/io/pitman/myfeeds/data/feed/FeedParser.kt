@@ -80,6 +80,8 @@ object FeedParser {
             itemGuid = guid.ifBlank { url },
             enclosure = enclosure,
             durationMs = item.firstLocalNameOrNull("duration")?.let(::parseItunesDurationMs),
+            chaptersUrl = item.childElements().firstOrNull { it.localName() == "chapters" }
+                ?.getAttribute("url")?.ifBlank { null },
         )
     }
 

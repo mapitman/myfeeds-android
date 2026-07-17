@@ -37,6 +37,14 @@ class FeedParserTest {
     }
 
     @Test
+    fun parseRss_extractsPodcastChaptersUrl() {
+        val feed = FeedParser.parse(fixture("rss.xml"))!!
+
+        assertEquals("https://arstechnica.com/first-post/chapters.json", feed.items[0].chaptersUrl)
+        assertNull(feed.items[1].chaptersUrl)
+    }
+
+    @Test
     fun parseRss_itemGuidFallsBackToLinkWhenGuidMissing() {
         val feed = FeedParser.parse(fixture("rss.xml"))!!
 

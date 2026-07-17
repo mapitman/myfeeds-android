@@ -34,6 +34,8 @@ import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -177,6 +179,8 @@ fun ReaderScreen(
                 onSpeedChange = viewModel::setPlaybackSpeed,
                 onSkipBackward = viewModel::skipBackward,
                 onSkipForward = viewModel::skipForward,
+                onNextChapter = viewModel::nextChapter,
+                onPreviousChapter = viewModel::previousChapter,
                 sharedTransitionScope = sharedTransitionScope,
                 animatedVisibilityScope = animatedVisibilityScope,
             )
@@ -203,6 +207,8 @@ private fun ArticlePage(
     onSpeedChange: (Float) -> Unit,
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
+    onNextChapter: () -> Unit,
+    onPreviousChapter: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
 ) {
@@ -277,6 +283,8 @@ private fun ArticlePage(
                     onSpeedChange = onSpeedChange,
                     onSkipBackward = onSkipBackward,
                     onSkipForward = onSkipForward,
+                    onNextChapter = onNextChapter,
+                    onPreviousChapter = onPreviousChapter,
                 )
             }
             val imageUrl = item.imageUrl
@@ -319,6 +327,8 @@ private fun PodcastPlayerControls(
     onSpeedChange: (Float) -> Unit,
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
+    onNextChapter: () -> Unit,
+    onPreviousChapter: () -> Unit,
 ) {
     // While actively loaded *and* the player has a real duration, show the live player position.
     // Otherwise -- not yet played this session, still buffering, or the mini-player was dismissed
@@ -340,6 +350,9 @@ private fun PodcastPlayerControls(
     val isPlaying = isCurrentItem && playbackState.isPlaying
     val isDownloaded = downloadedFilePath != null
     val isDownloading = !isDownloaded && downloadedBytes != null
+    // issue #95: chapter nav only makes sense while this episode is the one actually loaded, since
+    // playbackState.chapters/currentChapter reflect whatever's currently playing, not this item.
+    val hasChapters = isCurrentItem && playbackState.chapters.isNotEmpty()
 
     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)) {
         // The article list already shows played episodes greyed out (issue #89) -- this is the
@@ -358,6 +371,17 @@ private fun PodcastPlayerControls(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+        if (hasChapters) {
+            val chapterIndex = playbackState.currentChapterIndex
+            val chapterTitle = playbackState.currentChapter?.title
+            Text(
+                text = stringResource(R.string.reader_chapter_label, chapterIndex + 1, playbackState.chapters.size)
+                    .let { if (chapterTitle != null) "$it: $chapterTitle" else it },
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.padding(bottom = 4.dp),
+            )
         }
         Slider(
             value = positionMs.toFloat(),
@@ -385,6 +409,14 @@ private fun PodcastPlayerControls(
                     Text(formatSpeed(playbackState.speed))
                 }
             }
+            // Distinct icon shape (solid triangle+bar) from the 15/30s time-skip buttons below
+            // (looping-arrow FastRewind/FastForward), so the two controls read as different actions
+            // at a glance (issue #95).
+            if (hasChapters) {
+                IconButton(onClick = onPreviousChapter) {
+                    Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
+                }
+            }
             IconButton(onClick = onSkipBackward, enabled = isCurrentItem) {
                 Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.cd_rewind))
             }
@@ -400,6 +432,11 @@ private fun PodcastPlayerControls(
             }
             IconButton(onClick = onSkipForward, enabled = isCurrentItem) {
                 Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.cd_forward))
+            }
+            if (hasChapters) {
+                IconButton(onClick = onNextChapter) {
+                    Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
+                }
             }
             when {
                 isDownloading -> {

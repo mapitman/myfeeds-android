@@ -10,6 +10,7 @@ import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.test.runTest
+import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -43,6 +44,7 @@ class PlaybackControllerTest {
             SettingsDataStore(dataStore),
             FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao()),
             QueueRepository(db.queueDao()),
+            ChaptersFetcher(OkHttpClient()),
         )
     }
 

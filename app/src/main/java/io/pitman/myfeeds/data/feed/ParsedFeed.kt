@@ -18,6 +18,9 @@ data class ParsedFeedItem(
     /** From `itunes:duration` (RSS podcast feeds only) -- lets the reader show a resume position
      *  proportionally (issue #75) before the episode has ever actually been buffered/played. */
     val durationMs: Long? = null,
+    /** From the Podcasting 2.0 `<podcast:chapters url="..."/>` element (issue #95) -- points to an
+     *  external JSON chapters file, fetched lazily at playback time rather than at parse time. */
+    val chaptersUrl: String? = null,
 )
 
 data class ParsedFeed(

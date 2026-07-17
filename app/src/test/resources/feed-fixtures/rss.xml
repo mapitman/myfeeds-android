@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/">
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:podcast="https://podcastindex.org/namespace/1.0">
   <channel>
     <title>Ars Technica</title>
     <link>https://arstechnica.com</link>
@@ -14,6 +14,7 @@
       <description>Plain description text.</description>
       <content:encoded><![CDATA[<p>Rich <b>content</b> body.</p>]]></content:encoded>
       <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+      <podcast:chapters url="https://arstechnica.com/first-post/chapters.json" type="application/json"/>
     </item>
     <item>
       <title>Second Post (no guid)</title>

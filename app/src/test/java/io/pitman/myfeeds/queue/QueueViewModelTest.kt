@@ -12,6 +12,7 @@ import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
+import io.pitman.myfeeds.playback.ChaptersFetcher
 import io.pitman.myfeeds.playback.PlaybackController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -20,6 +21,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Before
@@ -59,7 +61,13 @@ class QueueViewModelTest {
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
-        playbackController = PlaybackController(context, SettingsDataStore(dataStore), feedRepository, queueRepository)
+        playbackController = PlaybackController(
+            context,
+            SettingsDataStore(dataStore),
+            feedRepository,
+            queueRepository,
+            ChaptersFetcher(OkHttpClient()),
+        )
 
         feedId = feedRepository.subscribe(Feed(title = "A Feed"))
         feedRepository.upsertItems(

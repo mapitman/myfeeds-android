@@ -20,6 +20,8 @@
     <string name="cd_share">Share</string>
     <string name="cd_rewind">Rewind 15 seconds</string>
     <string name="cd_forward">Forward 30 seconds</string>
+    <string name="cd_previous_chapter">Previous chapter</string>
+    <string name="cd_next_chapter">Next chapter</string>
     <string name="cd_pause">Pause</string>
     <string name="cd_play">Play</string>
     <string name="cd_delete_download">Delete download</string>
@@ -66,6 +68,7 @@
     <!-- Reader -->
     <string name="reader_no_article_to_show">No article to show</string>
     <string name="reader_page_position">%1$d of %2$d</string>
+    <string name="reader_chapter_label">Chapter %1$d of %2$d</string>
 
     <!-- Settings -->
     <string name="settings_title">Settings</string>

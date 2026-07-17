@@ -33,6 +33,10 @@ private const val SKIP_FORWARD_MS = 30_000L
 private const val SKIP_BACKWARD_MS = 15_000L
 private const val POSITION_TICK_MS = 500L
 
+/** issue #95: "previous chapter" restarts the current chapter if more than this far into it,
+ *  otherwise jumps to the actual previous chapter -- mirrors standard previous-track UX. */
+private const val PREVIOUS_CHAPTER_RESTART_THRESHOLD_MS = 5_000L
+
 data class PlaybackUiState(
     val currentItemId: String? = null,
     val feedId: Long? = null,
@@ -45,7 +49,17 @@ data class PlaybackUiState(
     val isEnded: Boolean = false,
     val speed: Float = 1.0f,
     val artworkUrl: String? = null,
-)
+    /** Chapters for the current episode (issue #95), fetched lazily and possibly still empty
+     *  while the fetch is in flight, or permanently empty if the episode has none. */
+    val chapters: List<Chapter> = emptyList(),
+) {
+    /** The chapter containing the current playback position, if any. */
+    val currentChapter: Chapter?
+        get() = chapters.lastOrNull { it.startTimeMs <= positionMs }
+
+    val currentChapterIndex: Int
+        get() = chapters.indexOfLast { it.startTimeMs <= positionMs }
+}
 
 /**
  * UI-facing entry point for playback (used by the in-article player, issue #20): connects to
@@ -59,8 +73,14 @@ class PlaybackController @Inject constructor(
     private val settingsDataStore: SettingsDataStore,
     private val feedRepository: FeedRepository,
     private val queueRepository: QueueRepository,
+    private val chaptersFetcher: ChaptersFetcher,
 ) {
     private var controller: MediaController? = null
+
+    // Rebuilt into every PlaybackUiState by snapshotState (issue #95); tracked here rather than
+    // read back out of _uiState.value since it's fetched asynchronously and independently of the
+    // player-driven state snapshots.
+    private var currentChapters: List<Chapter> = emptyList()
 
     // Media3's MediaItem/MediaMetadata have no first-class "feedId" field, so it's tracked
     // alongside the controller and folded into PlaybackUiState -- the mini-player (issue #66)
@@ -93,6 +113,7 @@ class PlaybackController @Inject constructor(
         isEnded = player.playbackState == Player.STATE_ENDED,
         speed = player.playbackParameters.speed,
         artworkUrl = player.currentMediaItem?.mediaMetadata?.artworkUri?.toString(),
+        chapters = currentChapters,
     )
 
     private val playerListener = object : Player.Listener {
@@ -122,6 +143,7 @@ class PlaybackController @Inject constructor(
         player.clearMediaItems()
         currentFeedId = null
         currentItemId = null
+        currentChapters = emptyList()
         _uiState.value = PlaybackUiState()
         positionTickerJob?.cancel()
         // Left on the scope's default Main.immediate context (not dispatched to IO) because
@@ -217,6 +239,9 @@ class PlaybackController @Inject constructor(
 
         currentFeedId = item.feedId
         currentItemId = item.id
+        // Cleared synchronously so the previous episode's chapters never briefly show for the new
+        // one while the fetch below (if any) is still in flight.
+        currentChapters = emptyList()
         connect { controller ->
             controller.setMediaItem(mediaItem, item.enclosurePosition?.let { (it * 1000).toLong() } ?: 0L)
             controller.setPlaybackSpeed(speed)
@@ -224,7 +249,20 @@ class PlaybackController @Inject constructor(
             if (autoPlay) controller.play()
         }
         settingsDataStore.setLastPlayingItem(item.feedId, item.id)
+        loadChapters(item)
         return true
+    }
+
+    /** Fetched asynchronously so a slow/unreachable chapters host never delays playback starting. */
+    private fun loadChapters(item: FeedItem) {
+        val chaptersUrl = item.chaptersUrl ?: return
+        positionTickerScope.launch {
+            val chapters = chaptersFetcher.fetch(chaptersUrl)
+            // The user may have already switched to another episode by the time this resolves.
+            if (currentItemId != item.id) return@launch
+            currentChapters = chapters
+            _uiState.value = _uiState.value.copy(chapters = chapters)
+        }
     }
 
     /**
@@ -273,6 +311,32 @@ class PlaybackController @Inject constructor(
         seekTo((playback.positionMs - SKIP_BACKWARD_MS).coerceAtLeast(0L))
     }
 
+    /** Jumps to the start of the next chapter, if any (issue #95). No-op past the last chapter. */
+    fun nextChapter() {
+        val playback = uiState.value
+        val next = playback.chapters.firstOrNull { it.startTimeMs > playback.positionMs } ?: return
+        seekTo(next.startTimeMs)
+    }
+
+    /**
+     * More than [PREVIOUS_CHAPTER_RESTART_THRESHOLD_MS] into the current chapter, restarts it;
+     * otherwise jumps to the actual previous chapter (or the very start, if already in the first
+     * one) -- mirrors standard previous-track UX (issue #95).
+     */
+    fun previousChapter() {
+        val playback = uiState.value
+        val currentIndex = playback.currentChapterIndex
+        if (currentIndex < 0) return
+        val currentChapter = playback.chapters[currentIndex]
+        val elapsedInChapter = playback.positionMs - currentChapter.startTimeMs
+        val target = if (elapsedInChapter > PREVIOUS_CHAPTER_RESTART_THRESHOLD_MS) {
+            currentChapter.startTimeMs
+        } else {
+            playback.chapters.getOrNull(currentIndex - 1)?.startTimeMs ?: 0L
+        }
+        seekTo(target)
+    }
+
     fun stop() {
         // Player.stop() alone halts playback but retains currentMediaItem, which would leave
         // the mini-player (issue #66) stuck on-screen -- clearMediaItems() is what actually
@@ -281,6 +345,7 @@ class PlaybackController @Inject constructor(
         controller?.clearMediaItems()
         currentFeedId = null
         currentItemId = null
+        currentChapters = emptyList()
         positionTickerScope.launch(Dispatchers.IO) { settingsDataStore.setLastPlayingItem(null, null) }
     }
 
