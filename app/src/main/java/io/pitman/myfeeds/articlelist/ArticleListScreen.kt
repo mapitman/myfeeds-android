@@ -171,8 +171,9 @@ fun ArticleListScreen(
                         Text(
                             stringResource(
                                 when {
+                                    !uiState.showUnreadOnly && uiState.isPodcastFeed -> R.string.article_list_no_episodes
                                     !uiState.showUnreadOnly -> R.string.article_list_no_articles
-                                    uiState.isPodcastFeed -> R.string.article_list_no_unplayed_articles
+                                    uiState.isPodcastFeed -> R.string.article_list_no_unplayed_episodes
                                     else -> R.string.article_list_no_unread_articles
                                 },
                             ),

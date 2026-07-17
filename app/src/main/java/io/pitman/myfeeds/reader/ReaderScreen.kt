@@ -110,7 +110,7 @@ fun ReaderScreen(
     if (uiState.items.isEmpty()) {
         Scaffold(modifier = modifier) { padding ->
             Box(modifier = Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.reader_no_article_to_show))
+                Text(stringResource(R.string.reader_no_content_to_show))
             }
         }
         return

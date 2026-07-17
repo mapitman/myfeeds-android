@@ -37,6 +37,7 @@
     <string name="feed_list_no_feeds_yet">No feeds yet</string>
     <string name="feed_list_total_unread">%1$d unread</string>
     <string name="feed_list_section_unread">%1$d Unread</string>
+    <string name="feed_list_section_unplayed">%1$d Unplayed</string>
     <string name="feed_list_refresh_error">Couldn\'t refresh: check your connection</string>
     <string name="feed_list_podcasts_tab">Podcasts</string>
     <string name="feed_list_feeds_tab">Feeds</string>
@@ -51,8 +52,9 @@
     <string name="article_list_tab_unplayed">Unplayed</string>
     <string name="article_list_tab_all">All</string>
     <string name="article_list_no_articles">No articles</string>
+    <string name="article_list_no_episodes">No episodes</string>
     <string name="article_list_no_unread_articles">No unread articles</string>
-    <string name="article_list_no_unplayed_articles">No unplayed articles</string>
+    <string name="article_list_no_unplayed_episodes">No unplayed episodes</string>
 
     <!-- Next Up queue -->
     <string name="queue_title">Next Up</string>
@@ -66,7 +68,7 @@
     <string name="downloads_item_subtitle">%1$s • %2$s</string>
 
     <!-- Reader -->
-    <string name="reader_no_article_to_show">No article to show</string>
+    <string name="reader_no_content_to_show">No content to show</string>
     <string name="reader_page_position">%1$d of %2$d</string>
     <string name="reader_chapter_label">Chapter %1$d of %2$d</string>
 
@@ -78,13 +80,13 @@
     <string name="settings_section_actions">Actions</string>
     <string name="settings_section_about">About</string>
     <string name="settings_show_images">Show images</string>
-    <string name="settings_default_to_all_articles">Default to all articles</string>
+    <string name="settings_default_to_all_articles">Default to all items</string>
     <string name="settings_notify_on_new_items">Notify on new items</string>
     <string name="settings_update_interval">Update interval: %1$d min</string>
     <string name="settings_update_interval_minutes_chip">%1$dm</string>
-    <string name="settings_max_articles_per_feed">Max articles per feed: %1$d</string>
-    <string name="settings_article_font_size">Article font size</string>
-    <string name="settings_article_list_font_size">Article list font size</string>
+    <string name="settings_max_articles_per_feed">Max items per feed: %1$d</string>
+    <string name="settings_article_font_size">Reader font size</string>
+    <string name="settings_article_list_font_size">List font size</string>
     <string name="settings_feed_list_font_size">Feed list font size</string>
     <string name="settings_download_on_battery">Download on battery</string>
     <string name="settings_download_on_cellular">Download on cellular</string>
@@ -102,7 +104,7 @@
     <string name="settings_confirm_add_default_feeds_title">Add default feeds?</string>
     <string name="settings_confirm_add_default_feeds_message">This adds the bundled starter feeds to your subscriptions.</string>
     <string name="settings_confirm_remove_all_feeds_title">Remove all feeds?</string>
-    <string name="settings_confirm_remove_all_feeds_message">This permanently deletes every subscribed feed and its articles.</string>
+    <string name="settings_confirm_remove_all_feeds_message">This permanently deletes every subscribed feed and its content.</string>
     <string name="settings_confirm_reset_title">Reset settings?</string>
     <string name="settings_confirm_reset_message">This restores all settings to their defaults. Feeds are not affected.</string>
 
@@ -136,7 +138,9 @@
     <string name="feed_properties_url_label">Feed URL (tap to copy)</string>
     <string name="feed_properties_url_copied">Feed URL copied to clipboard</string>
     <string name="feed_properties_use_global_max">Use global max articles setting (%1$d)</string>
+    <string name="feed_properties_use_global_max_episodes">Use global max episodes setting (%1$d)</string>
     <string name="feed_properties_max_articles_for_feed">Max articles for this feed: %1$d</string>
+    <string name="feed_properties_max_episodes_for_feed">Max episodes for this feed: %1$d</string>
     <string name="feed_properties_auto_download">Auto-download new episodes</string>
     <string name="feed_properties_auto_queue">Automatically add new episodes to queue</string>
     <string name="feed_properties_auto_queue_max_count">Max episodes to keep queued for this feed</string>
@@ -145,14 +149,15 @@
     <string name="feed_properties_unsubscribe">Unsubscribe</string>
     <string name="feed_properties_confirm_unsubscribe_title">Unsubscribe from this feed?</string>
     <string name="feed_properties_confirm_unsubscribe_message">This permanently deletes the feed and its articles.</string>
+    <string name="feed_properties_confirm_unsubscribe_message_podcast">This permanently deletes the feed and its episodes.</string>
 
     <!-- Notifications -->
-    <string name="notification_new_items_channel_name">New articles</string>
-    <string name="notification_new_items_channel_description">Notifies when a feed refresh finds new articles</string>
-    <string name="notification_new_items_title">New articles</string>
+    <string name="notification_new_items_channel_name">New items</string>
+    <string name="notification_new_items_channel_description">Notifies when a feed refresh finds new items</string>
+    <string name="notification_new_items_title">New items</string>
     <plurals name="notification_new_items_body">
-        <item quantity="one">%1$d new article</item>
-        <item quantity="other">%1$d new articles</item>
+        <item quantity="one">%1$d new item</item>
+        <item quantity="other">%1$d new items</item>
     </plurals>
 
     <!-- Widget -->
