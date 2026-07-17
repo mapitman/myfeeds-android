@@ -1,6 +1,7 @@
 package io.pitman.myfeeds.settings
 
 import android.content.Context
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -108,5 +109,15 @@ class SettingsViewModel @Inject constructor(
         val file = File(context.cacheDir, "myfeeds-export.opml")
         file.writeText(opml)
         return file
+    }
+
+    /**
+     * Writes the OPML export directly to a user-chosen destination (issue #151), e.g. from
+     * [androidx.activity.result.contract.ActivityResultContracts.CreateDocument] -- no storage
+     * permission needed since the system picker itself grants access to the chosen [uri].
+     */
+    suspend fun writeOpmlTo(uri: Uri) {
+        val opml = opmlExporter.export()
+        context.contentResolver.openOutputStream(uri)?.use { it.write(opml.toByteArray()) }
     }
 }
