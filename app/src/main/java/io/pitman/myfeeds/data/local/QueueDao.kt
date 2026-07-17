@@ -35,7 +35,8 @@ interface QueueDao {
     @Query("UPDATE queue_entries SET position = :position WHERE itemId = :itemId")
     suspend fun setPosition(itemId: String, position: Int)
 
-    // Oldest-queued first (lowest position = added earliest), for per-feed cap eviction (issue #68).
+    // All of a feed's currently-queued items regardless of how they got there, oldest-position
+    // first -- used to exempt queued items from item-count trimming (issue #125).
     @Query(
         """
         SELECT queue_entries.itemId FROM queue_entries
@@ -45,6 +46,19 @@ interface QueueDao {
         """,
     )
     suspend fun orderedItemIdsForFeed(feedId: Long): List<String>
+
+    // Only this feed's auto-queued items, oldest-queued first (lowest position = added earliest),
+    // for per-feed cap eviction (issue #68) -- manually-queued entries are never candidates, see
+    // [QueueEntry.autoQueued] (issue #125/#127).
+    @Query(
+        """
+        SELECT queue_entries.itemId FROM queue_entries
+        INNER JOIN feed_items ON feed_items.id = queue_entries.itemId
+        WHERE feed_items.feedId = :feedId AND queue_entries.autoQueued = 1
+        ORDER BY queue_entries.position
+        """,
+    )
+    suspend fun orderedAutoQueuedItemIdsForFeed(feedId: Long): List<String>
 
     @Query(
         """

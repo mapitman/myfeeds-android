@@ -26,4 +26,8 @@ data class QueueEntry(
     @PrimaryKey val itemId: String,
     val position: Int,
     val addedAt: Long,
+    // Only auto-queued entries (issue #68) are subject to a feed's autoQueueMaxCount eviction --
+    // a manually-queued episode shouldn't vanish just because its feed happened to auto-queue new
+    // ones afterward (issue #125/#127).
+    val autoQueued: Boolean = false,
 )

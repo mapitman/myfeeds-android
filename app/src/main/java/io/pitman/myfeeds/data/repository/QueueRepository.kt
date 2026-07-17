@@ -14,10 +14,16 @@ class QueueRepository @Inject constructor(
 
     suspend fun isQueued(itemId: String): Boolean = queueDao.findItemId(itemId) != null
 
-    /** No-op if already queued -- an episode can only be queued once. Returns whether it was added. */
-    suspend fun addToEnd(itemId: String): Boolean {
+    /**
+     * No-op if already queued -- an episode can only be queued once. Returns whether it was added.
+     * [autoQueued] should only be true for the feed-refresh auto-queue path (issue #68); manual
+     * adds must stay exempt from that feed's [enforceFeedCap] eviction (issue #125/#127).
+     */
+    suspend fun addToEnd(itemId: String, autoQueued: Boolean = false): Boolean {
         if (queueDao.findItemId(itemId) != null) return false
-        queueDao.insert(QueueEntry(itemId, position = queueDao.maxPosition() + 1, addedAt = System.currentTimeMillis()))
+        queueDao.insert(
+            QueueEntry(itemId, position = queueDao.maxPosition() + 1, addedAt = System.currentTimeMillis(), autoQueued = autoQueued),
+        )
         return true
     }
 
@@ -42,13 +48,14 @@ class QueueRepository @Inject constructor(
     }
 
     /**
-     * Evicts this feed's oldest-queued episodes (earliest added, not earliest published) down to
-     * [maxCount] (issue #68) -- applies to the whole queue for that feed, auto- and manually-queued
-     * alike, since [QueueEntry] doesn't distinguish how an entry got there. Only removes from the
-     * queue; does not touch the episode, its download, or read state.
+     * Evicts this feed's oldest *auto-queued* episodes (earliest added, not earliest published)
+     * down to [maxCount] (issue #68) -- manually-queued entries are never evicted by this, so a
+     * feed auto-queuing new episodes can't silently wipe out ones the user deliberately queued
+     * (issue #125/#127). Only removes from the queue; does not touch the episode, its download, or
+     * read state.
      */
     suspend fun enforceFeedCap(feedId: Long, maxCount: Int) {
-        val ordered = queueDao.orderedItemIdsForFeed(feedId)
+        val ordered = queueDao.orderedAutoQueuedItemIdsForFeed(feedId)
         val excess = ordered.size - maxCount
         if (excess <= 0) return
         ordered.take(excess).forEach { queueDao.remove(it) }

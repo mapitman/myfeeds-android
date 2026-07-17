@@ -77,7 +77,7 @@ class FeedRefreshWorker @AssistedInject constructor(
             if (!feed.autoQueueEnabled) return@forEach
             success.newItemIds.forEach { itemId ->
                 val item = feedRepository.getItem(itemId) ?: return@forEach
-                if (item.isPodcastEpisode) queueRepository.addToEnd(itemId)
+                if (item.isPodcastEpisode) queueRepository.addToEnd(itemId, autoQueued = true)
             }
             feed.autoQueueMaxCount?.let { queueRepository.enforceFeedCap(feed.id, it) }
         }

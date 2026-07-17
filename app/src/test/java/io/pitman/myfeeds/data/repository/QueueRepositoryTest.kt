@@ -149,13 +149,13 @@ class QueueRepositoryTest {
     }
 
     @Test
-    fun enforceFeedCap_evictsOldestQueuedFromThatFeedOnly() = runTest {
+    fun enforceFeedCap_evictsOldestAutoQueuedFromThatFeedOnly() = runTest {
         val otherFeedId = feedRepository.subscribe(Feed(title = "Other Feed"))
         feedRepository.upsertItems(listOf(FeedItem(id = "other-1", feedId = otherFeedId, title = "Other Episode", itemGuid = "og1")))
-        queueRepository.addToEnd("ep-1")
-        queueRepository.addToEnd("ep-2")
-        queueRepository.addToEnd("ep-3")
-        queueRepository.addToEnd("other-1")
+        queueRepository.addToEnd("ep-1", autoQueued = true)
+        queueRepository.addToEnd("ep-2", autoQueued = true)
+        queueRepository.addToEnd("ep-3", autoQueued = true)
+        queueRepository.addToEnd("other-1", autoQueued = true)
 
         queueRepository.enforceFeedCap(feedId, maxCount = 1)
 
@@ -165,10 +165,24 @@ class QueueRepositoryTest {
 
     @Test
     fun enforceFeedCap_underCap_isNoOp() = runTest {
-        queueRepository.addToEnd("ep-1")
-        queueRepository.addToEnd("ep-2")
+        queueRepository.addToEnd("ep-1", autoQueued = true)
+        queueRepository.addToEnd("ep-2", autoQueued = true)
 
         queueRepository.enforceFeedCap(feedId, maxCount = 5)
+
+        val queue = queueRepository.observeQueue().first()
+        assertEquals(listOf("ep-1", "ep-2"), queue.map { it.item.id })
+    }
+
+    @Test
+    fun enforceFeedCap_neverEvictsManuallyQueuedEntries() = runTest {
+        // issue #125/#127: a feed auto-queuing new episodes shouldn't silently wipe out episodes
+        // the user deliberately added to Next Up.
+        queueRepository.addToEnd("ep-1")
+        queueRepository.addToEnd("ep-2")
+        queueRepository.addToEnd("ep-3", autoQueued = true)
+
+        queueRepository.enforceFeedCap(feedId, maxCount = 0)
 
         val queue = queueRepository.observeQueue().first()
         assertEquals(listOf("ep-1", "ep-2"), queue.map { it.item.id })
