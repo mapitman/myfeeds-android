@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:content="http://purl.org/rss/1.0/modules/content/" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
+  <channel>
+    <title>Late Night Linux</title>
+    <link>https://latenightlinux.com</link>
+    <description>A Linux podcast.</description>
+    <itunes:image href="http://latenightlinux.com/wp-content/uploads/latenightlinux.jpg" />
+    <item>
+      <title>Episode 1</title>
+      <link>https://latenightlinux.com/episode-1</link>
+      <guid isPermaLink="false">episode-1</guid>
+      <description>Show notes.</description>
+      <pubDate>Wed, 05 Jun 2013 18:00:00 GMT</pubDate>
+      <enclosure url="https://latenightlinux.com/episode-1.mp3" type="audio/mpeg" length="123456789" />
+    </item>
+  </channel>
+</rss>
