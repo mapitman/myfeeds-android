@@ -202,4 +202,31 @@ class ReaderViewModelTest {
         assertEquals(appContext.getString(R.string.queue_feedback_added), viewModel.queueFeedback.first { it != null })
         assertTrue(queueRepository.isQueued("item-1"))
     }
+
+    @Test
+    fun queuedItemIds_reflectsAddToQueue() = runTest(testDispatcher) {
+        val viewModel = createViewModel("item-1")
+        viewModel.uiState.first { it.items.isNotEmpty() }
+
+        viewModel.addToQueue("item-1")
+
+        val queuedIds = viewModel.queuedItemIds.first { "item-1" in it }
+        assertTrue("item-1" in queuedIds)
+    }
+
+    @Test
+    fun removeFromQueue_removesItemFromRepository() = runTest(testDispatcher) {
+        val viewModel = createViewModel("item-1")
+        viewModel.uiState.first { it.items.isNotEmpty() }
+        viewModel.addToQueue("item-1")
+        viewModel.queuedItemIds.first { "item-1" in it }
+
+        viewModel.removeFromQueue("item-1")
+
+        // Wait for the reactive queue Flow to reflect the removal before asserting via a direct
+        // suspend call -- removeFromQueue's DB delete runs on Room's own executor and may not
+        // have committed yet at this point even under an unconfined test dispatcher.
+        viewModel.queuedItemIds.first { "item-1" !in it }
+        assertTrue(!queueRepository.isQueued("item-1"))
+    }
 }
