@@ -51,6 +51,8 @@
     <!-- Next Up queue -->
     <string name="queue_title">Als Nächstes</string>
     <string name="queue_empty">Nichts in der Warteschlange</string>
+    <string name="queue_feedback_added">Zu \"Als Nächstes\" hinzugefügt</string>
+    <string name="queue_feedback_already_queued">Bereits in \"Als Nächstes\"</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">Kein Artikel vorhanden</string>

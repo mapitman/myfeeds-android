@@ -51,6 +51,8 @@
     <!-- Next Up queue -->
     <string name="queue_title">À suivre</string>
     <string name="queue_empty">Aucun élément en file d\'attente</string>
+    <string name="queue_feedback_added">Ajouté à À suivre</string>
+    <string name="queue_feedback_already_queued">Déjà dans À suivre</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">Aucun article à afficher</string>

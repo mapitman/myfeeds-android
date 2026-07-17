@@ -15,15 +15,16 @@ class QueueRepository @Inject constructor(
     suspend fun isQueued(itemId: String): Boolean = queueDao.findItemId(itemId) != null
 
     /**
-     * No-op if already queued -- an episode can only be queued once. [autoQueued] should only be
-     * true for the feed-refresh auto-queue path (issue #68); manual adds must stay exempt from
-     * that feed's [enforceFeedCap] eviction (issue #125/#127).
+     * No-op if already queued -- an episode can only be queued once. Returns whether it was added.
+     * [autoQueued] should only be true for the feed-refresh auto-queue path (issue #68); manual
+     * adds must stay exempt from that feed's [enforceFeedCap] eviction (issue #125/#127).
      */
-    suspend fun addToEnd(itemId: String, autoQueued: Boolean = false) {
-        if (queueDao.findItemId(itemId) != null) return
+    suspend fun addToEnd(itemId: String, autoQueued: Boolean = false): Boolean {
+        if (queueDao.findItemId(itemId) != null) return false
         queueDao.insert(
             QueueEntry(itemId, position = queueDao.maxPosition() + 1, addedAt = System.currentTimeMillis(), autoQueued = autoQueued),
         )
+        return true
     }
 
     /** No-op if already queued -- an episode can only be queued once. */

@@ -53,6 +53,8 @@
     <!-- Next Up queue -->
     <string name="queue_title">Next Up</string>
     <string name="queue_empty">Nothing queued</string>
+    <string name="queue_feedback_added">Added to Next Up</string>
+    <string name="queue_feedback_already_queued">Already in Next Up</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">No article to show</string>
