@@ -16,13 +16,11 @@ import dagger.assisted.AssistedInject
 import io.pitman.myfeeds.MainActivity
 import io.pitman.myfeeds.MyFeedsApp
 import io.pitman.myfeeds.R
+import io.pitman.myfeeds.data.feed.AutoQueueAndDownloadEnforcer
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.feed.FeedUpdateResult
-import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.repository.FeedRepository
-import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
-import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import io.pitman.myfeeds.widget.UnreadWidget
 import kotlinx.coroutines.flow.first
 
@@ -47,13 +45,11 @@ class FeedRefreshWorker @AssistedInject constructor(
     @Assisted workerParams: WorkerParameters,
     private val feedRepository: FeedRepository,
     private val feedUpdateEngine: FeedUpdateEngine,
-    private val downloadRepository: EnclosureDownloadRepository,
-    private val queueRepository: QueueRepository,
+    private val autoQueueAndDownloadEnforcer: AutoQueueAndDownloadEnforcer,
     private val settingsDataStore: SettingsDataStore,
 ) : CoroutineWorker(context, workerParams) {
     override suspend fun doWork(): Result {
         val feeds = feedRepository.observeAllFeeds().first()
-        val feedsById = feeds.associateBy { it.id }
         val results = feedUpdateEngine.updateFeeds(feeds)
 
         // Per-feed failures don't fail the whole run (see class doc), but they shouldn't be
@@ -62,25 +58,7 @@ class FeedRefreshWorker @AssistedInject constructor(
             Log.w(TAG, "Feed refresh failed: ${failure.message}")
         }
 
-        results.filterIsInstance<FeedUpdateResult.Success>()
-            .filter { feedsById[it.feedId]?.autoDownloadEnabled == true }
-            .flatMap { it.newItemIds }
-            .forEach { itemId ->
-                val item = feedRepository.getItem(itemId) ?: return@forEach
-                if (item.isPodcastEpisode) downloadRepository.startDownload(item)
-            }
-
-        // Per feed (not flattened, since cap eviction needs to run once per feed after all of
-        // that feed's new items for this run have been queued) -- see FeedRepository#enforceFeedCap.
-        results.filterIsInstance<FeedUpdateResult.Success>().forEach { success ->
-            val feed = feedsById[success.feedId] ?: return@forEach
-            if (!feed.autoQueueEnabled) return@forEach
-            success.newItemIds.forEach { itemId ->
-                val item = feedRepository.getItem(itemId) ?: return@forEach
-                if (item.isPodcastEpisode) queueRepository.addToEnd(itemId, autoQueued = true)
-            }
-            feed.autoQueueMaxCount?.let { queueRepository.enforceFeedCap(feed.id, it) }
-        }
+        autoQueueAndDownloadEnforcer.apply(feeds, results)
 
         UnreadWidget().updateAll(applicationContext)
 

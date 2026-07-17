@@ -7,6 +7,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.DefaultFeedsSeeder
+import io.pitman.myfeeds.data.feed.AutoQueueAndDownloadEnforcer
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.feed.FeedUpdateResult
 import io.pitman.myfeeds.data.local.Feed
@@ -52,6 +53,7 @@ class FeedListViewModel @Inject constructor(
     private val seeder: DefaultFeedsSeeder,
     private val feedRepository: FeedRepository,
     private val feedUpdateEngine: FeedUpdateEngine,
+    private val autoQueueAndDownloadEnforcer: AutoQueueAndDownloadEnforcer,
     settingsDataStore: SettingsDataStore,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
@@ -100,6 +102,7 @@ class FeedListViewModel @Inject constructor(
             isRefreshing.value = true
             val feeds = feedRepository.observeAllFeeds().first()
             val results = feedUpdateEngine.updateFeeds(feeds)
+            autoQueueAndDownloadEnforcer.apply(feeds, results)
             if (results.any { it is FeedUpdateResult.Failure }) {
                 _refreshError.value = context.getString(R.string.feed_list_refresh_error)
             }
