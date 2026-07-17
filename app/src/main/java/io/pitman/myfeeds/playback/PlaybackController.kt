@@ -71,6 +71,11 @@ class PlaybackController @Inject constructor(
     // re-queue it (issue #106).
     private var currentItemId: String? = null
 
+    // Guards handlePlaybackEnded against re-entrancy for the *whole* advance, not just until
+    // currentItemId is reassigned -- see that function's doc for why a narrower guard wasn't
+    // enough (issue #125/#127).
+    private var isAdvancingQueue = false
+
     private val _uiState = MutableStateFlow(PlaybackUiState())
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
 
@@ -111,12 +116,16 @@ class PlaybackController @Inject constructor(
      *
      * [Player.Listener.onEvents] can fire more than once while [player] still reports
      * `STATE_ENDED` -- [clearMediaItems] is dispatched to the (possibly cross-process)
-     * [MediaController] asynchronously, so a second callback can arrive before it takes effect.
-     * Without this guard, each call independently pops the next queued episode, so one completion
-     * could silently consume two entries from Next Up (issue #125/#127).
+     * [MediaController] asynchronously, so repeat callbacks can arrive before it takes effect, in
+     * a burst rather than just once. Each call independently pops the next queued episode via
+     * [playNextQueued], so without a guard covering the *entire* advance -- not just until
+     * [currentItemId] is reassigned to the next item, which a burst of repeat callbacks can outlast
+     * -- a single completion could cascade through and silently drain several entries from Next Up
+     * (issue #125/#127).
      */
     private fun handlePlaybackEnded(player: Player) {
-        if (currentItemId == null) return
+        if (isAdvancingQueue) return
+        isAdvancingQueue = true
         player.clearMediaItems()
         currentFeedId = null
         currentItemId = null
@@ -128,6 +137,7 @@ class PlaybackController @Inject constructor(
         positionTickerScope.launch {
             settingsDataStore.setLastPlayingItem(null, null)
             playNextQueued()
+            isAdvancingQueue = false
         }
     }
 
