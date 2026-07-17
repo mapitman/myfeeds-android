@@ -45,6 +45,7 @@ class SettingsDataStoreTest {
         assertFalse(settings.allowPodcastDownloadOnBattery)
         assertFalse(settings.allowPodcastDownloadOnCellular)
         assertTrue(settings.allowPodcastStreaming)
+        assertFalse(settings.autoDeleteFinishedDownloads)
         assertNull(settings.lastImportUrl)
     }
 
@@ -61,6 +62,7 @@ class SettingsDataStoreTest {
         settingsDataStore.setAllowPodcastDownloadOnBattery(true)
         settingsDataStore.setAllowPodcastDownloadOnCellular(true)
         settingsDataStore.setAllowPodcastStreaming(false)
+        settingsDataStore.setAutoDeleteFinishedDownloads(true)
         settingsDataStore.setLastImportUrl("https://example.com/feeds.opml")
         settingsDataStore.setLastFeedUpdateEpochMillis(123456789L)
 
@@ -77,6 +79,7 @@ class SettingsDataStoreTest {
         assertTrue(settings.allowPodcastDownloadOnBattery)
         assertTrue(settings.allowPodcastDownloadOnCellular)
         assertFalse(settings.allowPodcastStreaming)
+        assertTrue(settings.autoDeleteFinishedDownloads)
         assertEquals("https://example.com/feeds.opml", settings.lastImportUrl)
         assertEquals(123456789L, settings.lastFeedUpdateEpochMillis)
     }

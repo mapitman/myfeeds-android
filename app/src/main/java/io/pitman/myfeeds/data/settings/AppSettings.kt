@@ -17,6 +17,8 @@ data class AppSettings(
     val allowPodcastDownloadOnBattery: Boolean = false,
     val allowPodcastDownloadOnCellular: Boolean = false,
     val allowPodcastStreaming: Boolean = true,
+    /** Deletes a downloaded episode's file once it's fully played (issue #71). */
+    val autoDeleteFinishedDownloads: Boolean = false,
     val notifyOnNewItems: Boolean = false,
     val lastImportUrl: String? = null,
     val lastFeedUpdateEpochMillis: Long? = null,

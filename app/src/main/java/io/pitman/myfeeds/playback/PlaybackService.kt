@@ -13,12 +13,15 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.pitman.myfeeds.MainActivity
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.settings.SettingsDataStore
+import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -35,6 +38,12 @@ class PlaybackService : MediaSessionService() {
 
     @Inject
     lateinit var feedRepository: FeedRepository
+
+    @Inject
+    lateinit var downloadRepository: EnclosureDownloadRepository
+
+    @Inject
+    lateinit var settingsDataStore: SettingsDataStore
 
     private lateinit var player: ExoPlayer
     private var mediaSession: MediaSession? = null
@@ -103,6 +112,13 @@ class PlaybackService : MediaSessionService() {
                 serviceScope.launch {
                     feedRepository.setEnclosurePosition(itemId, null)
                     feedRepository.markRead(itemId, true)
+                    // Storage cap / auto-cleanup (issue #71): only ever deletes an episode that
+                    // just finished playing in full, never one still in progress or unplayed.
+                    if (settingsDataStore.settings.first().autoDeleteFinishedDownloads) {
+                        feedRepository.getItem(itemId)
+                            ?.takeIf { it.downloadedFilePath != null }
+                            ?.let { downloadRepository.deleteDownload(it) }
+                    }
                 }
             }
         }
