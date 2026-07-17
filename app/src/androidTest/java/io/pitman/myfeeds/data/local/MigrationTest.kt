@@ -42,6 +42,11 @@ class MigrationTest {
     }
 
     @Test
+    fun version10Schema_opensSuccessfully() {
+        helper.createDatabase(TEST_DB, 10).close()
+    }
+
+    @Test
     fun migrate1To2_addsDownloadColumnsWithoutDataLoss() {
         helper.createDatabase(TEST_DB, 1).apply {
             execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
@@ -225,6 +230,27 @@ class MigrationTest {
         migrated.query("SELECT chaptersUrl FROM feed_items WHERE id = 'item-1'").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertTrue(cursor.isNull(0))
+        }
+        migrated.close()
+    }
+
+    @Test
+    fun migrate9To10_addsAutoQueuePositionColumnDefaultingToBottom() {
+        helper.createDatabase(TEST_DB, 9).apply {
+            execSQL(
+                "INSERT INTO feeds (id, title, userTitle, description, feedUrl, siteUrl, imageUrl, " +
+                    "displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, autoQueueEnabled, " +
+                    "autoQueueMaxCount, playbackSpeed) " +
+                    "VALUES (1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, 1.0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 10, true, MIGRATION_9_10)
+
+        migrated.query("SELECT autoQueuePosition FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals("BOTTOM", cursor.getString(0))
         }
         migrated.close()
     }

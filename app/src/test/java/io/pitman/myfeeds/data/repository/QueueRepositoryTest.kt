@@ -81,6 +81,29 @@ class QueueRepositoryTest {
     }
 
     @Test
+    fun addToFront_autoQueuedTrue_isEvictionCandidate() = runTest {
+        // issue #166: addToFront needs its own autoQueued flag, matching addToEnd, so front-inserted
+        // auto-queue entries are still subject to a feed's autoQueueMaxCount eviction.
+        queueRepository.addToFront("ep-1", autoQueued = true)
+        queueRepository.addToFront("ep-2", autoQueued = true)
+
+        queueRepository.enforceFeedCap(feedId, maxCount = 1)
+
+        val queue = queueRepository.observeQueue().first()
+        assertEquals(listOf("ep-2"), queue.map { it.item.id })
+    }
+
+    @Test
+    fun addToFront_defaultsToNotAutoQueued() = runTest {
+        queueRepository.addToFront("ep-1")
+
+        queueRepository.enforceFeedCap(feedId, maxCount = 0)
+
+        val queue = queueRepository.observeQueue().first()
+        assertEquals(listOf("ep-1"), queue.map { it.item.id })
+    }
+
+    @Test
     fun remove_dropsItemAndKeepsRestInOrder() = runTest {
         queueRepository.addToEnd("ep-1")
         queueRepository.addToEnd("ep-2")
@@ -172,6 +195,20 @@ class QueueRepositoryTest {
 
         val queue = queueRepository.observeQueue().first()
         assertEquals(listOf("ep-1", "ep-2"), queue.map { it.item.id })
+    }
+
+    @Test
+    fun enforceFeedCap_ordersByAddedAtNotPosition_whenAutoQueuingToFront() = runTest {
+        // issue #166: a feed that auto-queues to the front of Next Up ends up with its earliest
+        // auto-queued episode at the *highest* position, not the lowest -- eviction must key off
+        // addedAt (queuing order) rather than position to still evict the actually-oldest one.
+        queueRepository.addToFront("ep-1", autoQueued = true) // queued first, ends up last in position
+        queueRepository.addToFront("ep-2", autoQueued = true) // queued second, ends up first in position
+
+        queueRepository.enforceFeedCap(feedId, maxCount = 1)
+
+        val queue = queueRepository.observeQueue().first()
+        assertEquals(listOf("ep-2"), queue.map { it.item.id })
     }
 
     @Test

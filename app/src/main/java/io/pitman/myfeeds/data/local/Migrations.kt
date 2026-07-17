@@ -108,3 +108,12 @@ val MIGRATION_8_9 = object : Migration(8, 9) {
         db.execSQL("ALTER TABLE feed_items ADD COLUMN chaptersUrl TEXT")
     }
 }
+
+/** Adds per-feed auto-queue position (issue #166): whether new episodes auto-added to Next Up
+ *  land at the top or bottom of the queue. Existing rows default to 'BOTTOM' to preserve the
+ *  pre-existing append-to-end behavior. */
+val MIGRATION_9_10 = object : Migration(9, 10) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE feeds ADD COLUMN autoQueuePosition TEXT NOT NULL DEFAULT 'BOTTOM'")
+    }
+}

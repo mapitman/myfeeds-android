@@ -1,5 +1,6 @@
 package io.pitman.myfeeds.data.feed
 
+import io.pitman.myfeeds.data.local.AutoQueuePosition
 import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.repository.QueueRepository
@@ -39,7 +40,14 @@ class AutoQueueAndDownloadEnforcer @Inject constructor(
             if (feed.autoQueueEnabled) {
                 success.newItemIds.forEach { itemId ->
                     val item = feedRepository.getItem(itemId) ?: return@forEach
-                    if (item.isPodcastEpisode) queueRepository.addToEnd(itemId, autoQueued = true)
+                    if (item.isPodcastEpisode) {
+                        // issue #166: user chooses per-feed whether new episodes land at the top
+                        // or bottom of Next Up.
+                        when (feed.autoQueuePosition) {
+                            AutoQueuePosition.TOP -> queueRepository.addToFront(itemId, autoQueued = true)
+                            AutoQueuePosition.BOTTOM -> queueRepository.addToEnd(itemId, autoQueued = true)
+                        }
+                    }
                 }
                 feed.autoQueueMaxCount?.let { queueRepository.enforceFeedCap(feed.id, it) }
             }

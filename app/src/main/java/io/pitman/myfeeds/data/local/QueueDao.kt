@@ -47,15 +47,18 @@ interface QueueDao {
     )
     suspend fun orderedItemIdsForFeed(feedId: Long): List<String>
 
-    // Only this feed's auto-queued items, oldest-queued first (lowest position = added earliest),
-    // for per-feed cap eviction (issue #68) -- manually-queued entries are never candidates, see
-    // [QueueEntry.autoQueued] (issue #125/#127).
+    // Only this feed's auto-queued items, oldest-queued first, for per-feed cap eviction (issue
+    // #68) -- manually-queued entries are never candidates, see [QueueEntry.autoQueued]
+    // (issue #125/#127). Ordered by addedAt rather than position (issue #166): once auto-queue can
+    // insert at the front of the queue as well as the end, position no longer reliably tracks
+    // queuing order -- the oldest auto-queued item can end up at either end depending on which way
+    // its feed inserts -- but addedAt always does.
     @Query(
         """
         SELECT queue_entries.itemId FROM queue_entries
         INNER JOIN feed_items ON feed_items.id = queue_entries.itemId
         WHERE feed_items.feedId = :feedId AND queue_entries.autoQueued = 1
-        ORDER BY queue_entries.position
+        ORDER BY queue_entries.addedAt
         """,
     )
     suspend fun orderedAutoQueuedItemIdsForFeed(feedId: Long): List<String>

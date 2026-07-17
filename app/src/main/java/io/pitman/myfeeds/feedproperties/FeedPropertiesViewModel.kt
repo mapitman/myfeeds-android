@@ -4,6 +4,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import io.pitman.myfeeds.data.local.AutoQueuePosition
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.flow.SharingStarted
@@ -22,6 +23,7 @@ data class FeedPropertiesUiState(
     val autoDownloadEnabled: Boolean = false,
     val autoQueueEnabled: Boolean = false,
     val autoQueueMaxCount: Int? = null,
+    val autoQueuePosition: AutoQueuePosition = AutoQueuePosition.BOTTOM,
     val playbackSpeed: Float = 1.0f,
     val isUnsubscribed: Boolean = false,
     val isPodcastFeed: Boolean = false,
@@ -52,6 +54,7 @@ class FeedPropertiesViewModel @Inject constructor(
                 autoDownloadEnabled = feed.autoDownloadEnabled,
                 autoQueueEnabled = feed.autoQueueEnabled,
                 autoQueueMaxCount = feed.autoQueueMaxCount,
+                autoQueuePosition = feed.autoQueuePosition,
                 playbackSpeed = feed.playbackSpeed,
                 isPodcastFeed = feedId in podcastFeedIds,
             )
@@ -92,6 +95,13 @@ class FeedPropertiesViewModel @Inject constructor(
         viewModelScope.launch {
             val feed = feedRepository.getFeed(feedId) ?: return@launch
             feedRepository.updateFeed(feed.copy(autoQueueMaxCount = maxCount))
+        }
+    }
+
+    fun setAutoQueuePosition(position: AutoQueuePosition) {
+        viewModelScope.launch {
+            val feed = feedRepository.getFeed(feedId) ?: return@launch
+            feedRepository.updateFeed(feed.copy(autoQueuePosition = position))
         }
     }
 

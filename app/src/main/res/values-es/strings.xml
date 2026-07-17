@@ -144,6 +144,9 @@
     <string name="feed_properties_auto_queue">Añadir automáticamente episodios nuevos a la cola</string>
     <string name="feed_properties_auto_queue_max_count">Máx. episodios en cola para esta fuente</string>
     <string name="feed_properties_auto_queue_unlimited">Ilimitado</string>
+    <string name="feed_properties_auto_queue_position">Añadir episodios nuevos a</string>
+    <string name="feed_properties_auto_queue_position_top">Principio de la cola</string>
+    <string name="feed_properties_auto_queue_position_bottom">Final de la cola</string>
     <string name="feed_properties_playback_speed">Velocidad de reproducción</string>
     <string name="feed_properties_unsubscribe">Cancelar suscripción</string>
     <string name="feed_properties_confirm_unsubscribe_title">¿Cancelar la suscripción a esta fuente?</string>
