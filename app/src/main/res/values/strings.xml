@@ -31,6 +31,7 @@
     <string name="cd_open_queue">Next Up</string>
     <string name="cd_remove_from_queue">Remove from queue</string>
     <string name="cd_open_downloads">Downloads</string>
+    <string name="cd_open_feed_settings">Feed settings</string>
     <string name="cd_reorder_queue_item">Drag to reorder</string>
 
     <!-- Feed list -->

@@ -29,6 +29,7 @@
     <string name="cd_open_queue">Reproducir a continuación</string>
     <string name="cd_remove_from_queue">Quitar de la cola</string>
     <string name="cd_open_downloads">Descargas</string>
+    <string name="cd_open_feed_settings">Ajustes de la fuente</string>
     <string name="cd_reorder_queue_item">Arrastra para reordenar</string>
 
     <!-- Feed list -->
