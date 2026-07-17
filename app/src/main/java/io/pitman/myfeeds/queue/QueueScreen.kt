@@ -7,8 +7,10 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -92,39 +94,81 @@ fun QueueScreen(
             return@Scaffold
         }
 
-        Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            // Next Up (issue #106) is the screen most about "what's playing", so the currently
-            // playing episode gets the full player -- with cover art and transport controls --
-            // as the top of the list, rather than a plain pinned row.
-            if (playbackState.currentItemId != null) {
-                ExpandedPlayerBar(
-                    playbackState = playbackState,
-                    onClick = {
-                        val feedId = playbackState.feedId
-                        val itemId = playbackState.currentItemId
-                        if (feedId != null && itemId != null) onEpisodeClick(feedId, itemId)
-                    },
-                    onSeek = miniPlayerViewModel::seekTo,
-                    onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
-                    onSkipBackward = miniPlayerViewModel::skipBackward,
-                    onSkipForward = miniPlayerViewModel::skipForward,
-                    onNextChapter = miniPlayerViewModel::nextChapter,
-                    onPreviousChapter = miniPlayerViewModel::previousChapter,
-                    onStop = miniPlayerViewModel::stop,
-                    sharedTransitionScope = sharedTransitionScope,
-                    animatedVisibilityScope = animatedVisibilityScope,
-                )
+        // issue #158: measuring available width vs. height (rather than checking
+        // Configuration.orientation) also does the right thing in split-screen/multi-window and on
+        // foldables, where the window can be wider than it is tall without the device itself being
+        // held sideways.
+        BoxWithConstraints(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+            val isLandscape = maxWidth > maxHeight
+            if (isLandscape) {
+                Row(modifier = Modifier.fillMaxSize()) {
+                    if (playbackState.currentItemId != null) {
+                        ExpandedPlayerBar(
+                            playbackState = playbackState,
+                            onClick = {
+                                val feedId = playbackState.feedId
+                                val itemId = playbackState.currentItemId
+                                if (feedId != null && itemId != null) onEpisodeClick(feedId, itemId)
+                            },
+                            onSeek = miniPlayerViewModel::seekTo,
+                            onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
+                            onSkipBackward = miniPlayerViewModel::skipBackward,
+                            onSkipForward = miniPlayerViewModel::skipForward,
+                            onNextChapter = miniPlayerViewModel::nextChapter,
+                            onPreviousChapter = miniPlayerViewModel::previousChapter,
+                            onStop = miniPlayerViewModel::stop,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            modifier = Modifier.weight(1f).fillMaxHeight(),
+                        )
+                    }
+                    ReorderableQueueList(
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
+                        queue = queue,
+                        onReorder = { ids, onComplete -> viewModel.reorder(ids, onComplete) },
+                        onRemove = viewModel::remove,
+                        onClick = { episode ->
+                            viewModel.playNow(episode)
+                            onEpisodeClick(episode.item.feedId, episode.item.id)
+                        },
+                    )
+                }
+            } else {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Next Up (issue #106) is the screen most about "what's playing", so the
+                    // currently playing episode gets the full player -- with cover art and
+                    // transport controls -- as the top of the list, rather than a plain pinned row.
+                    if (playbackState.currentItemId != null) {
+                        ExpandedPlayerBar(
+                            playbackState = playbackState,
+                            onClick = {
+                                val feedId = playbackState.feedId
+                                val itemId = playbackState.currentItemId
+                                if (feedId != null && itemId != null) onEpisodeClick(feedId, itemId)
+                            },
+                            onSeek = miniPlayerViewModel::seekTo,
+                            onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
+                            onSkipBackward = miniPlayerViewModel::skipBackward,
+                            onSkipForward = miniPlayerViewModel::skipForward,
+                            onNextChapter = miniPlayerViewModel::nextChapter,
+                            onPreviousChapter = miniPlayerViewModel::previousChapter,
+                            onStop = miniPlayerViewModel::stop,
+                            sharedTransitionScope = sharedTransitionScope,
+                            animatedVisibilityScope = animatedVisibilityScope,
+                        )
+                    }
+                    ReorderableQueueList(
+                        modifier = Modifier.weight(1f),
+                        queue = queue,
+                        onReorder = { ids, onComplete -> viewModel.reorder(ids, onComplete) },
+                        onRemove = viewModel::remove,
+                        onClick = { episode ->
+                            viewModel.playNow(episode)
+                            onEpisodeClick(episode.item.feedId, episode.item.id)
+                        },
+                    )
+                }
             }
-            ReorderableQueueList(
-                modifier = Modifier.weight(1f),
-                queue = queue,
-                onReorder = { ids, onComplete -> viewModel.reorder(ids, onComplete) },
-                onRemove = viewModel::remove,
-                onClick = { episode ->
-                    viewModel.playNow(episode)
-                    onEpisodeClick(episode.item.feedId, episode.item.id)
-                },
-            )
         }
     }
 }
