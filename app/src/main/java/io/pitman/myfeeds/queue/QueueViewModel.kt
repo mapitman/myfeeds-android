@@ -22,9 +22,17 @@ class QueueViewModel @Inject constructor(
     val queue: StateFlow<List<QueuedEpisode>> = queueRepository.observeQueue()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    /** Renumbers the queue to match [orderedItemIds] exactly, for drag-to-reorder. */
-    fun reorder(orderedItemIds: List<String>) {
-        viewModelScope.launch { queueRepository.reorder(orderedItemIds) }
+    /**
+     * Renumbers the queue to match [orderedItemIds] exactly, for drag-to-reorder. [onComplete]
+     * runs once the write lands -- the caller uses it to release its own optimistic-ordering
+     * guard, so an unrelated `queue` re-emission racing this write can't overwrite the drag's
+     * result with the stale pre-reorder order before it's persisted.
+     */
+    fun reorder(orderedItemIds: List<String>, onComplete: () -> Unit = {}) {
+        viewModelScope.launch {
+            queueRepository.reorder(orderedItemIds)
+            onComplete()
+        }
     }
 
     fun remove(itemId: String) {
