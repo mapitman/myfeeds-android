@@ -42,11 +42,20 @@ class FeedUpdateEngine @Inject constructor(
     }
 
     private suspend fun persist(feed: Feed, parsed: ParsedFeed): FeedUpdateResult {
+        // A feed's first-ever successful fetch is the only time it's safe to change auto-queue
+        // defaults without risking overwriting a value the user has since set themselves via Feed
+        // Properties (issue #137) -- lastGet is only ever null before that first fetch completes.
+        val isFirstFetch = feed.lastGet == null
         val newItemIds = mutableListOf<String>()
+        var hasPodcastEpisode = false
 
         parsed.items.forEach { parsedItem ->
             val itemGuid = parsedItem.itemGuid.ifBlank { parsedItem.url }
             if (itemGuid.isBlank()) return@forEach
+
+            if (parsedItem.enclosure?.type?.startsWith("audio/", ignoreCase = true) == true) {
+                hasPodcastEpisode = true
+            }
 
             val existing = feedRepository.findByItemGuid(feed.id, itemGuid)
             val imageUrl = FirstImageExtractor.extractFirstImageUrl(parsedItem.description, parsedItem.url)
@@ -72,9 +81,14 @@ class FeedUpdateEngine @Inject constructor(
             if (existing == null) newItemIds += id
         }
 
-        feedRepository.updateFeed(
-            feed.copy(lastGet = Instant.now().toEpochMilli(), imageUrl = parsed.imageUrl ?: feed.imageUrl),
-        )
+        var updatedFeed = feed.copy(lastGet = Instant.now().toEpochMilli(), imageUrl = parsed.imageUrl ?: feed.imageUrl)
+        // New podcast subscriptions default to auto-queuing, capped at a small number of episodes
+        // rather than unlimited (issue #137), so Next Up doesn't get flooded by a feed's entire
+        // back catalog on the very first fetch.
+        if (isFirstFetch && hasPodcastEpisode && !feed.autoQueueEnabled) {
+            updatedFeed = updatedFeed.copy(autoQueueEnabled = true, autoQueueMaxCount = NEW_PODCAST_AUTO_QUEUE_CAP)
+        }
+        feedRepository.updateFeed(updatedFeed)
         val defaultItemsToKeep = settingsDataStore.settings.first().maxArticles
         val evicted = feedRepository.trimToItemsToKeep(feed.id, defaultItemsToKeep)
 
@@ -83,5 +97,6 @@ class FeedUpdateEngine @Inject constructor(
 
     companion object {
         private const val MAX_CONCURRENT_UPDATES = 2
+        private const val NEW_PODCAST_AUTO_QUEUE_CAP = 5
     }
 }

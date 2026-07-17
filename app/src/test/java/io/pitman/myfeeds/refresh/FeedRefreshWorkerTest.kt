@@ -28,6 +28,7 @@ import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -244,13 +245,60 @@ class FeedRefreshWorkerTest {
     }
 
     @Test
-    fun doWork_autoQueueDisabled_doesNotQueueNewEpisodes() = runTest {
+    fun doWork_nonPodcastFeed_doesNotQueueNewEpisodes() = runTest {
+        // Auto-queue is podcast-only functionality -- an ordinary article feed never gets it,
+        // regardless of the new-podcast default (issue #137).
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         val server = MockWebServer()
         server.start()
         try {
             val url = server.url("/feed.xml").toString()
-            repository.subscribe(Feed(title = "A Podcast", feedUrl = url))
+            repository.subscribe(Feed(title = "An Article Feed", feedUrl = url))
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0"><channel>
+                      <title>An Article Feed</title>
+                      <link>https://example.com</link>
+                      <description>desc</description>
+                      <item>
+                        <title>Article 1</title>
+                        <link>https://example.com/1</link>
+                        <guid>guid-1</guid>
+                        <description>Body</description>
+                        <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+                      </item>
+                    </channel></rss>
+                    """.trimIndent(),
+                ),
+            )
+            val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository, settingsDataStore)
+
+            val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
+                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, queueRepository, settingsDataStore))
+                .build()
+            worker.doWork()
+
+            assertTrue(queueRepository.observeQueue().first().isEmpty())
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun doWork_podcastFeedAutoQueueExplicitlyDisabled_doesNotQueueNewEpisodes() = runTest {
+        // issue #137's new-podcast default only applies on a feed's first-ever fetch (lastGet ==
+        // null) -- once that's happened, a user who's since turned auto-queue back off must stay
+        // off on later refreshes, not get silently re-enabled.
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val server = MockWebServer()
+        server.start()
+        try {
+            val url = server.url("/feed.xml").toString()
+            val feedId = repository.subscribe(
+                Feed(title = "A Podcast", feedUrl = url, lastGet = 1L, autoQueueEnabled = false),
+            )
             server.enqueue(
                 MockResponse().setResponseCode(200).setBody(
                     """
@@ -279,6 +327,63 @@ class FeedRefreshWorkerTest {
             worker.doWork()
 
             assertTrue(queueRepository.observeQueue().first().isEmpty())
+            assertFalse(repository.getFeed(feedId)!!.autoQueueEnabled)
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun doWork_newPodcastSubscription_defaultsToAutoQueueCappedAtFive() = runTest {
+        // issue #137: a podcast's first-ever fetch should default it to auto-queuing, capped at 5
+        // episodes, rather than the app-wide autoQueueEnabled=false/unlimited-cap defaults.
+        val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        val server = MockWebServer()
+        server.start()
+        try {
+            val url = server.url("/feed.xml").toString()
+            val feedId = repository.subscribe(Feed(title = "A Podcast", feedUrl = url))
+            // trimMargin (not trimIndent) here: the dynamically-generated, already-trimmed `items`
+            // fragment has its own (zero) indentation, which would drag trimIndent's computed
+            // common-minimum-indentation for the *outer* template down to zero too, leaving the
+            // leading whitespace on the "<?xml ...?>" line intact and breaking the XML prolog.
+            // trimMargin strips only lines that start with "|", leaving interpolated content alone.
+            val items = (1..6).joinToString("\n") { n ->
+                """
+                |<item>
+                |  <title>Episode $n</title>
+                |  <link>https://example.com/$n</link>
+                |  <guid>guid-$n</guid>
+                |  <description>Body</description>
+                |  <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+                |  <enclosure url="https://example.com/ep$n.mp3" type="audio/mpeg" length="1" />
+                |</item>
+                """.trimMargin()
+            }
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    """
+                    |<?xml version="1.0" encoding="UTF-8"?>
+                    |<rss version="2.0"><channel>
+                    |  <title>A Podcast</title>
+                    |  <link>https://example.com</link>
+                    |  <description>desc</description>
+                    |  $items
+                    |</channel></rss>
+                    """.trimMargin(),
+                ),
+            )
+            val engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository, settingsDataStore)
+
+            val worker = TestListenableWorkerBuilder<FeedRefreshWorker>(context)
+                .setWorkerFactory(TestWorkerFactory(repository, engine, downloadRepository, queueRepository, settingsDataStore))
+                .build()
+            worker.doWork()
+
+            val feed = repository.getFeed(feedId)!!
+            assertTrue(feed.autoQueueEnabled)
+            assertEquals(5, feed.autoQueueMaxCount)
+            assertEquals(5, queueRepository.observeQueue().first().size)
         } finally {
             server.shutdown()
         }

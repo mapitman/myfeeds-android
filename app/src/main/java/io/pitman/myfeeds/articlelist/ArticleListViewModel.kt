@@ -97,7 +97,7 @@ class ArticleListViewModel @Inject constructor(
             val feed = feedRepository.getFeed(feedId)
             if (feed != null) {
                 val result = feedUpdateEngine.updateFeed(feed)
-                autoQueueAndDownloadEnforcer.apply(listOf(feed), listOf(result))
+                autoQueueAndDownloadEnforcer.apply(listOf(result))
                 if (result is FeedUpdateResult.Failure) {
                     _refreshError.value = context.getString(R.string.feed_list_refresh_error)
                 }
