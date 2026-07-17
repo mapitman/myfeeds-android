@@ -473,7 +473,7 @@ private fun PodcastPlayerControls(
     }
 }
 
-private val PLAYBACK_SPEEDS = listOf(0.8f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f)
+private val PLAYBACK_SPEEDS = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
 
 private fun formatSpeed(speed: Float): String =
     "${"%.2f".format(speed).trimEnd('0').trimEnd('.')}x"

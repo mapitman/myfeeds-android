@@ -206,7 +206,7 @@ fun FeedPropertiesScreen(
                 modifier = Modifier.padding(top = 24.dp),
             )
             Row(modifier = Modifier.padding(top = 4.dp).horizontalScroll(rememberScrollState())) {
-                listOf(0.8f, 1.0f, 1.25f, 1.5f, 1.75f, 2.0f, 2.5f, 3.0f).forEach { speed ->
+                listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f).forEach { speed ->
                     FilterChip(
                         selected = uiState.playbackSpeed == speed,
                         onClick = { viewModel.setPlaybackSpeed(speed) },
