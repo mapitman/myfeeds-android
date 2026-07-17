@@ -108,8 +108,15 @@ class PlaybackController @Inject constructor(
      * stops being treated as playing, and the mini-player disappears -- the same as an explicit
      * [stop], just triggered by reaching the end instead of the user tapping close. Then, if
      * anything is up next, playback continues automatically (issue #106).
+     *
+     * [Player.Listener.onEvents] can fire more than once while [player] still reports
+     * `STATE_ENDED` -- [clearMediaItems] is dispatched to the (possibly cross-process)
+     * [MediaController] asynchronously, so a second callback can arrive before it takes effect.
+     * Without this guard, each call independently pops the next queued episode, so one completion
+     * could silently consume two entries from Next Up (issue #125/#127).
      */
     private fun handlePlaybackEnded(player: Player) {
+        if (currentItemId == null) return
         player.clearMediaItems()
         currentFeedId = null
         currentItemId = null
