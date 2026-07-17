@@ -47,6 +47,7 @@ import io.pitman.myfeeds.data.directory.FeedDirectoryEntry
 fun AddFeedScreen(
     modifier: Modifier = Modifier,
     viewModel: AddFeedViewModel = hiltViewModel(),
+    initialUrl: String? = null,
     onDone: () -> Unit = {},
     onBack: () -> Unit = {},
 ) {
@@ -55,7 +56,7 @@ fun AddFeedScreen(
     val searchResults by viewModel.searchResults.collectAsState()
     val context = LocalContext.current
 
-    var url by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf(initialUrl.orEmpty()) }
     var opmlUrl by remember { mutableStateOf("") }
     var opmlText by remember { mutableStateOf("") }
 
