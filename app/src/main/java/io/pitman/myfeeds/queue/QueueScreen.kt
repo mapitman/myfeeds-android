@@ -267,13 +267,27 @@ private fun ReorderableQueueList(
                                         items = reordered
                                         offsetY -= (targetIndex - currentIndex) * itemHeightPx
                                     } else if (rawTargetIndex != targetIndex) {
-                                        // Pinned at the top/bottom of the list -- clamp so continuing
-                                        // to drag past the boundary doesn't keep sliding the row's
-                                        // visual position further from its slot with nothing to
-                                        // compensate it (it would otherwise end up dragged up behind
-                                        // the top bar, or below the last row, with no swap left to
-                                        // reset the offset).
-                                        offsetY = offsetY.coerceIn(-itemHeightPx / 2f, itemHeightPx / 2f)
+                                        // Pinned at the top/bottom of the list -- there's no row
+                                        // above index 0 (or below the last index) left to swap
+                                        // places with, so don't allow ANY further overshoot past
+                                        // the row's own slot in the pinned direction. A previous
+                                        // version of this clamp allowed up to half a row's height
+                                        // of overshoot here, which seemed harmless but wasn't:
+                                        // LazyColumn clips its content to its own viewport bounds,
+                                        // and translationY moves a row's paint position but not its
+                                        // layout position -- the index-0 row is still laid out at
+                                        // the very top of the LazyColumn's viewport, so any negative
+                                        // translationY on it draws above that viewport's top edge
+                                        // and gets visibly truncated there. That's exactly the
+                                        // "clipped to roughly half a row's height" sliver stuck
+                                        // under the app bar (issue #163) -- clamping the overshoot
+                                        // to zero means the pinned row simply comes to rest at its
+                                        // slot instead of poking out past it.
+                                        offsetY = if (rawTargetIndex < 0) {
+                                            offsetY.coerceAtLeast(0f)
+                                        } else {
+                                            offsetY.coerceAtMost(0f)
+                                        }
                                     }
                                     dragOffsetY = offsetY
                                 },
