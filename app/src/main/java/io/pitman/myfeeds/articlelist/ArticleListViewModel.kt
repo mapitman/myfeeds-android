@@ -124,6 +124,11 @@ class ArticleListViewModel @Inject constructor(
         selectedIds.value = emptySet()
     }
 
+    /** Selects every currently-visible/filtered article (issue #72). */
+    fun selectAll() {
+        selectedIds.value = uiState.value.articles.map { it.id }.toSet()
+    }
+
     fun markSelectedRead(isRead: Boolean) {
         val ids = selectedIds.value
         viewModelScope.launch {

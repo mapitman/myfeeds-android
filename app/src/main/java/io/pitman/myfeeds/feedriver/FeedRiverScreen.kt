@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.SelectAll
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -99,6 +100,9 @@ fun FeedRiverScreen(
                         }
                     },
                     actions = {
+                        IconButton(onClick = viewModel::selectAll) {
+                            Icon(Icons.Filled.SelectAll, contentDescription = stringResource(R.string.cd_select_all))
+                        }
                         IconButton(onClick = { viewModel.markSelectedRead(true) }) {
                             Icon(Icons.Filled.Done, contentDescription = stringResource(R.string.cd_mark_read))
                         }
