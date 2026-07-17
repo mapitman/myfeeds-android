@@ -18,6 +18,8 @@
     <string name="cd_share">Teilen</string>
     <string name="cd_rewind">15 Sekunden zurückspulen</string>
     <string name="cd_forward">30 Sekunden vorspulen</string>
+    <string name="cd_previous_chapter">Vorheriges Kapitel</string>
+    <string name="cd_next_chapter">Nächstes Kapitel</string>
     <string name="cd_pause">Pause</string>
     <string name="cd_play">Abspielen</string>
     <string name="cd_delete_download">Download löschen</string>
@@ -64,6 +66,7 @@
     <!-- Reader -->
     <string name="reader_no_article_to_show">Kein Artikel vorhanden</string>
     <string name="reader_page_position">%1$d von %2$d</string>
+    <string name="reader_chapter_label">Kapitel %1$d von %2$d</string>
 
     <!-- Settings -->
     <string name="settings_title">Einstellungen</string>

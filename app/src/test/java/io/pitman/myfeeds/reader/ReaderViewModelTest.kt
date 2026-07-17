@@ -15,6 +15,7 @@ import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.DownloadScheduling
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
+import io.pitman.myfeeds.playback.ChaptersFetcher
 import io.pitman.myfeeds.playback.PlaybackController
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -23,6 +24,7 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -72,7 +74,13 @@ class ReaderViewModelTest {
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
         settingsDataStore = SettingsDataStore(dataStore)
-        playbackController = PlaybackController(context, settingsDataStore, repository, QueueRepository(db.queueDao()))
+        playbackController = PlaybackController(
+            context,
+            settingsDataStore,
+            repository,
+            QueueRepository(db.queueDao()),
+            ChaptersFetcher(OkHttpClient()),
+        )
         downloadRepository = EnclosureDownloadRepository(
             feedRepository = repository,
             downloadScheduling = object : DownloadScheduling {

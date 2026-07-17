@@ -99,3 +99,12 @@ val MIGRATION_7_8 = object : Migration(7, 8) {
         db.execSQL("ALTER TABLE queue_entries ADD COLUMN autoQueued INTEGER NOT NULL DEFAULT 0")
     }
 }
+
+/** Adds podcast chapters support (issue #95): the URL of a per-episode Podcasting 2.0 external
+ *  JSON chapters file, if the feed provides one. Chapters themselves are fetched lazily at
+ *  playback time, not persisted. */
+val MIGRATION_8_9 = object : Migration(8, 9) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE feed_items ADD COLUMN chaptersUrl TEXT")
+    }
+}

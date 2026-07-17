@@ -48,6 +48,9 @@ data class FeedItem(
     val enclosureDurationMs: Long? = null,
     val downloadedBytes: Long? = null,
     val downloadedFilePath: String? = null,
+    /** From the Podcasting 2.0 `<podcast:chapters>` element (issue #95); chapters themselves are
+     *  fetched from this URL lazily at playback time, not persisted. */
+    val chaptersUrl: String? = null,
 )
 
 /**
