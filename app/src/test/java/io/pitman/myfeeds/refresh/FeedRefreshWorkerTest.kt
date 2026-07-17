@@ -407,6 +407,7 @@ class FeedRefreshWorkerTest {
             engine,
             AutoQueueAndDownloadEnforcer(repository, downloadRepository, queueRepository),
             settingsDataStore,
+            FeedRefreshState(),
         )
     }
 }

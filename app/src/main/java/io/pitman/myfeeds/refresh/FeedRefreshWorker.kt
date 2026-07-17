@@ -47,8 +47,9 @@ class FeedRefreshWorker @AssistedInject constructor(
     private val feedUpdateEngine: FeedUpdateEngine,
     private val autoQueueAndDownloadEnforcer: AutoQueueAndDownloadEnforcer,
     private val settingsDataStore: SettingsDataStore,
+    private val feedRefreshState: FeedRefreshState,
 ) : CoroutineWorker(context, workerParams) {
-    override suspend fun doWork(): Result {
+    override suspend fun doWork(): Result = feedRefreshState.track {
         val feeds = feedRepository.observeAllFeeds().first()
         val results = feedUpdateEngine.updateFeeds(feeds)
 
@@ -67,7 +68,7 @@ class FeedRefreshWorker @AssistedInject constructor(
             notifyNewItems(newItemCount)
         }
 
-        return Result.success()
+        Result.success()
     }
 
     private fun notifyNewItems(newItemCount: Int) {
