@@ -32,6 +32,11 @@ class MigrationTest {
     }
 
     @Test
+    fun version8Schema_opensSuccessfully() {
+        helper.createDatabase(TEST_DB, 8).close()
+    }
+
+    @Test
     fun migrate1To2_addsDownloadColumnsWithoutDataLoss() {
         helper.createDatabase(TEST_DB, 1).apply {
             execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
@@ -166,6 +171,31 @@ class MigrationTest {
         }
         migrated.query("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'categories'").use { cursor ->
             assertTrue(!cursor.moveToFirst())
+        }
+        migrated.close()
+    }
+
+    @Test
+    fun migrate7To8_addsAutoQueuedColumnDefaultingToManual() {
+        helper.createDatabase(TEST_DB, 7).apply {
+            execSQL(
+                "INSERT INTO feeds (id, title, userTitle, description, feedUrl, siteUrl, imageUrl, " +
+                    "displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, autoQueueEnabled, " +
+                    "autoQueueMaxCount, playbackSpeed) " +
+                    "VALUES (1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, 1.0)",
+            )
+            execSQL(
+                "INSERT INTO feed_items (id, feedId, title, isRead) VALUES ('item-1', 1, 'An Item', 0)",
+            )
+            execSQL("INSERT INTO queue_entries (itemId, position, addedAt) VALUES ('item-1', 0, 1000)")
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 8, true, MIGRATION_7_8)
+
+        migrated.query("SELECT autoQueued FROM queue_entries WHERE itemId = 'item-1'").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
         }
         migrated.close()
     }

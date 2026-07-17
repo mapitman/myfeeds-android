@@ -87,3 +87,15 @@ val MIGRATION_6_7 = object : Migration(6, 7) {
         db.execSQL("DROP TABLE categories")
     }
 }
+
+/**
+ * Distinguishes auto-queued from manually-queued entries (issue #125/#127): a feed's
+ * `autoQueueMaxCount` eviction should only ever remove episodes it auto-queued itself, not ones
+ * the user deliberately added to Next Up. Existing rows default to `0` (manual) -- the safe
+ * direction, since it's eviction that's opt-in via this flag, not protection.
+ */
+val MIGRATION_7_8 = object : Migration(7, 8) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE queue_entries ADD COLUMN autoQueued INTEGER NOT NULL DEFAULT 0")
+    }
+}
