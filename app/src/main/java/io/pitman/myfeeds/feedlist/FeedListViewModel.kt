@@ -14,6 +14,7 @@ import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
+import io.pitman.myfeeds.refresh.FeedRefreshState
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -54,23 +55,34 @@ class FeedListViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
     private val feedUpdateEngine: FeedUpdateEngine,
     private val autoQueueAndDownloadEnforcer: AutoQueueAndDownloadEnforcer,
+    private val feedRefreshState: FeedRefreshState,
     settingsDataStore: SettingsDataStore,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
-    private val isRefreshing = MutableStateFlow(false)
+    // Shared app-wide signal (issue #152), not ViewModel-local -- a scheduled background refresh
+    // (FeedRefreshWorker) writes to the same DB this screen observes, so counts need to freeze
+    // for that too, not just a manual pull-to-refresh initiated from here.
+    private val isRefreshing = feedRefreshState.isRefreshing
     private val _refreshError = MutableStateFlow<String?>(null)
 
     /** One-shot refresh-failure message for a Snackbar; cleared via [consumeRefreshError]. */
     val refreshError: StateFlow<String?> = _refreshError
 
+    // Holds the last snapshot taken while NOT refreshing (issue #152): a refresh inserts/evicts
+    // items one feed at a time, so reacting to every intermediate write made unread counts
+    // visibly rise then fall mid-refresh instead of settling once, atomically, when it's actually
+    // done. `isRefreshing` itself is exposed live (below) so the spinner still responds instantly;
+    // only the counts/sections freeze. The moment a refresh finishes, this combine re-emits with
+    // whatever the DB currently holds -- already fully trimmed, since persistence happens
+    // synchronously before `isRefreshing` flips back to false in `refresh()` -- so the UI jumps
+    // straight to the correct settled numbers in one step rather than trickling there.
+    private val stableSource = MutableStateFlow(FeedListSourceData(emptyList(), emptyMap(), 0, false))
+
     val uiState: StateFlow<FeedListUiState> = combine(
-        feedRepository.observeAllFeeds(),
-        feedRepository.observeUnreadCountsByFeed(),
-        feedRepository.observeTotalUnreadCount(),
+        stableSource,
+        feedRepository.observePodcastFeedIds(),
         isRefreshing,
-    ) { feeds, unreadCounts, totalUnread, refreshing ->
-        FeedListSourceData(feeds, unreadCounts, totalUnread, refreshing)
-    }.combine(feedRepository.observePodcastFeedIds()) { source, podcastFeedIds ->
+    ) { source, podcastFeedIds, refreshing ->
         // Podcast-ness (issue #65) splits the flat feed list into two fixed sections (issue #118):
         // "Podcasts" (feeds with at least one audio-enclosure item) and "Feeds" (everything else).
         val podcastFeeds = source.feeds
@@ -85,12 +97,22 @@ class FeedListViewModel @Inject constructor(
                 FeedListSectionUiState(FeedListSection.FEEDS, otherFeeds),
             ),
             totalUnread = source.totalUnread,
-            isRefreshing = source.refreshing,
+            isRefreshing = refreshing,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FeedListUiState())
 
     init {
         viewModelScope.launch { seeder.seedIfFirstRun() }
+        viewModelScope.launch {
+            combine(
+                feedRepository.observeAllFeeds(),
+                feedRepository.observeUnreadCountsByFeed(),
+                feedRepository.observeTotalUnreadCount(),
+                isRefreshing,
+            ) { feeds, unreadCounts, totalUnread, refreshing ->
+                FeedListSourceData(feeds, unreadCounts, totalUnread, refreshing)
+            }.collect { source -> if (!source.refreshing) stableSource.value = source }
+        }
     }
 
     val feedListFontSize: StateFlow<FontSize> = settingsDataStore.settings
@@ -99,14 +121,14 @@ class FeedListViewModel @Inject constructor(
 
     fun refresh() {
         viewModelScope.launch {
-            isRefreshing.value = true
-            val feeds = feedRepository.observeAllFeeds().first()
-            val results = feedUpdateEngine.updateFeeds(feeds)
-            autoQueueAndDownloadEnforcer.apply(results)
-            if (results.any { it is FeedUpdateResult.Failure }) {
-                _refreshError.value = context.getString(R.string.feed_list_refresh_error)
+            feedRefreshState.track {
+                val feeds = feedRepository.observeAllFeeds().first()
+                val results = feedUpdateEngine.updateFeeds(feeds)
+                autoQueueAndDownloadEnforcer.apply(results)
+                if (results.any { it is FeedUpdateResult.Failure }) {
+                    _refreshError.value = context.getString(R.string.feed_list_refresh_error)
+                }
             }
-            isRefreshing.value = false
         }
     }
 

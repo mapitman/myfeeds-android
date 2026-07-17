@@ -17,10 +17,13 @@ import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.DownloadScheduling
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
+import io.pitman.myfeeds.refresh.FeedRefreshState
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
@@ -83,6 +86,7 @@ class FeedListViewModelTest {
             feedRepository = repository,
             feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository, settingsDataStore),
             autoQueueAndDownloadEnforcer = AutoQueueAndDownloadEnforcer(repository, downloadRepository, queueRepository),
+            feedRefreshState = FeedRefreshState(),
             settingsDataStore = settingsDataStore,
             context = context,
         )
@@ -153,6 +157,101 @@ class FeedListViewModelTest {
 
             val queue = queueRepository.observeQueue().first { it.isNotEmpty() }
             assertEquals(feedId, queue.single().item.feedId)
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun uiState_freezesUnreadCountWhileRefreshing() = runTest(testDispatcher) {
+        // issue #152: a refresh inserts/evicts items one feed at a time, so reacting to every
+        // intermediate DB write made the displayed unread count visibly rise then fall mid-refresh
+        // instead of settling once, atomically, when the refresh is actually done.
+        val server = MockWebServer()
+        server.start()
+        try {
+            // Keeps the WhileSubscribed(5_000) uiState StateFlow actively collecting for the
+            // whole test -- otherwise it goes idle the moment the `first{}` below detaches, and
+            // `.value` reads below would return a stale cached emission instead of a live one.
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            val feedId = repository.subscribe(Feed(title = "A Feed", feedUrl = server.url("/feed.xml").toString()))
+            repository.insertItems(listOf(FeedItem(id = "existing-1", feedId = feedId, itemGuid = "g-existing")))
+            // Waits specifically for the count to settle, not just for the feed to appear --
+            // `observeAllFeeds()` and `observeUnreadCountsByFeed()` are separate Flows that can
+            // emit an intermediate combination (feed present, count not yet updated) before both
+            // settle together.
+            val baseline = viewModel.uiState.first { it.totalUnread > 0 }
+            assertEquals(1, baseline.totalUnread)
+
+            // A real (small) network delay so the refresh coroutine is genuinely still in-flight
+            // (suspended on FeedFetcher's withContext(Dispatchers.IO) network call, a real
+            // dispatcher switch, not virtual test time) when this test writes to the DB below.
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBodyDelay(300, java.util.concurrent.TimeUnit.MILLISECONDS).setBody(
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0"><channel><title>A Feed</title><link>https://example.com</link>
+                    <description>desc</description></channel></rss>
+                    """.trimIndent(),
+                ),
+            )
+
+            val refreshJob = launch { viewModel.refresh() }
+            advanceUntilIdle()
+
+            // Simulate a DB write landing mid-refresh (e.g. another feed's own refresh completing
+            // sooner) -- the displayed count must not react to it while still refreshing.
+            repository.insertItems(listOf(FeedItem(id = "sneaky-new", feedId = feedId, itemGuid = "g-sneaky")))
+            advanceUntilIdle()
+            assertEquals(1, viewModel.uiState.value.totalUnread)
+
+            refreshJob.join()
+            val settled = viewModel.uiState.first { !it.isRefreshing && it.totalUnread == 2 }
+            assertEquals(2, settled.totalUnread)
+            collectJob.cancel()
+        } finally {
+            server.shutdown()
+        }
+    }
+
+    @Test
+    fun uiState_allReadFeedWithNoNewItems_unreadCountNeverRisesDuringRefresh() = runTest(testDispatcher) {
+        // issue #152's exact reported scenario, not just a generic race: a feed that's already
+        // fully read, refreshed with a response containing no new items, should show 0 unread the
+        // entire time -- never a transient nonzero blip while the refresh is in flight.
+        val server = MockWebServer()
+        server.start()
+        try {
+            val collectJob = launch { viewModel.uiState.collect {} }
+
+            val feedId = repository.subscribe(Feed(title = "A Feed", feedUrl = server.url("/feed.xml").toString()))
+            repository.insertItems(listOf(FeedItem(id = "existing-1", feedId = feedId, itemGuid = "g-existing", isRead = true)))
+            val baseline = viewModel.uiState.first { it.sections.any { s -> s.feeds.isNotEmpty() } }
+            assertEquals(0, baseline.totalUnread)
+
+            // Same single item, unchanged -- a real refresh with genuinely nothing new.
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBodyDelay(300, java.util.concurrent.TimeUnit.MILLISECONDS).setBody(
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0"><channel><title>A Feed</title><link>https://example.com</link>
+                    <description>desc</description>
+                    <item><title>Existing</title><link>https://example.com/existing</link><guid>g-existing</guid>
+                    <description>Body</description><pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate></item>
+                    </channel></rss>
+                    """.trimIndent(),
+                ),
+            )
+
+            val refreshJob = launch { viewModel.refresh() }
+            advanceUntilIdle()
+            assertEquals(0, viewModel.uiState.value.totalUnread)
+
+            refreshJob.join()
+            val settled = viewModel.uiState.first { !it.isRefreshing }
+            assertEquals(0, settled.totalUnread)
+            collectJob.cancel()
         } finally {
             server.shutdown()
         }
