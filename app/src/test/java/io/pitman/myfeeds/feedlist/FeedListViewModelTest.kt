@@ -65,7 +65,7 @@ class FeedListViewModelTest {
         viewModel = FeedListViewModel(
             seeder = DefaultFeedsSeeder(context, db.feedDao(), settingsDataStore),
             feedRepository = repository,
-            feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository),
+            feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository, settingsDataStore),
             settingsDataStore = settingsDataStore,
             context = context,
         )

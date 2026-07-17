@@ -1,5 +1,8 @@
 package io.pitman.myfeeds.addfeed
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
@@ -9,6 +12,7 @@ import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.opml.OpmlImporter
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -22,10 +26,13 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 /** Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet. */
 @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -40,6 +47,9 @@ class AddFeedViewModelTest {
     // Dispatchers.setMain/resetMain. Routing creation through a real ViewModelStore and clearing
     // it in tearDown cancels those coroutines properly, the same way the Android framework does.
     private val viewModelStore = ViewModelStore()
+
+    @get:Rule
+    val tempFolder = TemporaryFolder()
 
     private lateinit var server: MockWebServer
     private lateinit var db: AppDatabase
@@ -69,10 +79,14 @@ class AddFeedViewModelTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         val repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
+        val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
+            produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
+        )
+        val settingsDataStore = SettingsDataStore(dataStore)
         val httpClient = OkHttpClient()
         viewModel = AddFeedViewModel(
             feedFetcher = FeedFetcher(httpClient),
-            feedUpdateEngine = FeedUpdateEngine(FeedFetcher(httpClient), repository),
+            feedUpdateEngine = FeedUpdateEngine(FeedFetcher(httpClient), repository, settingsDataStore),
             feedRepository = repository,
             opmlImporter = OpmlImporter(db.feedDao()),
             httpClient = httpClient,

@@ -80,12 +80,17 @@ class FeedRepository @Inject constructor(
      * FeedUpdater's trim-by-publish-date behavior. Returns the evicted items so callers can clean
      * up associated enclosure files (issue #12).
      *
+     * A feed's `itemsToKeep` of `null` means "use the app-wide default" (see Feed Properties,
+     * which falls back to [io.pitman.myfeeds.data.settings.AppSettings.maxArticles] the same way)
+     * -- it does NOT mean unlimited, so [defaultItemsToKeep] is required rather than skipping the
+     * trim (issue #82: feeds that never had a per-feed override set grew unbounded).
+     *
      * Items currently in the Next Up queue are exempt, even if they'd otherwise be old enough to
      * evict -- deleting a queued [FeedItem] cascades to its `queue_entries` row (issue #125:
      * episodes a user had manually queued were being silently dropped from Next Up by this trim).
      */
-    suspend fun trimToItemsToKeep(feedId: Long): List<FeedItem> {
-        val itemsToKeep = feedDao.getById(feedId)?.itemsToKeep ?: return emptyList()
+    suspend fun trimToItemsToKeep(feedId: Long, defaultItemsToKeep: Int): List<FeedItem> {
+        val itemsToKeep = feedDao.getById(feedId)?.itemsToKeep ?: defaultItemsToKeep
         val items = feedItemDao.observeByFeed(feedId).first()
         if (items.size <= itemsToKeep) return emptyList()
 

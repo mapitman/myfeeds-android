@@ -85,7 +85,7 @@ class ArticleListViewModelTest {
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
         settingsDataStore = SettingsDataStore(dataStore)
-        feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
+        feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository, settingsDataStore)
 
         feedId = repository.subscribe(Feed(title = "A Feed"))
         repository.upsertItems(
