@@ -30,6 +30,7 @@ import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Share
@@ -42,6 +43,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -92,7 +96,16 @@ fun ReaderScreen(
     val uiState by viewModel.uiState.collectAsState()
     val playbackState by viewModel.playbackState.collectAsState()
     val articleFontSize by viewModel.articleFontSize.collectAsState()
+    val queueFeedback by viewModel.queueFeedback.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
+
+    LaunchedEffect(queueFeedback) {
+        queueFeedback?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeQueueFeedback()
+        }
+    }
 
     if (uiState.items.isEmpty()) {
         Scaffold(modifier = modifier) { padding ->
@@ -140,6 +153,11 @@ fun ReaderScreen(
                     }
                 },
                 actions = {
+                    if (currentItem?.isPodcastEpisode == true) {
+                        IconButton(onClick = { viewModel.addToQueue(currentItem.id) }) {
+                            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = stringResource(R.string.cd_add_to_queue))
+                        }
+                    }
                     IconButton(onClick = onQueueClick) {
                         Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = stringResource(R.string.cd_open_queue))
                     }
@@ -163,6 +181,7 @@ fun ReaderScreen(
                 },
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) { Snackbar(it) } },
     ) { innerPadding ->
         HorizontalPager(state = pagerState, modifier = Modifier.padding(innerPadding).fillMaxSize()) { page ->
             ArticlePage(
