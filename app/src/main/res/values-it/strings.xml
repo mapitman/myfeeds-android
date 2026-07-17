@@ -29,6 +29,7 @@
     <string name="cd_open_queue">In arrivo</string>
     <string name="cd_remove_from_queue">Rimuovi dalla coda</string>
     <string name="cd_open_downloads">Download</string>
+    <string name="cd_open_feed_settings">Impostazioni del feed</string>
     <string name="cd_reorder_queue_item">Trascina per riordinare</string>
 
     <!-- Feed list -->

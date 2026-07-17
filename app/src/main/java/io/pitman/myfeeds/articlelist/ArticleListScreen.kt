@@ -21,6 +21,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Done
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.SelectAll
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -65,6 +66,7 @@ fun ArticleListScreen(
     onArticleClick: (String) -> Unit = {},
     onBack: () -> Unit = {},
     onQueueClick: () -> Unit = {},
+    onFeedSettingsClick: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val listFontSize by viewModel.listFontSize.collectAsState()
@@ -135,6 +137,9 @@ fun ArticleListScreen(
                     actions = {
                         IconButton(onClick = onQueueClick) {
                             Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = stringResource(R.string.cd_open_queue))
+                        }
+                        IconButton(onClick = onFeedSettingsClick) {
+                            Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.cd_open_feed_settings))
                         }
                     },
                 )

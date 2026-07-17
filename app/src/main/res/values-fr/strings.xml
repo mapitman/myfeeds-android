@@ -29,6 +29,7 @@
     <string name="cd_open_queue">À suivre</string>
     <string name="cd_remove_from_queue">Retirer de la file d\'attente</string>
     <string name="cd_open_downloads">Téléchargements</string>
+    <string name="cd_open_feed_settings">Paramètres du flux</string>
     <string name="cd_reorder_queue_item">Glisser pour réorganiser</string>
 
     <!-- Feed list -->

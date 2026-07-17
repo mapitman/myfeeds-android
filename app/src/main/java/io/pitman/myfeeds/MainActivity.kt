@@ -188,6 +188,7 @@ class MainActivity : ComponentActivity() {
                                     onBack = { navController.popBackStack() },
                                     onArticleClick = { itemId -> navController.navigate("reader/$feedId/$itemId") },
                                     onQueueClick = { navController.navigate("queue") },
+                                    onFeedSettingsClick = { navController.navigate("feedProperties/$feedId") },
                                 )
                             }
                             composable(
