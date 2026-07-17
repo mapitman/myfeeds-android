@@ -35,6 +35,7 @@
     <string name="feed_list_no_feeds_yet">Nessun feed ancora</string>
     <string name="feed_list_total_unread">%1$d non letti</string>
     <string name="feed_list_section_unread">%1$d non letti</string>
+    <string name="feed_list_section_unplayed">%1$d non riprodotti</string>
     <string name="feed_list_refresh_error">Aggiornamento non riuscito: controlla la connessione</string>
     <string name="feed_list_podcasts_tab">Podcast</string>
     <string name="feed_list_feeds_tab">Feed</string>
@@ -49,8 +50,9 @@
     <string name="article_list_tab_unplayed">Non riprodotti</string>
     <string name="article_list_tab_all">Tutti</string>
     <string name="article_list_no_articles">Nessun articolo</string>
+    <string name="article_list_no_episodes">Nessun episodio</string>
     <string name="article_list_no_unread_articles">Nessun articolo non letto</string>
-    <string name="article_list_no_unplayed_articles">Nessun episodio non riprodotto</string>
+    <string name="article_list_no_unplayed_episodes">Nessun episodio non riprodotto</string>
 
     <!-- Next Up queue -->
     <string name="queue_title">In arrivo</string>
@@ -64,7 +66,7 @@
     <string name="downloads_item_subtitle">%1$s • %2$s</string>
 
     <!-- Reader -->
-    <string name="reader_no_article_to_show">Nessun articolo da mostrare</string>
+    <string name="reader_no_content_to_show">Nessun contenuto da mostrare</string>
     <string name="reader_page_position">%1$d di %2$d</string>
     <string name="reader_chapter_label">Capitolo %1$d di %2$d</string>
 
@@ -76,13 +78,13 @@
     <string name="settings_section_actions">Azioni</string>
     <string name="settings_section_about">Informazioni</string>
     <string name="settings_show_images">Mostra immagini</string>
-    <string name="settings_default_to_all_articles">Mostra tutti gli articoli per impostazione predefinita</string>
+    <string name="settings_default_to_all_articles">Mostra tutti gli elementi per impostazione predefinita</string>
     <string name="settings_notify_on_new_items">Notifica nuovi articoli</string>
     <string name="settings_update_interval">Intervallo di aggiornamento: %1$d min</string>
     <string name="settings_update_interval_minutes_chip">%1$dm</string>
-    <string name="settings_max_articles_per_feed">Articoli massimi per feed: %1$d</string>
-    <string name="settings_article_font_size">Dimensione carattere articolo</string>
-    <string name="settings_article_list_font_size">Dimensione carattere elenco articoli</string>
+    <string name="settings_max_articles_per_feed">Elementi massimi per feed: %1$d</string>
+    <string name="settings_article_font_size">Dimensione carattere lettura</string>
+    <string name="settings_article_list_font_size">Dimensione carattere elenco</string>
     <string name="settings_feed_list_font_size">Dimensione carattere elenco feed</string>
     <string name="settings_download_on_battery">Scarica in modalità batteria</string>
     <string name="settings_download_on_cellular">Scarica su rete cellulare</string>
@@ -100,7 +102,7 @@
     <string name="settings_confirm_add_default_feeds_title">Aggiungere i feed predefiniti?</string>
     <string name="settings_confirm_add_default_feeds_message">Questo aggiunge i feed iniziali inclusi ai tuoi abbonamenti.</string>
     <string name="settings_confirm_remove_all_feeds_title">Rimuovere tutti i feed?</string>
-    <string name="settings_confirm_remove_all_feeds_message">Questo elimina definitivamente tutti i feed sottoscritti e i loro articoli.</string>
+    <string name="settings_confirm_remove_all_feeds_message">Questo elimina definitivamente tutti i feed sottoscritti e i loro contenuti.</string>
     <string name="settings_confirm_reset_title">Ripristinare le impostazioni?</string>
     <string name="settings_confirm_reset_message">Questo ripristina tutte le impostazioni ai valori predefiniti. I feed non vengono interessati.</string>
 
@@ -134,7 +136,9 @@
     <string name="feed_properties_url_label">URL del feed (tocca per copiare)</string>
     <string name="feed_properties_url_copied">URL del feed copiato negli appunti</string>
     <string name="feed_properties_use_global_max">Usa impostazione globale di articoli massimi (%1$d)</string>
+    <string name="feed_properties_use_global_max_episodes">Usa impostazione globale di episodi massimi (%1$d)</string>
     <string name="feed_properties_max_articles_for_feed">Articoli massimi per questo feed: %1$d</string>
+    <string name="feed_properties_max_episodes_for_feed">Episodi massimi per questo feed: %1$d</string>
     <string name="feed_properties_auto_download">Scarica automaticamente i nuovi episodi</string>
     <string name="feed_properties_auto_queue">Aggiungi automaticamente i nuovi episodi alla coda</string>
     <string name="feed_properties_auto_queue_max_count">Numero massimo di episodi in coda per questo feed</string>
@@ -143,14 +147,15 @@
     <string name="feed_properties_unsubscribe">Annulla iscrizione</string>
     <string name="feed_properties_confirm_unsubscribe_title">Annullare l\'iscrizione a questo feed?</string>
     <string name="feed_properties_confirm_unsubscribe_message">Questo elimina definitivamente il feed e i suoi articoli.</string>
+    <string name="feed_properties_confirm_unsubscribe_message_podcast">Questo elimina definitivamente il feed e i suoi episodi.</string>
 
     <!-- Notifications -->
-    <string name="notification_new_items_channel_name">Nuovi articoli</string>
-    <string name="notification_new_items_channel_description">Notifica quando un aggiornamento del feed trova nuovi articoli</string>
-    <string name="notification_new_items_title">Nuovi articoli</string>
+    <string name="notification_new_items_channel_name">Nuovi elementi</string>
+    <string name="notification_new_items_channel_description">Notifica quando un aggiornamento del feed trova nuovi elementi</string>
+    <string name="notification_new_items_title">Nuovi elementi</string>
     <plurals name="notification_new_items_body">
-        <item quantity="one">%1$d nuovo articolo</item>
-        <item quantity="other">%1$d nuovi articoli</item>
+        <item quantity="one">%1$d nuovo elemento</item>
+        <item quantity="other">%1$d nuovi elementi</item>
     </plurals>
 
     <!-- Widget -->

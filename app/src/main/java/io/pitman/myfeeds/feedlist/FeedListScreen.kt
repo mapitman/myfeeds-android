@@ -167,7 +167,14 @@ private fun FeedSectionList(
                     horizontalArrangement = Arrangement.SpaceBetween,
                 ) {
                     Text(
-                        text = stringResource(R.string.feed_list_section_unread, section.totalUnread),
+                        text = stringResource(
+                            if (section.section == FeedListSection.PODCASTS) {
+                                R.string.feed_list_section_unplayed
+                            } else {
+                                R.string.feed_list_section_unread
+                            },
+                            section.totalUnread,
+                        ),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.primary,
                     )

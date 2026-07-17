@@ -125,7 +125,14 @@ fun FeedPropertiesScreen(
                     .padding(top = 24.dp),
             ) {
                 Text(
-                    text = stringResource(R.string.feed_properties_use_global_max, uiState.globalMaxArticles),
+                    text = stringResource(
+                        if (uiState.isPodcastFeed) {
+                            R.string.feed_properties_use_global_max_episodes
+                        } else {
+                            R.string.feed_properties_use_global_max
+                        },
+                        uiState.globalMaxArticles,
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Switch(checked = useGlobalMax, onCheckedChange = null)
@@ -133,7 +140,14 @@ fun FeedPropertiesScreen(
             if (!useGlobalMax) {
                 val itemsToKeep = uiState.itemsToKeep ?: uiState.globalMaxArticles
                 Text(
-                    stringResource(R.string.feed_properties_max_articles_for_feed, itemsToKeep),
+                    stringResource(
+                        if (uiState.isPodcastFeed) {
+                            R.string.feed_properties_max_episodes_for_feed
+                        } else {
+                            R.string.feed_properties_max_articles_for_feed
+                        },
+                        itemsToKeep,
+                    ),
                     style = MaterialTheme.typography.bodyLarge,
                 )
                 Slider(
@@ -229,7 +243,17 @@ fun FeedPropertiesScreen(
         AlertDialog(
             onDismissRequest = { showUnsubscribeConfirm = false },
             title = { Text(stringResource(R.string.feed_properties_confirm_unsubscribe_title)) },
-            text = { Text(stringResource(R.string.feed_properties_confirm_unsubscribe_message)) },
+            text = {
+                Text(
+                    stringResource(
+                        if (uiState.isPodcastFeed) {
+                            R.string.feed_properties_confirm_unsubscribe_message_podcast
+                        } else {
+                            R.string.feed_properties_confirm_unsubscribe_message
+                        },
+                    ),
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     showUnsubscribeConfirm = false
