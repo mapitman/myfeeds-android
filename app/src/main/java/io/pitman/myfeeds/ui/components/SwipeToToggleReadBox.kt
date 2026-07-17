@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.rememberSwipeToDismissBoxState
@@ -63,6 +64,10 @@ fun SwipeToToggleReadBox(
                 )
             }
         },
-        content = { content() },
+        // The row composables passed in as `content` are plain Rows with no background of their
+        // own -- without an opaque Surface here, SwipeToDismissBox's backgroundContent (always
+        // composed, meant to be revealed only during an active swipe) shows through permanently
+        // behind every row instead of just the one being swiped.
+        content = { Surface(color = MaterialTheme.colorScheme.surface) { content() } },
     )
 }
