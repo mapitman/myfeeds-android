@@ -15,10 +15,11 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -33,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -58,11 +60,14 @@ fun MiniPlayerBar(
     onTogglePlayPause: () -> Unit,
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
+    onNextChapter: () -> Unit,
+    onPreviousChapter: () -> Unit,
     onStop: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
 ) {
+    val hasChapters = playbackState.chapters.isNotEmpty()
     with(sharedTransitionScope) {
         Surface(
             modifier = modifier.fillMaxWidth().clickable(onClick = onClick)
@@ -128,8 +133,13 @@ fun MiniPlayerBar(
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                if (hasChapters) {
+                    IconButton(onClick = onPreviousChapter) {
+                        Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
+                    }
+                }
                 IconButton(onClick = onSkipBackward) {
-                    Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.cd_rewind))
+                    Icon(Icons.Filled.Replay, contentDescription = stringResource(R.string.cd_rewind))
                 }
                 IconButton(onClick = onTogglePlayPause) {
                     if (playbackState.isBuffering) {
@@ -142,7 +152,16 @@ fun MiniPlayerBar(
                     }
                 }
                 IconButton(onClick = onSkipForward) {
-                    Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.cd_forward))
+                    Icon(
+                        Icons.Filled.Replay,
+                        contentDescription = stringResource(R.string.cd_forward),
+                        modifier = Modifier.graphicsLayer(scaleX = -1f),
+                    )
+                }
+                if (hasChapters) {
+                    IconButton(onClick = onNextChapter) {
+                        Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
+                    }
                 }
                 IconButton(onClick = onStop) {
                     Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_stop_playback))
@@ -167,11 +186,14 @@ fun ExpandedPlayerBar(
     onTogglePlayPause: () -> Unit,
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
+    onNextChapter: () -> Unit,
+    onPreviousChapter: () -> Unit,
     onStop: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
 ) {
+    val hasChapters = playbackState.chapters.isNotEmpty()
     with(sharedTransitionScope) {
     Surface(
         modifier = modifier.fillMaxWidth()
@@ -236,8 +258,13 @@ fun ExpandedPlayerBar(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    if (hasChapters) {
+                        IconButton(onClick = onPreviousChapter) {
+                            Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
+                        }
+                    }
                     IconButton(onClick = onSkipBackward) {
-                        Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.cd_rewind))
+                        Icon(Icons.Filled.Replay, contentDescription = stringResource(R.string.cd_rewind))
                     }
                     IconButton(onClick = onTogglePlayPause) {
                         if (playbackState.isBuffering) {
@@ -250,7 +277,16 @@ fun ExpandedPlayerBar(
                         }
                     }
                     IconButton(onClick = onSkipForward) {
-                        Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.cd_forward))
+                        Icon(
+                            Icons.Filled.Replay,
+                            contentDescription = stringResource(R.string.cd_forward),
+                            modifier = Modifier.graphicsLayer(scaleX = -1f),
+                        )
+                    }
+                    if (hasChapters) {
+                        IconButton(onClick = onNextChapter) {
+                            Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
+                        }
                     }
                     IconButton(onClick = onStop) {
                         Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_stop_playback))
