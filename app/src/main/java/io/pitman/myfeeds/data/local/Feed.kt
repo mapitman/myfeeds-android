@@ -32,4 +32,14 @@ data class Feed(
     val autoQueueMaxCount: Int? = null,
     /** Playback speed applied when starting an episode of this feed (issue #70). */
     val playbackSpeed: Float = 1.0f,
+    /** Where new episodes land in the Next Up queue when [autoQueueEnabled] (issue #166). Defaults
+     *  to [AutoQueuePosition.BOTTOM] to preserve pre-existing auto-queue behavior for existing feeds. */
+    val autoQueuePosition: AutoQueuePosition = AutoQueuePosition.BOTTOM,
 )
+
+/** Where auto-queued episodes are inserted in the Next Up queue (issue #166). Room stores enums
+ *  natively as their [name] string, so no [androidx.room.TypeConverter] is needed. */
+enum class AutoQueuePosition {
+    TOP,
+    BOTTOM,
+}

@@ -145,6 +145,9 @@
     <string name="feed_properties_auto_queue">Ajouter automatiquement les nouveaux épisodes à la file d\'attente</string>
     <string name="feed_properties_auto_queue_max_count">Nb. max. d\'épisodes en file d\'attente pour ce flux</string>
     <string name="feed_properties_auto_queue_unlimited">Illimité</string>
+    <string name="feed_properties_auto_queue_position">Ajouter les nouveaux épisodes</string>
+    <string name="feed_properties_auto_queue_position_top">En haut de la file d\'attente</string>
+    <string name="feed_properties_auto_queue_position_bottom">En bas de la file d\'attente</string>
     <string name="feed_properties_playback_speed">Vitesse de lecture</string>
     <string name="feed_properties_unsubscribe">Se désabonner</string>
     <string name="feed_properties_confirm_unsubscribe_title">Se désabonner de ce flux ?</string>

@@ -43,6 +43,7 @@ import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import io.pitman.myfeeds.R
+import io.pitman.myfeeds.data.local.AutoQueuePosition
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -208,6 +209,25 @@ fun FeedPropertiesScreen(
                                         ?: stringResource(R.string.feed_properties_auto_queue_unlimited),
                                 )
                             },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
+                }
+
+                Text(
+                    text = stringResource(R.string.feed_properties_auto_queue_position),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(top = 16.dp),
+                )
+                Row(modifier = Modifier.padding(top = 4.dp)) {
+                    listOf(
+                        AutoQueuePosition.TOP to R.string.feed_properties_auto_queue_position_top,
+                        AutoQueuePosition.BOTTOM to R.string.feed_properties_auto_queue_position_bottom,
+                    ).forEach { (position, labelRes) ->
+                        FilterChip(
+                            selected = uiState.autoQueuePosition == position,
+                            onClick = { viewModel.setAutoQueuePosition(position) },
+                            label = { Text(stringResource(labelRes)) },
                             modifier = Modifier.padding(end = 8.dp),
                         )
                     }

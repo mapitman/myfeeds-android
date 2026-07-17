@@ -145,6 +145,9 @@
     <string name="feed_properties_auto_queue">Neue Episoden automatisch zur Warteschlange hinzufügen</string>
     <string name="feed_properties_auto_queue_max_count">Max. Episoden in der Warteschlange für diesen Feed</string>
     <string name="feed_properties_auto_queue_unlimited">Unbegrenzt</string>
+    <string name="feed_properties_auto_queue_position">Neue Episoden hinzufügen zu</string>
+    <string name="feed_properties_auto_queue_position_top">Anfang der Warteschlange</string>
+    <string name="feed_properties_auto_queue_position_bottom">Ende der Warteschlange</string>
     <string name="feed_properties_playback_speed">Wiedergabegeschwindigkeit</string>
     <string name="feed_properties_unsubscribe">Abbestellen</string>
     <string name="feed_properties_confirm_unsubscribe_title">Diesen Feed abbestellen?</string>

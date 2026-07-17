@@ -27,10 +27,17 @@ class QueueRepository @Inject constructor(
         return true
     }
 
-    /** No-op if already queued -- an episode can only be queued once. */
-    suspend fun addToFront(itemId: String) {
+    /**
+     * No-op if already queued -- an episode can only be queued once. [autoQueued] mirrors
+     * [addToEnd]'s parameter of the same name (issue #166: auto-queue can now insert at either end
+     * of the queue depending on the feed's `autoQueuePosition`), so this end also needs to be able
+     * to mark entries as auto-queued for [enforceFeedCap] eviction to see them.
+     */
+    suspend fun addToFront(itemId: String, autoQueued: Boolean = false) {
         if (queueDao.findItemId(itemId) != null) return
-        queueDao.insert(QueueEntry(itemId, position = queueDao.minPosition() - 1, addedAt = System.currentTimeMillis()))
+        queueDao.insert(
+            QueueEntry(itemId, position = queueDao.minPosition() - 1, addedAt = System.currentTimeMillis(), autoQueued = autoQueued),
+        )
     }
 
     suspend fun remove(itemId: String) = queueDao.remove(itemId)
