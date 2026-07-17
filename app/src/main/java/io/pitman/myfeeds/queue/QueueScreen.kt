@@ -100,6 +100,8 @@ fun QueueScreen(
                     onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
                     onSkipBackward = miniPlayerViewModel::skipBackward,
                     onSkipForward = miniPlayerViewModel::skipForward,
+                    onNextChapter = miniPlayerViewModel::nextChapter,
+                    onPreviousChapter = miniPlayerViewModel::previousChapter,
                     onStop = miniPlayerViewModel::stop,
                     sharedTransitionScope = sharedTransitionScope,
                     animatedVisibilityScope = animatedVisibilityScope,

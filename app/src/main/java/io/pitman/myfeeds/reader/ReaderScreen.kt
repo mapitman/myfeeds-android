@@ -29,10 +29,9 @@ import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.FastForward
-import androidx.compose.material.icons.filled.FastRewind
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
@@ -410,15 +409,17 @@ private fun PodcastPlayerControls(
                 }
             }
             // Distinct icon shape (solid triangle+bar) from the 15/30s time-skip buttons below
-            // (looping-arrow FastRewind/FastForward), so the two controls read as different actions
-            // at a glance (issue #95).
+            // (circular-arrow Replay, mirrored for forward), so the two controls read as different
+            // actions at a glance (issue #95).
             if (hasChapters) {
                 IconButton(onClick = onPreviousChapter) {
                     Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
                 }
             }
+            // No stock Material icon for an exact 15s glyph (only 5/10/30) -- the plain circular
+            // Replay arrow (mirrored for forward) reads as "skip" without implying a wrong duration.
             IconButton(onClick = onSkipBackward, enabled = isCurrentItem) {
-                Icon(Icons.Filled.FastRewind, contentDescription = stringResource(R.string.cd_rewind))
+                Icon(Icons.Filled.Replay, contentDescription = stringResource(R.string.cd_rewind))
             }
             IconButton(onClick = onTogglePlayPause) {
                 if (isCurrentItem && playbackState.isBuffering) {
@@ -431,7 +432,11 @@ private fun PodcastPlayerControls(
                 }
             }
             IconButton(onClick = onSkipForward, enabled = isCurrentItem) {
-                Icon(Icons.Filled.FastForward, contentDescription = stringResource(R.string.cd_forward))
+                Icon(
+                    Icons.Filled.Replay,
+                    contentDescription = stringResource(R.string.cd_forward),
+                    modifier = Modifier.graphicsLayer(scaleX = -1f),
+                )
             }
             if (hasChapters) {
                 IconButton(onClick = onNextChapter) {

@@ -229,6 +229,8 @@ class MainActivity : ComponentActivity() {
                                 onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
                                 onSkipBackward = miniPlayerViewModel::skipBackward,
                                 onSkipForward = miniPlayerViewModel::skipForward,
+                                onNextChapter = miniPlayerViewModel::nextChapter,
+                                onPreviousChapter = miniPlayerViewModel::previousChapter,
                                 onStop = miniPlayerViewModel::stop,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = this,
