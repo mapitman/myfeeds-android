@@ -7,6 +7,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
@@ -59,17 +60,21 @@ class ReaderViewModelTest {
 
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
+    private lateinit var queueRepository: QueueRepository
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var playbackController: PlaybackController
     private lateinit var downloadRepository: EnclosureDownloadRepository
+    private lateinit var appContext: android.content.Context
     private var feedId: Long = 0
 
     @Before
     fun setUp() = runTest(testDispatcher) {
         Dispatchers.setMain(testDispatcher)
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
+        appContext = context
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
+        queueRepository = QueueRepository(db.queueDao())
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
@@ -78,7 +83,7 @@ class ReaderViewModelTest {
             context,
             settingsDataStore,
             repository,
-            QueueRepository(db.queueDao()),
+            queueRepository,
             ChaptersFetcher(OkHttpClient()),
         )
         downloadRepository = EnclosureDownloadRepository(
@@ -113,7 +118,9 @@ class ReaderViewModelTest {
             feedRepository = repository,
             playbackController = playbackController,
             downloadRepository = downloadRepository,
+            queueRepository = queueRepository,
             settingsDataStore = settingsDataStore,
+            context = appContext,
         ).also { viewModelStore.put("reader-${nextViewModelKey++}", it) }
 
     @Test
@@ -184,5 +191,15 @@ class ReaderViewModelTest {
 
         val item = repository.observeItems(feedId).first().first { it.id == "episode-1" }
         assertTrue(!item.isRead)
+    }
+
+    @Test
+    fun addToQueue_addsItemAndEmitsFeedback() = runTest(testDispatcher) {
+        val viewModel = createViewModel("item-1")
+
+        viewModel.addToQueue("item-1")
+
+        assertEquals(appContext.getString(R.string.queue_feedback_added), viewModel.queueFeedback.first { it != null })
+        assertTrue(queueRepository.isQueued("item-1"))
     }
 }

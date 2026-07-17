@@ -1,17 +1,22 @@
 package io.pitman.myfeeds.reader
 
+import android.content.Context
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.FontSize
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import io.pitman.myfeeds.playback.PlaybackController
 import io.pitman.myfeeds.playback.PlaybackUiState
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -33,10 +38,17 @@ class ReaderViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
     private val playbackController: PlaybackController,
     private val downloadRepository: EnclosureDownloadRepository,
+    private val queueRepository: QueueRepository,
     settingsDataStore: SettingsDataStore,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
     private val feedId: Long = checkNotNull(savedStateHandle["feedId"])
     private val initialItemId: String = checkNotNull(savedStateHandle["itemId"])
+
+    private val _queueFeedback = MutableStateFlow<String?>(null)
+
+    /** One-shot add-to-queue confirmation for a Snackbar (issue #144); cleared via [consumeQueueFeedback]. */
+    val queueFeedback: StateFlow<String?> = _queueFeedback
 
     val uiState: StateFlow<ReaderUiState> = combine(
         feedRepository.observeItems(feedId),
@@ -100,5 +112,18 @@ class ReaderViewModel @Inject constructor(
 
     fun deleteDownload(item: FeedItem) {
         viewModelScope.launch { downloadRepository.deleteDownload(item) }
+    }
+
+    fun addToQueue(itemId: String) {
+        viewModelScope.launch {
+            val added = queueRepository.addToEnd(itemId)
+            _queueFeedback.value = context.getString(
+                if (added) R.string.queue_feedback_added else R.string.queue_feedback_already_queued,
+            )
+        }
+    }
+
+    fun consumeQueueFeedback() {
+        _queueFeedback.value = null
     }
 }
