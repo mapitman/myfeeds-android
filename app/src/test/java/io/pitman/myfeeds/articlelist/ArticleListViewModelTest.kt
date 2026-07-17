@@ -172,6 +172,18 @@ class ArticleListViewModelTest {
     }
 
     @Test
+    fun selectAll_selectsEveryCurrentlyVisibleArticle() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.uiState.first { it.feedTitle == "A Feed" }
+
+        viewModel.selectAll()
+
+        // Default view is unread-only, so only "unread-1" is visible to select.
+        val selected = viewModel.uiState.first { it.selectedIds.isNotEmpty() }
+        assertEquals(setOf("unread-1"), selected.selectedIds)
+    }
+
+    @Test
     fun markSelectedRead_updatesItemsAndClearsSelection() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.uiState.first { it.feedTitle == "A Feed" }
