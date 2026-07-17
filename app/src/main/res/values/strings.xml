@@ -95,6 +95,7 @@
     <string name="settings_auto_delete_finished_downloads">Auto-delete downloads once played</string>
     <string name="settings_about_description">An RSS/Atom feed reader and podcast client.</string>
     <string name="settings_export_opml">Export OPML</string>
+    <string name="settings_save_opml_to_file">Save OPML to file</string>
     <string name="settings_export_feeds_chooser_title">Export feeds</string>
     <string name="settings_clear_podcasts">Clear podcasts</string>
     <string name="settings_add_default_feeds">Add default feeds</string>

@@ -239,6 +239,13 @@ private fun ActionsSection(viewModel: SettingsViewModel) {
     val coroutineScope = rememberCoroutineScope()
     val exportFeedsChooserTitle = stringResource(R.string.settings_export_feeds_chooser_title)
 
+    // Storage Access Framework: the system picker itself grants write access to whatever
+    // destination the user chooses (Downloads, Drive, etc.), so this needs no storage permission
+    // (issue #151), unlike writing directly to shared storage.
+    val saveOpmlLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/x-opml")) { uri ->
+        if (uri != null) coroutineScope.launch { viewModel.writeOpmlTo(uri) }
+    }
+
     Column {
         OutlinedButton(
             onClick = {
@@ -256,6 +263,12 @@ private fun ActionsSection(viewModel: SettingsViewModel) {
             modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
         ) {
             Text(stringResource(R.string.settings_export_opml))
+        }
+        OutlinedButton(
+            onClick = { saveOpmlLauncher.launch("myfeeds-export.opml") },
+            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        ) {
+            Text(stringResource(R.string.settings_save_opml_to_file))
         }
         OutlinedButton(onClick = { confirmAction = ConfirmableAction.ClearPodcasts }, modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)) {
             Text(stringResource(R.string.settings_clear_podcasts))
