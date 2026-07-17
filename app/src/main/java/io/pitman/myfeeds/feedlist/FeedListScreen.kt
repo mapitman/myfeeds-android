@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
@@ -55,6 +56,7 @@ fun FeedListScreen(
     onAddFeedClick: () -> Unit = {},
     onSettingsClick: () -> Unit = {},
     onQueueClick: () -> Unit = {},
+    onDownloadsClick: () -> Unit = {},
     onFeedLongClick: (Long) -> Unit = {},
     onReadAllFeedsClick: () -> Unit = {},
 ) {
@@ -87,6 +89,9 @@ fun FeedListScreen(
                 actions = {
                     IconButton(onClick = onQueueClick) {
                         Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = stringResource(R.string.cd_open_queue))
+                    }
+                    IconButton(onClick = onDownloadsClick) {
+                        Icon(Icons.Filled.Download, contentDescription = stringResource(R.string.cd_open_downloads))
                     }
                     IconButton(onClick = onSettingsClick) {
                         Icon(Icons.Filled.Settings, contentDescription = stringResource(R.string.cd_settings))

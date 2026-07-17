@@ -26,6 +26,7 @@
     <string name="cd_add_to_queue">Añadir a Reproducir a continuación</string>
     <string name="cd_open_queue">Reproducir a continuación</string>
     <string name="cd_remove_from_queue">Quitar de la cola</string>
+    <string name="cd_open_downloads">Descargas</string>
     <string name="cd_reorder_queue_item">Arrastra para reordenar</string>
 
     <!-- Feed list -->
@@ -54,6 +55,11 @@
     <string name="queue_empty">Nada en cola</string>
     <string name="queue_feedback_added">Añadido a Reproducir a continuación</string>
     <string name="queue_feedback_already_queued">Ya está en Reproducir a continuación</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">Descargas</string>
+    <string name="downloads_empty">Sin descargas</string>
+    <string name="downloads_item_subtitle">%1$s • %2$s</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">No hay ningún artículo que mostrar</string>

@@ -28,6 +28,7 @@
     <string name="cd_add_to_queue">Add to Next Up</string>
     <string name="cd_open_queue">Next Up</string>
     <string name="cd_remove_from_queue">Remove from queue</string>
+    <string name="cd_open_downloads">Downloads</string>
     <string name="cd_reorder_queue_item">Drag to reorder</string>
 
     <!-- Feed list -->
@@ -56,6 +57,11 @@
     <string name="queue_empty">Nothing queued</string>
     <string name="queue_feedback_added">Added to Next Up</string>
     <string name="queue_feedback_already_queued">Already in Next Up</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_empty">No downloads</string>
+    <string name="downloads_item_subtitle">%1$s • %2$s</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">No article to show</string>

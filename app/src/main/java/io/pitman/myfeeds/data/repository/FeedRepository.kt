@@ -1,5 +1,6 @@
 package io.pitman.myfeeds.data.repository
 
+import io.pitman.myfeeds.data.local.DownloadedEpisode
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedDao
 import io.pitman.myfeeds.data.local.FeedItem
@@ -74,6 +75,9 @@ class FeedRepository @Inject constructor(
     suspend fun setDownloadedBytes(itemId: String, bytes: Long?) = feedItemDao.setDownloadedBytes(itemId, bytes)
 
     suspend fun setDownloadedFilePath(itemId: String, path: String?) = feedItemDao.setDownloadedFilePath(itemId, path)
+
+    /** Every episode with a download in progress or completed, across all feeds (issue #69). */
+    fun observeDownloadedItems(): Flow<List<DownloadedEpisode>> = feedItemDao.observeDownloadedItems()
 
     /**
      * Deletes the oldest items beyond the feed's `itemsToKeep`, mirroring the original
