@@ -62,7 +62,7 @@ interface QueueDao {
 
     @Query(
         """
-        SELECT feed_items.*, COALESCE(feeds.userTitle, feeds.title) AS feedTitle
+        SELECT feed_items.*, COALESCE(feeds.userTitle, feeds.title) AS feedTitle, feeds.imageUrl AS feedImageUrl
         FROM queue_entries
         INNER JOIN feed_items ON feed_items.id = queue_entries.itemId
         INNER JOIN feeds ON feeds.id = feed_items.feedId

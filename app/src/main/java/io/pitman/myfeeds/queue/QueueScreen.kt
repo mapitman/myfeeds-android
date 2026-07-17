@@ -13,8 +13,10 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
@@ -35,20 +37,26 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import coil.compose.AsyncImage
 import io.pitman.myfeeds.R
+import io.pitman.myfeeds.articlelist.ArticleDateFormatter
 import io.pitman.myfeeds.data.local.QueuedEpisode
 import io.pitman.myfeeds.playback.ExpandedPlayerBar
 import io.pitman.myfeeds.playback.MiniPlayerViewModel
 import kotlin.math.roundToInt
 
-private val ROW_HEIGHT = 72.dp
+private val ROW_HEIGHT = 84.dp
+private val THUMBNAIL_SIZE = 48.dp
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
 @Composable
@@ -110,7 +118,7 @@ fun QueueScreen(
             ReorderableQueueList(
                 modifier = Modifier.weight(1f),
                 queue = queue,
-                onReorder = viewModel::reorder,
+                onReorder = { ids, onComplete -> viewModel.reorder(ids, onComplete) },
                 onRemove = viewModel::remove,
                 onClick = { episode ->
                     viewModel.playNow(episode)
@@ -125,7 +133,7 @@ fun QueueScreen(
 private fun ReorderableQueueList(
     modifier: Modifier,
     queue: List<QueuedEpisode>,
-    onReorder: (List<String>) -> Unit,
+    onReorder: (List<String>, onComplete: () -> Unit) -> Unit,
     onRemove: (String) -> Unit,
     onClick: (QueuedEpisode) -> Unit,
 ) {
@@ -136,10 +144,16 @@ private fun ReorderableQueueList(
     var items by remember { mutableStateOf(queue) }
     var draggedItemId by remember { mutableStateOf<String?>(null) }
     var dragOffsetY by remember { mutableStateOf(0f) }
+    // Separate from `draggedItemId`: that one drives the row's *visual* drag state and must
+    // clear the instant a finger lifts, or the row keeps its elevated zIndex/highlight into the
+    // settled layout and visibly overlaps its neighbor. This one guards `items` against an
+    // unrelated `queue` re-emission landing before the (async, fire-and-forget) reorder write
+    // completes and clobbering the just-dropped order with the stale pre-reorder one.
+    var isReordering by remember { mutableStateOf(false) }
     val itemHeightPx = with(LocalDensity.current) { ROW_HEIGHT.toPx() }
 
     LaunchedEffect(queue) {
-        if (draggedItemId == null) items = queue
+        if (!isReordering) items = queue
     }
 
     LazyColumn(modifier = modifier.fillMaxSize()) {
@@ -149,6 +163,11 @@ private fun ReorderableQueueList(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(ROW_HEIGHT)
+                    // Clips any content that overflows this row's fixed height (e.g. at larger
+                    // system font scales) to its own bounds -- otherwise the dragged row's
+                    // elevated zIndex below makes that overflow paint visibly on top of the row
+                    // underneath it instead of being hidden beneath it as it normally would be.
+                    .clipToBounds()
                     .zIndex(if (isDragged) 1f else 0f)
                     .graphicsLayer { translationY = if (isDragged) dragOffsetY else 0f }
                     .then(
@@ -176,38 +195,64 @@ private fun ReorderableQueueList(
                                 onDragStart = {
                                     offsetY = 0f
                                     draggedItemId = episode.item.id
+                                    isReordering = true
                                     dragOffsetY = 0f
                                 },
                                 onDragEnd = {
                                     draggedItemId = null
                                     dragOffsetY = 0f
-                                    onReorder(items.map { it.item.id })
+                                    onReorder(items.map { it.item.id }) { isReordering = false }
                                 },
                                 onDragCancel = {
                                     draggedItemId = null
+                                    isReordering = false
                                     dragOffsetY = 0f
                                 },
                                 onDrag = { change, dragAmount ->
                                     change.consume()
                                     offsetY += dragAmount.y
-                                    dragOffsetY = offsetY
 
                                     val currentIndex = items.indexOfFirst { it.item.id == episode.item.id }
                                     if (currentIndex == -1) return@detectDragGestures
-                                    val targetIndex = (currentIndex + (offsetY / itemHeightPx).roundToInt())
-                                        .coerceIn(0, items.lastIndex)
+                                    val rawTargetIndex = currentIndex + (offsetY / itemHeightPx).roundToInt()
+                                    val targetIndex = rawTargetIndex.coerceIn(0, items.lastIndex)
                                     if (targetIndex != currentIndex) {
                                         val reordered = items.toMutableList()
                                         val moved = reordered.removeAt(currentIndex)
                                         reordered.add(targetIndex, moved)
                                         items = reordered
                                         offsetY -= (targetIndex - currentIndex) * itemHeightPx
-                                        dragOffsetY = offsetY
+                                    } else if (rawTargetIndex != targetIndex) {
+                                        // Pinned at the top/bottom of the list -- clamp so continuing
+                                        // to drag past the boundary doesn't keep sliding the row's
+                                        // visual position further from its slot with nothing to
+                                        // compensate it (it would otherwise end up dragged up behind
+                                        // the top bar, or below the last row, with no swap left to
+                                        // reset the offset).
+                                        offsetY = offsetY.coerceIn(-itemHeightPx / 2f, itemHeightPx / 2f)
                                     }
+                                    dragOffsetY = offsetY
                                 },
                             )
                         },
                 )
+                val thumbnailUrl = episode.item.imageUrl ?: episode.feedImageUrl
+                if (thumbnailUrl != null) {
+                    AsyncImage(
+                        model = thumbnailUrl,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .padding(end = 12.dp)
+                            .size(THUMBNAIL_SIZE)
+                            .clip(RoundedCornerShape(8.dp))
+                            // Isolates the thumbnail into its own compositing layer so dragging a
+                            // row (which redraws it every frame via graphicsLayer{translationY=..})
+                            // doesn't force Coil's image draw to be re-evaluated as part of the
+                            // parent Row's drawing, which was visibly choppy mid-drag.
+                            .graphicsLayer(),
+                    )
+                }
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = episode.item.title.orEmpty(),
@@ -222,6 +267,12 @@ private fun ReorderableQueueList(
                             maxLines = 1,
                         )
                     }
+                    Text(
+                        text = ArticleDateFormatter.format(episode.item.publishDate),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                    )
                 }
                 IconButton(onClick = { onRemove(episode.item.id) }) {
                     Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_remove_from_queue))
