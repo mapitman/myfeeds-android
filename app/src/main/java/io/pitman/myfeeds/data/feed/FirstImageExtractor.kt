@@ -22,6 +22,6 @@ object FirstImageExtractor {
             return null
         }
 
-        return document.select("img[src]").firstOrNull()?.attr("abs:src")?.ifBlank { null }
+        return document.select("img[src]").firstOrNull()?.attr("abs:src")?.ifBlank { null }?.upgradeToHttps()
     }
 }

@@ -45,6 +45,17 @@ class FirstImageExtractorTest {
     }
 
     @Test
+    fun extractFirstImageUrl_httpSrc_upgradedToHttps() {
+        // issue #149: plain http:// images are silently blocked by cleartext-traffic
+        // restrictions (targetSdk 28+).
+        val html = "<img src=\"http://example.com/photo.jpg\" />"
+
+        val result = FirstImageExtractor.extractFirstImageUrl(html, "https://example.com/article-1")
+
+        assertEquals("https://example.com/photo.jpg", result)
+    }
+
+    @Test
     fun extractFirstImageUrl_noImgTags_returnsNull() {
         assertNull(FirstImageExtractor.extractFirstImageUrl("<p>just text</p>", "https://example.com"))
     }

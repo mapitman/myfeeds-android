@@ -71,6 +71,16 @@ class FeedParserTest {
     }
 
     @Test
+    fun parseRss_itunesImageHttpUrlUpgradedToHttps() {
+        // issue #149: a plain http:// image URL is silently blocked by cleartext-traffic
+        // restrictions (targetSdk 28+), so podcast cover art fails to render -- upgrade the
+        // scheme rather than requiring the feed to serve https itself.
+        val feed = FeedParser.parse(fixture("rss-podcast-http-image.xml"))!!
+
+        assertEquals("https://latenightlinux.com/wp-content/uploads/latenightlinux.jpg", feed.imageUrl)
+    }
+
+    @Test
     fun parseRss_itunesDurationParsedToMillis() {
         val feed = FeedParser.parse(fixture("rss-podcast.xml"))!!
 

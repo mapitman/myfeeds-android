@@ -57,7 +57,8 @@ object FeedParser {
             title = title,
             siteUrl = channel.textOf("link"),
             description = channel.textOf("description").ifBlank { title },
-            imageUrl = itunesImageUrl ?: channel.firstChildElement("image")?.textOf("url")?.ifBlank { null },
+            imageUrl = (itunesImageUrl ?: channel.firstChildElement("image")?.textOf("url")?.ifBlank { null })
+                ?.upgradeToHttps(),
             items = items,
         )
     }
@@ -102,8 +103,10 @@ object FeedParser {
             title = title,
             siteUrl = root.pickAtomLink(rel = "alternate", preferNoType = true),
             description = root.textOf("subtitle").ifBlank { title },
-            imageUrl = root.firstChildElement("logo")?.textContent?.trim()?.ifBlank { null }
-                ?: root.firstChildElement("icon")?.textContent?.trim()?.ifBlank { null },
+            imageUrl = (
+                root.firstChildElement("logo")?.textContent?.trim()?.ifBlank { null }
+                    ?: root.firstChildElement("icon")?.textContent?.trim()?.ifBlank { null }
+                )?.upgradeToHttps(),
             items = items,
         )
     }
@@ -147,7 +150,7 @@ object FeedParser {
             title = title,
             siteUrl = channel?.textOf("link").orEmpty(),
             description = channel?.textOf("description")?.ifBlank { title } ?: title,
-            imageUrl = channel?.firstChildElement("image")?.textOf("url")?.ifBlank { null },
+            imageUrl = channel?.firstChildElement("image")?.textOf("url")?.ifBlank { null }?.upgradeToHttps(),
             items = items,
         )
     }
@@ -194,3 +197,10 @@ object FeedParser {
     private fun Element.firstLocalNameOrNull(vararg localNames: String): String? =
         childElements().firstOrNull { it.localName() in localNames }?.textContent?.trim()
 }
+
+// Cleartext HTTP image loads are blocked by default (targetSdk 28+), silently failing to render --
+// almost every host that serves a podcast/feed image over http also serves it over https on the
+// same domain, so upgrading the scheme fixes this without weakening the app's network security
+// posture (issue #149).
+internal fun String.upgradeToHttps(): String =
+    if (startsWith("http://", ignoreCase = true)) "https://" + removePrefix("http://") else this
