@@ -51,7 +51,13 @@ class FeedRepository @Inject constructor(
 
     fun observePodcastFeedIds(): Flow<Set<Long>> = feedItemDao.observePodcastFeedIds().map { it.toSet() }
 
-    suspend fun upsertItems(items: List<FeedItem>) = feedItemDao.insertAll(items)
+    suspend fun insertItems(items: List<FeedItem>) = feedItemDao.insertAll(items)
+
+    // Must be a real SQL UPDATE, not insertAll's OnConflictStrategy.REPLACE -- REPLACE does a
+    // DELETE+INSERT under the hood even when the row's id is unchanged, which fires
+    // queue_entries' ON DELETE CASCADE and silently drops the episode from Next Up on every
+    // refresh of an already-queued item (issue #153).
+    suspend fun updateItem(item: FeedItem) = feedItemDao.update(item)
 
     suspend fun findByItemGuid(feedId: Long, itemGuid: String): FeedItem? =
         feedItemDao.findByItemGuid(feedId, itemGuid)

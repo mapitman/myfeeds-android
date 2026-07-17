@@ -70,7 +70,7 @@ class QueueViewModelTest {
         )
 
         feedId = feedRepository.subscribe(Feed(title = "A Feed"))
-        feedRepository.upsertItems(
+        feedRepository.insertItems(
             listOf(
                 FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1"),
                 FeedItem(id = "ep-2", feedId = feedId, title = "Episode 2", itemGuid = "g2"),

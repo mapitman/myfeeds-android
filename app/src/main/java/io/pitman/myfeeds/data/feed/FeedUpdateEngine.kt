@@ -78,8 +78,12 @@ class FeedUpdateEngine @Inject constructor(
                 enclosureDurationMs = parsedItem.durationMs,
                 chaptersUrl = parsedItem.chaptersUrl,
             )
-            feedRepository.upsertItems(listOf(entity))
-            if (existing == null) newItemIds += id
+            if (existing == null) {
+                feedRepository.insertItems(listOf(entity))
+                newItemIds += id
+            } else {
+                feedRepository.updateItem(entity)
+            }
         }
 
         var updatedFeed = feed.copy(lastGet = Instant.now().toEpochMilli(), imageUrl = parsed.imageUrl ?: feed.imageUrl)

@@ -36,7 +36,7 @@ class QueueRepositoryTest {
         queueRepository = QueueRepository(db.queueDao())
 
         feedId = feedRepository.subscribe(Feed(title = "A Feed"))
-        feedRepository.upsertItems(
+        feedRepository.insertItems(
             listOf(
                 FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1"),
                 FeedItem(id = "ep-2", feedId = feedId, title = "Episode 2", itemGuid = "g2"),
@@ -151,7 +151,7 @@ class QueueRepositoryTest {
     @Test
     fun enforceFeedCap_evictsOldestAutoQueuedFromThatFeedOnly() = runTest {
         val otherFeedId = feedRepository.subscribe(Feed(title = "Other Feed"))
-        feedRepository.upsertItems(listOf(FeedItem(id = "other-1", feedId = otherFeedId, title = "Other Episode", itemGuid = "og1")))
+        feedRepository.insertItems(listOf(FeedItem(id = "other-1", feedId = otherFeedId, title = "Other Episode", itemGuid = "og1")))
         queueRepository.addToEnd("ep-1", autoQueued = true)
         queueRepository.addToEnd("ep-2", autoQueued = true)
         queueRepository.addToEnd("ep-3", autoQueued = true)

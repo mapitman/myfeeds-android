@@ -91,7 +91,7 @@ class ReaderViewModelTest {
         )
 
         feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(id = "item-1", feedId = feedId, title = "First", itemGuid = "g1", publishDate = 3L),
                 FeedItem(id = "item-2", feedId = feedId, title = "Second", itemGuid = "g2", publishDate = 2L),
@@ -164,7 +164,7 @@ class ReaderViewModelTest {
 
     @Test
     fun markRead_podcastEpisode_doesNotMarkRead() = runTest(testDispatcher) {
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(
                     id = "episode-1",

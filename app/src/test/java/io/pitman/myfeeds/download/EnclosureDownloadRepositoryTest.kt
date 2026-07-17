@@ -72,7 +72,7 @@ class EnclosureDownloadRepositoryTest {
 
     private suspend fun seedFeedAndItem(enclosureUrl: String?, enclosureType: String? = "audio/mpeg"): Long {
         val id = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(
                     id = "item-1",
