@@ -14,10 +14,11 @@ class QueueRepository @Inject constructor(
 
     suspend fun isQueued(itemId: String): Boolean = queueDao.findItemId(itemId) != null
 
-    /** No-op if already queued -- an episode can only be queued once. */
-    suspend fun addToEnd(itemId: String) {
-        if (queueDao.findItemId(itemId) != null) return
+    /** No-op if already queued -- an episode can only be queued once. Returns whether it was added. */
+    suspend fun addToEnd(itemId: String): Boolean {
+        if (queueDao.findItemId(itemId) != null) return false
         queueDao.insert(QueueEntry(itemId, position = queueDao.maxPosition() + 1, addedAt = System.currentTimeMillis()))
+        return true
     }
 
     /** No-op if already queued -- an episode can only be queued once. */

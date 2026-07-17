@@ -68,12 +68,20 @@ fun FeedRiverScreen(
     val uiState by viewModel.uiState.collectAsState()
     val listFontSize by viewModel.listFontSize.collectAsState()
     val refreshError by viewModel.refreshError.collectAsState()
+    val queueFeedback by viewModel.queueFeedback.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(refreshError) {
         refreshError?.let {
             snackbarHostState.showSnackbar(it)
             viewModel.consumeRefreshError()
+        }
+    }
+
+    LaunchedEffect(queueFeedback) {
+        queueFeedback?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeQueueFeedback()
         }
     }
 

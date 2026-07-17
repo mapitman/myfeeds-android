@@ -52,8 +52,8 @@ class QueueRepositoryTest {
 
     @Test
     fun addToEnd_appendsInOrder() = runTest {
-        queueRepository.addToEnd("ep-1")
-        queueRepository.addToEnd("ep-2")
+        assertTrue(queueRepository.addToEnd("ep-1"))
+        assertTrue(queueRepository.addToEnd("ep-2"))
 
         val queue = queueRepository.observeQueue().first()
         assertEquals(listOf("ep-1", "ep-2"), queue.map { it.item.id })
@@ -63,8 +63,8 @@ class QueueRepositoryTest {
     fun addToEnd_alreadyQueued_isNoOp() = runTest {
         queueRepository.addToEnd("ep-1")
         queueRepository.addToEnd("ep-2")
-        queueRepository.addToEnd("ep-1")
 
+        assertFalse(queueRepository.addToEnd("ep-1"))
         val queue = queueRepository.observeQueue().first()
         assertEquals(listOf("ep-1", "ep-2"), queue.map { it.item.id })
     }
