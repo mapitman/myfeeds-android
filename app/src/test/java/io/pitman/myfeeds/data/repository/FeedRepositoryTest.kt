@@ -103,7 +103,7 @@ class FeedRepositoryTest {
             ),
         )
 
-        val evicted = repository.trimToItemsToKeep(feedId)
+        val evicted = repository.trimToItemsToKeep(feedId, defaultItemsToKeep = 999)
 
         assertEquals(listOf("oldest"), evicted.map { it.id })
         val remaining = repository.observeItems(feedId).first().map { it.id }
@@ -126,7 +126,7 @@ class FeedRepositoryTest {
         )
         db.queueDao().insert(QueueEntry(itemId = "oldest", position = 0, addedAt = 0L))
 
-        val evicted = repository.trimToItemsToKeep(feedId)
+        val evicted = repository.trimToItemsToKeep(feedId, defaultItemsToKeep = 999)
 
         assertEquals(emptyList<String>(), evicted.map { it.id })
         val remaining = repository.observeItems(feedId).first().map { it.id }
@@ -180,8 +180,25 @@ class FeedRepositoryTest {
         val feedId = repository.subscribe(Feed(title = "A Feed", itemsToKeep = 10))
         repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
 
-        val evicted = repository.trimToItemsToKeep(feedId)
+        val evicted = repository.trimToItemsToKeep(feedId, defaultItemsToKeep = 999)
 
         assertEquals(0, evicted.size)
+    }
+
+    @Test
+    fun trimToItemsToKeep_noPerFeedOverride_fallsBackToDefault() = runTest {
+        // issue #82: null itemsToKeep means "use the app-wide default", not "unlimited".
+        val feedId = repository.subscribe(Feed(title = "A Feed", itemsToKeep = null))
+        repository.upsertItems(
+            listOf(
+                FeedItem(id = "oldest", feedId = feedId, itemGuid = "g1", publishDate = 1L),
+                FeedItem(id = "newest", feedId = feedId, itemGuid = "g2", publishDate = 2L),
+            ),
+        )
+
+        val evicted = repository.trimToItemsToKeep(feedId, defaultItemsToKeep = 1)
+
+        assertEquals(listOf("oldest"), evicted.map { it.id })
+        assertEquals(listOf("newest"), repository.observeItems(feedId).first().map { it.id })
     }
 }

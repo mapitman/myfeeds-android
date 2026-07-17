@@ -1,10 +1,14 @@
 package io.pitman.myfeeds.data.feed
 
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
@@ -14,18 +18,25 @@ import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.io.File
 
 /** Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet. */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class FeedUpdateEngineTest {
+    @get:Rule
+    val tempFolder = TemporaryFolder()
+
     private lateinit var server: MockWebServer
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
+    private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var engine: FeedUpdateEngine
 
     private fun rssWithItems(vararg items: Pair<String, String>): String {
@@ -58,7 +69,11 @@ class FeedUpdateEngineTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
-        engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository)
+        val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
+            produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
+        )
+        settingsDataStore = SettingsDataStore(dataStore)
+        engine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository, settingsDataStore)
     }
 
     @After
@@ -147,6 +162,21 @@ class FeedUpdateEngineTest {
     @Test
     fun updateFeed_trimsToItemsToKeepAfterPersisting() = runTest {
         val feed = subscribeFeed(itemsToKeep = 1)
+        server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First", "guid-2" to "Second")))
+
+        val result = engine.updateFeed(feed)
+
+        assertTrue(result is FeedUpdateResult.Success)
+        assertEquals(1, (result as FeedUpdateResult.Success).evictedItemIds.size)
+        assertEquals(1, repository.observeItems(feed.id).first().size)
+    }
+
+    @Test
+    fun updateFeed_noPerFeedItemsToKeep_fallsBackToGlobalMaxArticles() = runTest {
+        // issue #82: null itemsToKeep means "use the app-wide default" (per Feed Properties'
+        // display), not "unlimited" -- a feed relying on the global default was never trimmed.
+        settingsDataStore.setMaxArticles(1)
+        val feed = subscribeFeed(itemsToKeep = null)
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First", "guid-2" to "Second")))
 
         val result = engine.updateFeed(feed)

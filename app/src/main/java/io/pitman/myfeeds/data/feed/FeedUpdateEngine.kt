@@ -3,9 +3,11 @@ package io.pitman.myfeeds.data.feed
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import java.time.Instant
@@ -22,6 +24,7 @@ import javax.inject.Inject
 class FeedUpdateEngine @Inject constructor(
     private val feedFetcher: FeedFetcher,
     private val feedRepository: FeedRepository,
+    private val settingsDataStore: SettingsDataStore,
 ) {
     suspend fun updateFeed(feed: Feed): FeedUpdateResult {
         val feedUrl = feed.feedUrl
@@ -72,7 +75,8 @@ class FeedUpdateEngine @Inject constructor(
         feedRepository.updateFeed(
             feed.copy(lastGet = Instant.now().toEpochMilli(), imageUrl = parsed.imageUrl ?: feed.imageUrl),
         )
-        val evicted = feedRepository.trimToItemsToKeep(feed.id)
+        val defaultItemsToKeep = settingsDataStore.settings.first().maxArticles
+        val evicted = feedRepository.trimToItemsToKeep(feed.id, defaultItemsToKeep)
 
         return FeedUpdateResult.Success(feedId = feed.id, newItemIds = newItemIds, evictedItemIds = evicted.map { it.id })
     }
