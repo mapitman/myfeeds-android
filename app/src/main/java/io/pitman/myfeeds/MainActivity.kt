@@ -39,6 +39,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.pitman.myfeeds.addfeed.AddFeedScreen
 import io.pitman.myfeeds.articlelist.ArticleListScreen
 import io.pitman.myfeeds.data.settings.SettingsDataStore
+import io.pitman.myfeeds.downloads.DownloadsScreen
 import io.pitman.myfeeds.feedlist.FeedListScreen
 import io.pitman.myfeeds.feedproperties.FeedPropertiesScreen
 import io.pitman.myfeeds.feedriver.FeedRiverScreen
@@ -130,7 +131,11 @@ class MainActivity : ComponentActivity() {
                                     onQueueClick = { navController.navigate("queue") },
                                     onFeedLongClick = { feedId -> navController.navigate("feedProperties/$feedId") },
                                     onReadAllFeedsClick = { navController.navigate("feedRiver") },
+                                    onDownloadsClick = { navController.navigate("downloads") },
                                 )
+                            }
+                            composable("downloads") {
+                                DownloadsScreen(onBack = { navController.popBackStack() })
                             }
                             composable("feedRiver") {
                                 FeedRiverScreen(

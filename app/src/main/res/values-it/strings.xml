@@ -26,6 +26,7 @@
     <string name="cd_add_to_queue">Aggiungi a In arrivo</string>
     <string name="cd_open_queue">In arrivo</string>
     <string name="cd_remove_from_queue">Rimuovi dalla coda</string>
+    <string name="cd_open_downloads">Download</string>
     <string name="cd_reorder_queue_item">Trascina per riordinare</string>
 
     <!-- Feed list -->
@@ -54,6 +55,11 @@
     <string name="queue_empty">Niente in coda</string>
     <string name="queue_feedback_added">Aggiunto a In arrivo</string>
     <string name="queue_feedback_already_queued">Già in In arrivo</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">Download</string>
+    <string name="downloads_empty">Nessun download</string>
+    <string name="downloads_item_subtitle">%1$s • %2$s</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">Nessun articolo da mostrare</string>

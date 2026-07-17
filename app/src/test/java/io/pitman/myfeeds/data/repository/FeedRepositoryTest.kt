@@ -201,4 +201,21 @@ class FeedRepositoryTest {
         assertEquals(listOf("oldest"), evicted.map { it.id })
         assertEquals(listOf("newest"), repository.observeItems(feedId).first().map { it.id })
     }
+
+    @Test
+    fun observeDownloadedItems_includesInProgressAndCompletedOnly() = runTest {
+        val feedId = repository.subscribe(Feed(title = "A Feed"))
+        repository.upsertItems(
+            listOf(
+                FeedItem(id = "not-downloaded", feedId = feedId, itemGuid = "g1"),
+                FeedItem(id = "in-progress", feedId = feedId, itemGuid = "g2", downloadedBytes = 500L),
+                FeedItem(id = "completed", feedId = feedId, itemGuid = "g3", downloadedFilePath = "/tmp/completed.mp3"),
+            ),
+        )
+
+        val downloaded = repository.observeDownloadedItems().first()
+
+        assertEquals(setOf("in-progress", "completed"), downloaded.map { it.item.id }.toSet())
+        assertTrue(downloaded.all { it.feedTitle == "A Feed" })
+    }
 }

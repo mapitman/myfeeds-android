@@ -26,6 +26,7 @@
     <string name="cd_add_to_queue">Zu \"Als Nächstes\" hinzufügen</string>
     <string name="cd_open_queue">Als Nächstes</string>
     <string name="cd_remove_from_queue">Aus der Warteschlange entfernen</string>
+    <string name="cd_open_downloads">Downloads</string>
     <string name="cd_reorder_queue_item">Zum Sortieren ziehen</string>
 
     <!-- Feed list -->
@@ -54,6 +55,11 @@
     <string name="queue_empty">Nichts in der Warteschlange</string>
     <string name="queue_feedback_added">Zu \"Als Nächstes\" hinzugefügt</string>
     <string name="queue_feedback_already_queued">Bereits in \"Als Nächstes\"</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">Downloads</string>
+    <string name="downloads_empty">Keine Downloads</string>
+    <string name="downloads_item_subtitle">%1$s • %2$s</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">Kein Artikel vorhanden</string>
