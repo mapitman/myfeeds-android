@@ -68,7 +68,7 @@ class DownloadsViewModelTest {
     @Test
     fun uiState_completedDownload_usesFileSizeOnDisk() = runTest {
         val file = tempFolder.newFile("episode.mp3").apply { writeBytes(ByteArray(1024)) }
-        repository.upsertItems(
+        repository.insertItems(
             listOf(FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1", downloadedFilePath = file.absolutePath)),
         )
 
@@ -82,7 +82,7 @@ class DownloadsViewModelTest {
 
     @Test
     fun uiState_inProgressDownload_usesDownloadedBytes() = runTest {
-        repository.upsertItems(
+        repository.insertItems(
             listOf(FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1", downloadedBytes = 512L)),
         )
 
@@ -96,7 +96,7 @@ class DownloadsViewModelTest {
     @Test
     fun delete_removesDownloadAndClearsState() = runTest {
         val file = tempFolder.newFile("episode.mp3").apply { writeBytes(ByteArray(1024)) }
-        repository.upsertItems(
+        repository.insertItems(
             listOf(FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1", downloadedFilePath = file.absolutePath)),
         )
         val item = viewModel.uiState.first { it.episodes.isNotEmpty() }.episodes.single().item

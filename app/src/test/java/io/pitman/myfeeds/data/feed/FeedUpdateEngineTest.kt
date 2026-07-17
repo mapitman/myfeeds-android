@@ -8,6 +8,7 @@ import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
@@ -36,6 +37,7 @@ class FeedUpdateEngineTest {
     private lateinit var server: MockWebServer
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
+    private lateinit var queueRepository: QueueRepository
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var engine: FeedUpdateEngine
 
@@ -69,6 +71,7 @@ class FeedUpdateEngineTest {
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
+        queueRepository = QueueRepository(db.queueDao())
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
@@ -195,6 +198,23 @@ class FeedUpdateEngineTest {
 
         assertTrue(result is FeedUpdateResult.Failure)
         assertEquals(0, repository.observeItems(feed.id).first().size)
+    }
+
+    @Test
+    fun updateFeed_secondRun_doesNotDropAlreadyQueuedItemFromNextUp() = runTest {
+        // issue #153: re-persisting an already-known item via INSERT OR REPLACE fired
+        // queue_entries' ON DELETE CASCADE even though the item's id didn't change, silently
+        // dropping it from Next Up on every subsequent refresh.
+        val feed = subscribeFeed()
+        server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First")))
+        engine.updateFeed(feed)
+        val itemId = repository.observeItems(feed.id).first().first { it.itemGuid == "guid-1" }.id
+        queueRepository.addToEnd(itemId)
+
+        server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First")))
+        engine.updateFeed(feed)
+
+        assertTrue(queueRepository.isQueued(itemId))
     }
 
     @Test

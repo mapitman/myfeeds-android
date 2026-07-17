@@ -140,7 +140,7 @@ class SettingsViewModelTest {
     @Test
     fun removeAllFeeds_deletesAllFeedsAndCascadesItems() = runTest(testDispatcher, timeout = 120.seconds) {
         val feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
+        repository.insertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
 
         viewModel.removeAllFeeds()
 
@@ -152,7 +152,7 @@ class SettingsViewModelTest {
     @Test
     fun clearPodcasts_clearsEnclosurePositions() = runTest(testDispatcher, timeout = 120.seconds) {
         val feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1", enclosurePosition = 42.0)),
         )
 

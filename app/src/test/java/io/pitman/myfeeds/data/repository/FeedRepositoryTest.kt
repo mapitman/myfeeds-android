@@ -42,7 +42,7 @@ class FeedRepositoryTest {
     fun unsubscribe_removesFeedAndCascadesItems() = runTest {
         val feed = Feed(title = "A Feed")
         val feedId = repository.subscribe(feed)
-        repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1")))
+        repository.insertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1")))
 
         repository.unsubscribe(feed.copy(id = feedId))
 
@@ -53,7 +53,7 @@ class FeedRepositoryTest {
     @Test
     fun markRead_updatesUnreadCounts() = runTest {
         val feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1"),
                 FeedItem(id = "item-2", feedId = feedId, itemGuid = "guid-2"),
@@ -69,7 +69,7 @@ class FeedRepositoryTest {
     @Test
     fun markAllRead_clearsUnreadCountForFeed() = runTest {
         val feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1"),
                 FeedItem(id = "item-2", feedId = feedId, itemGuid = "guid-2"),
@@ -84,7 +84,7 @@ class FeedRepositoryTest {
     @Test
     fun findByItemGuid_locatesExistingItemForDedup() = runTest {
         val feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1")))
+        repository.insertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "guid-1")))
 
         val found = repository.findByItemGuid(feedId, "guid-1")
 
@@ -95,7 +95,7 @@ class FeedRepositoryTest {
     @Test
     fun trimToItemsToKeep_deletesOldestBeyondLimitAndReturnsEvicted() = runTest {
         val feedId = repository.subscribe(Feed(title = "A Feed", itemsToKeep = 2))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(id = "oldest", feedId = feedId, itemGuid = "g1", publishDate = 1L),
                 FeedItem(id = "middle", feedId = feedId, itemGuid = "g2", publishDate = 2L),
@@ -117,7 +117,7 @@ class FeedRepositoryTest {
         // because trimToItemsToKeep deleted the underlying FeedItem, which cascade-deleted the
         // queue_entries row too.
         val feedId = repository.subscribe(Feed(title = "A Feed", itemsToKeep = 2))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(id = "oldest", feedId = feedId, itemGuid = "g1", publishDate = 1L),
                 FeedItem(id = "middle", feedId = feedId, itemGuid = "g2", publishDate = 2L),
@@ -136,7 +136,7 @@ class FeedRepositoryTest {
     @Test
     fun setEnclosurePosition_persistsAndClears() = runTest {
         val feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
+        repository.insertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
 
         repository.setEnclosurePosition("item-1", 42.5)
         assertEquals(42.5, repository.getItem("item-1")?.enclosurePosition)
@@ -152,7 +152,7 @@ class FeedRepositoryTest {
         // e.g. Windows Central/Sky News: an ordinary article whose feed sets <enclosure> on a
         // featured image, not an audio episode -- shouldn't count as a podcast feed.
         val imageEnclosureFeedId = repository.subscribe(Feed(title = "Image Enclosure Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(
                     id = "ep-1",
@@ -178,7 +178,7 @@ class FeedRepositoryTest {
     @Test
     fun trimToItemsToKeep_noOpWhenUnderLimit() = runTest {
         val feedId = repository.subscribe(Feed(title = "A Feed", itemsToKeep = 10))
-        repository.upsertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
+        repository.insertItems(listOf(FeedItem(id = "item-1", feedId = feedId, itemGuid = "g1")))
 
         val evicted = repository.trimToItemsToKeep(feedId, defaultItemsToKeep = 999)
 
@@ -189,7 +189,7 @@ class FeedRepositoryTest {
     fun trimToItemsToKeep_noPerFeedOverride_fallsBackToDefault() = runTest {
         // issue #82: null itemsToKeep means "use the app-wide default", not "unlimited".
         val feedId = repository.subscribe(Feed(title = "A Feed", itemsToKeep = null))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(id = "oldest", feedId = feedId, itemGuid = "g1", publishDate = 1L),
                 FeedItem(id = "newest", feedId = feedId, itemGuid = "g2", publishDate = 2L),
@@ -205,7 +205,7 @@ class FeedRepositoryTest {
     @Test
     fun observeDownloadedItems_includesInProgressAndCompletedOnly() = runTest {
         val feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(id = "not-downloaded", feedId = feedId, itemGuid = "g1"),
                 FeedItem(id = "in-progress", feedId = feedId, itemGuid = "g2", downloadedBytes = 500L),

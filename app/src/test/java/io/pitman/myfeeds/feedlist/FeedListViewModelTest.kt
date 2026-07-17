@@ -98,7 +98,7 @@ class FeedListViewModelTest {
     fun uiState_splitsPodcastAndOtherFeedsIntoFixedSections() = runTest(testDispatcher) {
         val podcastFeedId = repository.subscribe(Feed(title = "Podcast Feed"))
         val articleFeedId = repository.subscribe(Feed(title = "Article Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(
                     id = "ep-1",

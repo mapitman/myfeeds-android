@@ -104,7 +104,7 @@ class ArticleListViewModelTest {
         autoQueueAndDownloadEnforcer = AutoQueueAndDownloadEnforcer(repository, downloadRepository, queueRepository)
 
         feedId = repository.subscribe(Feed(title = "A Feed"))
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(id = "unread-1", feedId = feedId, title = "Unread One", itemGuid = "g1", isRead = false),
                 FeedItem(id = "read-1", feedId = feedId, title = "Read One", itemGuid = "g2", isRead = true),
@@ -262,7 +262,7 @@ class ArticleListViewModelTest {
 
     @Test
     fun defaultState_podcastFeed_isPodcastFeed() = runTest(testDispatcher) {
-        repository.upsertItems(
+        repository.insertItems(
             listOf(
                 FeedItem(
                     id = "episode-1",
