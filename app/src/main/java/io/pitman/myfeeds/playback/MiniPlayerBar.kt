@@ -105,13 +105,23 @@ fun MiniPlayerBar(
                             ),
                     )
                 }
-                Text(
-                    text = playbackState.title.orEmpty(),
-                    style = MaterialTheme.typography.bodyMedium,
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                )
+                Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                    Text(
+                        text = playbackState.title.orEmpty(),
+                        style = MaterialTheme.typography.bodyMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    if (playbackState.feedTitle != null) {
+                        Text(
+                            text = playbackState.feedTitle,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
             }
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
