@@ -126,6 +126,15 @@ fun MiniPlayerBar(
                             overflow = TextOverflow.Ellipsis,
                         )
                     }
+                    if (hasChapters) {
+                        Text(
+                            text = chapterLabel(playbackState),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.primary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
                 }
             }
             Row(
@@ -233,13 +242,23 @@ fun ExpandedPlayerBar(
                                 ),
                         )
                     }
-                    Text(
-                        text = playbackState.title.orEmpty(),
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
-                    )
+                    Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
+                        Text(
+                            text = playbackState.title.orEmpty(),
+                            style = MaterialTheme.typography.titleMedium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                        if (hasChapters) {
+                            Text(
+                                text = chapterLabel(playbackState),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
+                    }
                 }
                 Slider(
                     value = playbackState.positionMs.toFloat(),
@@ -296,6 +315,18 @@ fun ExpandedPlayerBar(
         }
     }
     }
+}
+
+/** "Chapter N of M[: Title]" (issue #95), shared by [MiniPlayerBar] and [ExpandedPlayerBar]. */
+@Composable
+private fun chapterLabel(playbackState: PlaybackUiState): String {
+    val label = stringResource(
+        R.string.reader_chapter_label,
+        playbackState.currentChapterIndex + 1,
+        playbackState.chapters.size,
+    )
+    val title = playbackState.currentChapter?.title
+    return if (title != null) "$label: $title" else label
 }
 
 private fun formatDuration(millis: Long): String {
