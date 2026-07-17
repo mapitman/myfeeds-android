@@ -1,5 +1,7 @@
 package io.pitman.myfeeds
 
+import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -82,9 +84,15 @@ class MainActivity : ComponentActivity() {
         // other trigger is FeedRefreshWorker completing a scheduled background refresh.
         lifecycleScope.launch { UnreadWidget().updateAll(applicationContext) }
 
+        // issue #150: sharing a URL from another app (ACTION_SEND) lands here to add it as a feed,
+        // the same way tapping a widget feed lands on that feed's article list.
+        val sharedUrl = intent.takeIf { it.action == Intent.ACTION_SEND && it.type == "text/plain" }
+            ?.getStringExtra(Intent.EXTRA_TEXT)
+
         val startDestination = intent.getLongExtra(WIDGET_FEED_ID_EXTRA, -1L)
             .takeIf { it >= 0 }
             ?.let { feedId -> "articleList/$feedId" }
+            ?: sharedUrl?.let { "addFeed?sharedUrl=${Uri.encode(it)}" }
             ?: "feedList"
 
         setContent {
@@ -173,8 +181,18 @@ class MainActivity : ComponentActivity() {
                             composable("settings") {
                                 SettingsScreen(onBack = { navController.popBackStack() })
                             }
-                            composable("addFeed") {
+                            composable(
+                                "addFeed?sharedUrl={sharedUrl}",
+                                arguments = listOf(
+                                    navArgument("sharedUrl") {
+                                        type = NavType.StringType
+                                        nullable = true
+                                        defaultValue = null
+                                    },
+                                ),
+                            ) { backStackEntry ->
                                 AddFeedScreen(
+                                    initialUrl = backStackEntry.arguments?.getString("sharedUrl"),
                                     onDone = { navController.popBackStack() },
                                     onBack = { navController.popBackStack() },
                                 )
