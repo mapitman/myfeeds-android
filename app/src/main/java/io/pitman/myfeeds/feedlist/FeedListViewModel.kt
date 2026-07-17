@@ -102,7 +102,7 @@ class FeedListViewModel @Inject constructor(
             isRefreshing.value = true
             val feeds = feedRepository.observeAllFeeds().first()
             val results = feedUpdateEngine.updateFeeds(feeds)
-            autoQueueAndDownloadEnforcer.apply(feeds, results)
+            autoQueueAndDownloadEnforcer.apply(results)
             if (results.any { it is FeedUpdateResult.Failure }) {
                 _refreshError.value = context.getString(R.string.feed_list_refresh_error)
             }

@@ -58,7 +58,7 @@ class FeedRefreshWorker @AssistedInject constructor(
             Log.w(TAG, "Feed refresh failed: ${failure.message}")
         }
 
-        autoQueueAndDownloadEnforcer.apply(feeds, results)
+        autoQueueAndDownloadEnforcer.apply(results)
 
         UnreadWidget().updateAll(applicationContext)
 
