@@ -60,6 +60,15 @@ class ReaderViewModel @Inject constructor(
 
     val playbackState: StateFlow<PlaybackUiState> = playbackController.uiState
 
+    /**
+     * Item IDs currently in the "Next Up" queue, kept live so the reader's per-page toggle
+     * (issue #160) reflects queue changes made anywhere (this screen, the queue screen, etc.)
+     * without needing to key a lookup on the pager's current item.
+     */
+    val queuedItemIds: StateFlow<Set<String>> = queueRepository.observeQueue()
+        .map { queued -> queued.map { it.item.id }.toSet() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptySet())
+
     val articleFontSize: StateFlow<FontSize> = settingsDataStore.settings
         .map { it.articleFontSize }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FontSize.NORMAL)
@@ -121,6 +130,11 @@ class ReaderViewModel @Inject constructor(
                 if (added) R.string.queue_feedback_added else R.string.queue_feedback_already_queued,
             )
         }
+    }
+
+    /** Removes an episode from the "Next Up" queue (issue #160 toggle, tapping again removes it). */
+    fun removeFromQueue(itemId: String) {
+        viewModelScope.launch { queueRepository.remove(itemId) }
     }
 
     fun consumeQueueFeedback() {

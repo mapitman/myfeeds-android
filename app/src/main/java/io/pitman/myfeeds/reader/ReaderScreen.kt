@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.PlaylistAddCheck
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Replay
 import androidx.compose.material.icons.filled.Share
@@ -97,6 +98,7 @@ fun ReaderScreen(
     val playbackState by viewModel.playbackState.collectAsState()
     val articleFontSize by viewModel.articleFontSize.collectAsState()
     val queueFeedback by viewModel.queueFeedback.collectAsState()
+    val queuedItemIds by viewModel.queuedItemIds.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
 
@@ -154,8 +156,16 @@ fun ReaderScreen(
                 },
                 actions = {
                     if (currentItem?.isPodcastEpisode == true) {
-                        IconButton(onClick = { viewModel.addToQueue(currentItem.id) }) {
-                            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = stringResource(R.string.cd_add_to_queue))
+                        val isQueued = currentItem.id in queuedItemIds
+                        IconButton(onClick = {
+                            if (isQueued) viewModel.removeFromQueue(currentItem.id) else viewModel.addToQueue(currentItem.id)
+                        }) {
+                            Icon(
+                                if (isQueued) Icons.AutoMirrored.Filled.PlaylistAddCheck else Icons.AutoMirrored.Filled.PlaylistAdd,
+                                contentDescription = stringResource(
+                                    if (isQueued) R.string.cd_remove_from_next_up else R.string.cd_add_to_queue,
+                                ),
+                            )
                         }
                     }
                     IconButton(onClick = onQueueClick) {
