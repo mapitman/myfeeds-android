@@ -54,6 +54,7 @@ import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.settings.scaleFactor
+import io.pitman.myfeeds.ui.components.SwipeToToggleReadBox
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -176,17 +177,34 @@ fun ArticleListScreen(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(uiState.articles, key = { it.id }) { article ->
-                            ArticleRow(
-                                article = article,
-                                selected = article.id in uiState.selectedIds,
-                                selectionMode = uiState.isSelectionMode,
-                                titleFontScale = listFontSize.scaleFactor,
-                                onClick = {
-                                    if (uiState.isSelectionMode) viewModel.toggleSelection(article.id) else onArticleClick(article.id)
-                                },
-                                onLongClick = { viewModel.toggleSelection(article.id) },
-                                onAddToQueue = { viewModel.addToQueue(article.id) },
-                            )
+                            // Selection mode already has its own per-row tap target (the
+                            // checkbox); swiping to toggle read state there would fight with it.
+                            if (uiState.isSelectionMode) {
+                                ArticleRow(
+                                    article = article,
+                                    selected = article.id in uiState.selectedIds,
+                                    selectionMode = true,
+                                    titleFontScale = listFontSize.scaleFactor,
+                                    onClick = { viewModel.toggleSelection(article.id) },
+                                    onLongClick = { viewModel.toggleSelection(article.id) },
+                                    onAddToQueue = { viewModel.addToQueue(article.id) },
+                                )
+                            } else {
+                                SwipeToToggleReadBox(
+                                    isRead = article.isRead,
+                                    onToggleRead = { viewModel.toggleRead(article) },
+                                ) {
+                                    ArticleRow(
+                                        article = article,
+                                        selected = false,
+                                        selectionMode = false,
+                                        titleFontScale = listFontSize.scaleFactor,
+                                        onClick = { onArticleClick(article.id) },
+                                        onLongClick = { viewModel.toggleSelection(article.id) },
+                                        onAddToQueue = { viewModel.addToQueue(article.id) },
+                                    )
+                                }
+                            }
                         }
                     }
                 }

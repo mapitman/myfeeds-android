@@ -132,6 +132,11 @@ class ArticleListViewModel @Inject constructor(
         }
     }
 
+    /** Swipe-to-toggle on a single row (issue #120), independent of multi-select. */
+    fun toggleRead(item: FeedItem) {
+        viewModelScope.launch { feedRepository.markRead(item.id, !item.isRead) }
+    }
+
     fun deleteSelected() {
         val ids = selectedIds.value
         viewModelScope.launch {

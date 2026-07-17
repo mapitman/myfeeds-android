@@ -55,6 +55,7 @@ import io.pitman.myfeeds.articlelist.ArticleDateFormatter
 import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.settings.scaleFactor
+import io.pitman.myfeeds.ui.components.SwipeToToggleReadBox
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -164,22 +165,36 @@ fun FeedRiverScreen(
                 } else {
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(uiState.articles, key = { it.id }) { article ->
-                            FeedRiverArticleRow(
-                                article = article,
-                                feedTitle = uiState.feedTitles[article.feedId].orEmpty(),
-                                selected = article.id in uiState.selectedIds,
-                                selectionMode = uiState.isSelectionMode,
-                                titleFontScale = listFontSize.scaleFactor,
-                                onClick = {
-                                    if (uiState.isSelectionMode) {
-                                        viewModel.toggleSelection(article.id)
-                                    } else {
-                                        onArticleClick(article.feedId, article.id)
-                                    }
-                                },
-                                onLongClick = { viewModel.toggleSelection(article.id) },
-                                onAddToQueue = { viewModel.addToQueue(article.id) },
-                            )
+                            // Selection mode already has its own per-row tap target (the
+                            // checkbox); swiping to toggle read state there would fight with it.
+                            if (uiState.isSelectionMode) {
+                                FeedRiverArticleRow(
+                                    article = article,
+                                    feedTitle = uiState.feedTitles[article.feedId].orEmpty(),
+                                    selected = article.id in uiState.selectedIds,
+                                    selectionMode = true,
+                                    titleFontScale = listFontSize.scaleFactor,
+                                    onClick = { viewModel.toggleSelection(article.id) },
+                                    onLongClick = { viewModel.toggleSelection(article.id) },
+                                    onAddToQueue = { viewModel.addToQueue(article.id) },
+                                )
+                            } else {
+                                SwipeToToggleReadBox(
+                                    isRead = article.isRead,
+                                    onToggleRead = { viewModel.toggleRead(article) },
+                                ) {
+                                    FeedRiverArticleRow(
+                                        article = article,
+                                        feedTitle = uiState.feedTitles[article.feedId].orEmpty(),
+                                        selected = false,
+                                        selectionMode = false,
+                                        titleFontScale = listFontSize.scaleFactor,
+                                        onClick = { onArticleClick(article.feedId, article.id) },
+                                        onLongClick = { viewModel.toggleSelection(article.id) },
+                                        onAddToQueue = { viewModel.addToQueue(article.id) },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
