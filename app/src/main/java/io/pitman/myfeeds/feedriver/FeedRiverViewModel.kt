@@ -54,9 +54,13 @@ class FeedRiverViewModel @Inject constructor(
     private val selectedIds = MutableStateFlow<Set<String>>(emptySet())
     private val isRefreshing = MutableStateFlow(false)
     private val _refreshError = MutableStateFlow<String?>(null)
+    private val _queueFeedback = MutableStateFlow<String?>(null)
 
     /** One-shot refresh-failure message for a Snackbar; cleared via [consumeRefreshError]. */
     val refreshError: StateFlow<String?> = _refreshError
+
+    /** One-shot add-to-queue confirmation for a Snackbar (issue #126); cleared via [consumeQueueFeedback]. */
+    val queueFeedback: StateFlow<String?> = _queueFeedback
 
     private val feedIds: StateFlow<List<Long>> = combine(
         feedRepository.observeAllFeeds(),
@@ -143,6 +147,15 @@ class FeedRiverViewModel @Inject constructor(
     }
 
     fun addToQueue(itemId: String) {
-        viewModelScope.launch { queueRepository.addToEnd(itemId) }
+        viewModelScope.launch {
+            val added = queueRepository.addToEnd(itemId)
+            _queueFeedback.value = context.getString(
+                if (added) R.string.queue_feedback_added else R.string.queue_feedback_already_queued,
+            )
+        }
+    }
+
+    fun consumeQueueFeedback() {
+        _queueFeedback.value = null
     }
 }

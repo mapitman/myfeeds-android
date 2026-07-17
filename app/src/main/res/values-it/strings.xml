@@ -51,6 +51,8 @@
     <!-- Next Up queue -->
     <string name="queue_title">In arrivo</string>
     <string name="queue_empty">Niente in coda</string>
+    <string name="queue_feedback_added">Aggiunto a In arrivo</string>
+    <string name="queue_feedback_already_queued">Già in In arrivo</string>
 
     <!-- Reader -->
     <string name="reader_no_article_to_show">Nessun articolo da mostrare</string>
