@@ -127,6 +127,11 @@ fun SettingsScreen(
                 viewModel::setAllowPodcastDownloadOnCellular,
             )
             SwitchRow(stringResource(R.string.settings_allow_streaming), settings.allowPodcastStreaming, viewModel::setAllowPodcastStreaming)
+            SwitchRow(
+                stringResource(R.string.settings_auto_delete_finished_downloads),
+                settings.autoDeleteFinishedDownloads,
+                viewModel::setAutoDeleteFinishedDownloads,
+            )
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             SectionHeader(stringResource(R.string.settings_section_actions))

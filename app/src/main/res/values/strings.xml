@@ -80,6 +80,7 @@
     <string name="settings_download_on_battery">Download on battery</string>
     <string name="settings_download_on_cellular">Download on cellular</string>
     <string name="settings_allow_streaming">Allow streaming</string>
+    <string name="settings_auto_delete_finished_downloads">Auto-delete downloads once played</string>
     <string name="settings_about_description">An RSS/Atom feed reader and podcast client.</string>
     <string name="settings_export_opml">Export OPML</string>
     <string name="settings_export_feeds_chooser_title">Export feeds</string>

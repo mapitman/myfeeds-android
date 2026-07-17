@@ -75,6 +75,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsDataStore.setAllowPodcastStreaming(value) }
     }
 
+    fun setAutoDeleteFinishedDownloads(value: Boolean) {
+        viewModelScope.launch { settingsDataStore.setAutoDeleteFinishedDownloads(value) }
+    }
+
     fun setNotifyOnNewItems(value: Boolean) {
         viewModelScope.launch { settingsDataStore.setNotifyOnNewItems(value) }
     }
