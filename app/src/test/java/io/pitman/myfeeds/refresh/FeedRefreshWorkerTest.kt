@@ -11,6 +11,7 @@ import androidx.work.ListenableWorker
 import androidx.work.WorkerFactory
 import androidx.work.WorkerParameters
 import androidx.work.testing.TestListenableWorkerBuilder
+import io.pitman.myfeeds.data.feed.AutoQueueAndDownloadEnforcer
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
@@ -299,8 +300,7 @@ class FeedRefreshWorkerTest {
             workerParameters,
             repository,
             engine,
-            downloadRepository,
-            queueRepository,
+            AutoQueueAndDownloadEnforcer(repository, downloadRepository, queueRepository),
             settingsDataStore,
         )
     }

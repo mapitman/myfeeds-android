@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.pitman.myfeeds.R
+import io.pitman.myfeeds.data.feed.AutoQueueAndDownloadEnforcer
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.feed.FeedUpdateResult
 import io.pitman.myfeeds.data.local.FeedItem
@@ -44,6 +45,7 @@ class ArticleListViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val feedRepository: FeedRepository,
     private val feedUpdateEngine: FeedUpdateEngine,
+    private val autoQueueAndDownloadEnforcer: AutoQueueAndDownloadEnforcer,
     private val queueRepository: QueueRepository,
     settingsDataStore: SettingsDataStore,
     @ApplicationContext private val context: Context,
@@ -93,8 +95,12 @@ class ArticleListViewModel @Inject constructor(
         viewModelScope.launch {
             isRefreshing.value = true
             val feed = feedRepository.getFeed(feedId)
-            if (feed != null && feedUpdateEngine.updateFeed(feed) is FeedUpdateResult.Failure) {
-                _refreshError.value = context.getString(R.string.feed_list_refresh_error)
+            if (feed != null) {
+                val result = feedUpdateEngine.updateFeed(feed)
+                autoQueueAndDownloadEnforcer.apply(listOf(feed), listOf(result))
+                if (result is FeedUpdateResult.Failure) {
+                    _refreshError.value = context.getString(R.string.feed_list_refresh_error)
+                }
             }
             isRefreshing.value = false
         }

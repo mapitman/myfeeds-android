@@ -7,6 +7,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.data.feed.AutoQueueAndDownloadEnforcer
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
@@ -15,6 +16,8 @@ import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
+import io.pitman.myfeeds.download.DownloadScheduling
+import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
@@ -23,6 +26,8 @@ import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -53,6 +58,7 @@ class ArticleListViewModelTest {
     private lateinit var queueRepository: QueueRepository
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var feedUpdateEngine: FeedUpdateEngine
+    private lateinit var autoQueueAndDownloadEnforcer: AutoQueueAndDownloadEnforcer
     private lateinit var context: android.content.Context
     private var feedId: Long = 0
     private var nextViewModelKey = 0
@@ -69,6 +75,7 @@ class ArticleListViewModelTest {
             savedStateHandle = SavedStateHandle(mapOf("feedId" to feedId)),
             feedRepository = repository,
             feedUpdateEngine = feedUpdateEngine,
+            autoQueueAndDownloadEnforcer = autoQueueAndDownloadEnforcer,
             queueRepository = queueRepository,
             settingsDataStore = settingsDataStore,
             context = context,
@@ -86,6 +93,15 @@ class ArticleListViewModelTest {
         )
         settingsDataStore = SettingsDataStore(dataStore)
         feedUpdateEngine = FeedUpdateEngine(FeedFetcher(OkHttpClient()), repository, settingsDataStore)
+        val downloadRepository = EnclosureDownloadRepository(
+            feedRepository = repository,
+            downloadScheduling = object : DownloadScheduling {
+                override fun enqueueDownload(itemId: String, allowCellular: Boolean, allowOnBattery: Boolean) {}
+                override fun cancelDownload(itemId: String) {}
+            },
+            settingsDataStore = settingsDataStore,
+        )
+        autoQueueAndDownloadEnforcer = AutoQueueAndDownloadEnforcer(repository, downloadRepository, queueRepository)
 
         feedId = repository.subscribe(Feed(title = "A Feed"))
         repository.upsertItems(
@@ -181,6 +197,46 @@ class ArticleListViewModelTest {
 
         assertNotNull(viewModel.refreshError.first { it != null })
         assertFalse(viewModel.uiState.value.isRefreshing)
+    }
+
+    @Test
+    fun refresh_autoQueueEnabledFeed_queuesNewEpisode() = runTest(testDispatcher) {
+        // issue #88: manual pull-to-refresh should trigger auto-queue, not just the background worker.
+        val server = MockWebServer()
+        server.start()
+        try {
+            val url = server.url("/feed.xml").toString()
+            feedId = repository.subscribe(Feed(title = "A Podcast", feedUrl = url, autoQueueEnabled = true))
+            server.enqueue(
+                MockResponse().setResponseCode(200).setBody(
+                    """
+                    <?xml version="1.0" encoding="UTF-8"?>
+                    <rss version="2.0"><channel>
+                      <title>A Podcast</title>
+                      <link>https://example.com</link>
+                      <description>desc</description>
+                      <item>
+                        <title>Episode 1</title>
+                        <link>https://example.com/1</link>
+                        <guid>guid-1</guid>
+                        <description>Body</description>
+                        <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+                        <enclosure url="https://example.com/ep1.mp3" type="audio/mpeg" length="1" />
+                      </item>
+                    </channel></rss>
+                    """.trimIndent(),
+                ),
+            )
+            val viewModel = createViewModel()
+            viewModel.uiState.first { it.feedTitle == "A Podcast" }
+
+            viewModel.refresh()
+
+            val queue = queueRepository.observeQueue().first { it.isNotEmpty() }
+            assertEquals(feedId, queue.single().item.feedId)
+        } finally {
+            server.shutdown()
+        }
     }
 
     @Test
