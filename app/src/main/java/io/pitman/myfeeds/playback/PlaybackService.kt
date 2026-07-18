@@ -13,6 +13,7 @@ import dagger.hilt.android.AndroidEntryPoint
 import io.pitman.myfeeds.MainActivity
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.repository.FeedRepository
+import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
 import kotlinx.coroutines.CoroutineScope
@@ -45,10 +46,18 @@ class PlaybackService : MediaSessionService() {
     @Inject
     lateinit var settingsDataStore: SettingsDataStore
 
+    @Inject
+    lateinit var queueRepository: QueueRepository
+
     private lateinit var player: ExoPlayer
     private var mediaSession: MediaSession? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var positionSaveJob: Job? = null
+
+    // Guards against onPlaybackStateChanged(STATE_ENDED) firing again (issue #125/#127's original
+    // failure mode, now guarded here instead of PlaybackController -- issue #179) before the
+    // coroutine handling the first call has advanced the player off STATE_ENDED.
+    private var advancingFromEnded = false
 
     @OptIn(markerClass = [UnstableApi::class])
     override fun onCreate() {
@@ -107,9 +116,11 @@ class PlaybackService : MediaSessionService() {
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
-            if (playbackState == Player.STATE_ENDED) {
-                val itemId = player.currentMediaItem?.mediaId ?: return
-                serviceScope.launch {
+            if (playbackState != Player.STATE_ENDED || advancingFromEnded) return
+            val itemId = player.currentMediaItem?.mediaId ?: return
+            advancingFromEnded = true
+            serviceScope.launch {
+                try {
                     feedRepository.setEnclosurePosition(itemId, null)
                     feedRepository.markRead(itemId, true)
                     // Storage cap / auto-cleanup (issue #71): only ever deletes an episode that
@@ -119,9 +130,36 @@ class PlaybackService : MediaSessionService() {
                             ?.takeIf { it.downloadedFilePath != null }
                             ?.let { downloadRepository.deleteDownload(it) }
                     }
+                    settingsDataStore.setLastPlayingItem(null, null)
+                    playNextQueued()
+                } finally {
+                    advancingFromEnded = false
                 }
             }
         }
+    }
+
+    /**
+     * Auto-advances to whatever's next in Next Up when an episode finishes (issue #106), acting
+     * directly on [player] rather than through a [androidx.media3.session.MediaController] --
+     * issue #179: this has to keep working even with no UI/MediaController attached (backgrounded
+     * or screen off), and this service is the one guaranteed to still be running when that happens.
+     */
+    private suspend fun playNextQueued() {
+        val itemId = queueRepository.popNext()
+        if (itemId == null) {
+            player.clearMediaItems()
+            return
+        }
+        val item = feedRepository.getItem(itemId) ?: return
+        val feed = feedRepository.getFeed(item.feedId)
+        val resolved = PlaybackMediaItemFactory.resolve(item, feed?.userTitle ?: feed?.title, feedRepository, settingsDataStore)
+            ?: return
+        player.setMediaItem(resolved.mediaItem, resolved.startPositionMs)
+        player.setPlaybackSpeed(resolved.speed)
+        player.prepare()
+        player.play()
+        settingsDataStore.setLastPlayingItem(item.feedId, item.id)
     }
 
     private fun startPositionSaveLoop() {

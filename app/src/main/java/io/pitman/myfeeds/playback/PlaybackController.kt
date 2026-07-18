@@ -2,9 +2,6 @@ package io.pitman.myfeeds.playback
 
 import android.content.ComponentName
 import android.content.Context
-import android.net.Uri
-import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
@@ -25,7 +22,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -63,8 +59,8 @@ data class PlaybackUiState(
 
 /**
  * UI-facing entry point for playback (used by the in-article player, issue #20): connects to
- * [PlaybackService] via a [MediaController] and exposes its state as a [StateFlow]. Building the
- * [MediaItem] here (rather than in the service) keeps the streaming-gate check
+ * [PlaybackService] via a [MediaController] and exposes its state as a [StateFlow]. Resolving the
+ * media via [PlaybackMediaItemFactory] (rather than in the service) keeps the streaming-gate check
  * ([PlaybackUrlResolver]) next to the caller, which needs to know whether the request was denied.
  */
 @Singleton
@@ -119,7 +115,7 @@ class PlaybackController @Inject constructor(
     private val playerListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
             if (player.playbackState == Player.STATE_ENDED) {
-                handlePlaybackEnded(player)
+                handlePlaybackEnded()
             } else {
                 _uiState.value = snapshotState(player)
             }
@@ -127,40 +123,25 @@ class PlaybackController @Inject constructor(
     }
 
     /**
-     * On completion the episode is no longer "current" (issue #107): position resets, the item
-     * stops being treated as playing, and the mini-player disappears -- the same as an explicit
-     * [stop], just triggered by reaching the end instead of the user tapping close. Then, if
-     * anything is up next, playback continues automatically (issue #106).
+     * On completion the episode is no longer "current" (issue #107): position resets and the item
+     * stops being treated as playing -- the same as an explicit [stop], just triggered by reaching
+     * the end instead of the user tapping close. If anything is up next, [PlaybackService] (not
+     * here -- issue #179) advances the underlying player to it directly, and the next
+     * [Player.Listener.onEvents] this controller receives will reflect that automatically via the
+     * normal (non-ended) branch below, so the mini-player picks it up without this needing to do
+     * anything further.
      *
      * [Player.Listener.onEvents] can fire more than once while [player] still reports
-     * `STATE_ENDED` -- [clearMediaItems] is dispatched to the (possibly cross-process)
-     * [MediaController] asynchronously, so a second callback can arrive before it takes effect.
-     * Without this guard, each call independently pops the next queued episode, so one completion
-     * could silently consume two entries from Next Up (issue #125/#127).
+     * `STATE_ENDED` -- guarded the same way as [PlaybackService]'s own end-of-track handling, so
+     * this reset doesn't happen redundantly for one completion.
      */
-    private fun handlePlaybackEnded(player: Player) {
+    private fun handlePlaybackEnded() {
         if (currentItemId == null) return
-        player.clearMediaItems()
         currentFeedId = null
         currentItemId = null
         currentChapters = emptyList()
         _uiState.value = PlaybackUiState()
         positionTickerJob?.cancel()
-        // Left on the scope's default Main.immediate context (not dispatched to IO) because
-        // playNextQueued(), if the queue isn't empty, ends up calling into the MediaController --
-        // which, like all Media3 controller methods, must be called on the app's main thread.
-        positionTickerScope.launch {
-            settingsDataStore.setLastPlayingItem(null, null)
-            playNextQueued()
-        }
-    }
-
-    /** Auto-advances to whatever's next in "Next Up" when an episode finishes (issue #106). */
-    private suspend fun playNextQueued() {
-        val itemId = queueRepository.popNext() ?: return
-        val item = feedRepository.getItem(itemId) ?: return
-        val feed = feedRepository.getFeed(item.feedId)
-        loadMedia(item, feed?.userTitle ?: feed?.title, autoPlay = true)
     }
 
     private fun connect(onConnected: (MediaController) -> Unit) {
@@ -223,25 +204,8 @@ class PlaybackController @Inject constructor(
     }
 
     private suspend fun loadMedia(item: FeedItem, feedTitle: String?, autoPlay: Boolean): Boolean {
-        val allowStreaming = settingsDataStore.settings.first().allowPodcastStreaming
-        val downloadedFilePath = item.downloadedFilePath?.takeIf { File(it).exists() }
-        val uri = PlaybackUrlResolver.resolve(item, downloadedFilePath, allowStreaming = allowStreaming)
+        val resolved = PlaybackMediaItemFactory.resolve(item, feedTitle, feedRepository, settingsDataStore)
             ?: return false
-        val feed = feedRepository.getFeed(item.feedId)
-        val speed = feed?.playbackSpeed ?: 1.0f
-        val artworkUrl = item.imageUrl ?: feed?.imageUrl
-
-        val mediaItem = MediaItem.Builder()
-            .setMediaId(item.id)
-            .setUri(uri)
-            .setMediaMetadata(
-                MediaMetadata.Builder()
-                    .setTitle(item.title)
-                    .setArtist(feedTitle)
-                    .setArtworkUri(artworkUrl?.let(Uri::parse))
-                    .build(),
-            )
-            .build()
 
         val previousItemId = currentItemId
         if (previousItemId != null && previousItemId != item.id) {
@@ -254,8 +218,8 @@ class PlaybackController @Inject constructor(
         // one while the fetch below (if any) is still in flight.
         currentChapters = emptyList()
         connect { controller ->
-            controller.setMediaItem(mediaItem, item.enclosurePosition?.let { (it * 1000).toLong() } ?: 0L)
-            controller.setPlaybackSpeed(speed)
+            controller.setMediaItem(resolved.mediaItem, resolved.startPositionMs)
+            controller.setPlaybackSpeed(resolved.speed)
             controller.prepare()
             if (autoPlay) controller.play()
         }
