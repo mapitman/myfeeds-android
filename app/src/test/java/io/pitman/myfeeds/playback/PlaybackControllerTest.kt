@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
+import io.pitman.myfeeds.data.local.Feed
+import io.pitman.myfeeds.data.local.FeedItem
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
@@ -13,6 +15,7 @@ import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
@@ -30,6 +33,8 @@ class PlaybackControllerTest {
     val tempFolder = TemporaryFolder()
 
     private lateinit var db: AppDatabase
+    private lateinit var feedRepository: FeedRepository
+    private lateinit var queueRepository: QueueRepository
     private lateinit var playbackController: PlaybackController
 
     @Before
@@ -39,11 +44,13 @@ class PlaybackControllerTest {
         val dataStore: DataStore<Preferences> = PreferenceDataStoreFactory.create(
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
+        feedRepository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
+        queueRepository = QueueRepository(db.queueDao())
         playbackController = PlaybackController(
             context,
             SettingsDataStore(dataStore),
-            FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao()),
-            QueueRepository(db.queueDao()),
+            feedRepository,
+            queueRepository,
             ChaptersFetcher(OkHttpClient()),
         )
     }
@@ -71,5 +78,29 @@ class PlaybackControllerTest {
         playbackController.setSpeed(1.5f)
 
         assertEquals(1.0f, playbackController.uiState.value.speed)
+    }
+
+    /**
+     * issue #171: the currently playing episode is already shown pinned to the top of the Next Up
+     * screen via the current-playback player bar, so a leftover Next Up queue entry for it would
+     * just be a duplicate -- playing an episode that's queued should dequeue it.
+     */
+    @Test
+    fun play_episodeAlreadyQueued_removesItFromQueue() = runTest {
+        val feedId = feedRepository.subscribe(Feed(title = "Feed"))
+        val item = FeedItem(
+            id = "episode-1",
+            feedId = feedId,
+            title = "Episode One",
+            itemGuid = "g-episode-1",
+            enclosureUrl = "https://example.com/ep1.mp3",
+            enclosureType = "audio/mpeg",
+        )
+        feedRepository.insertItems(listOf(item))
+        queueRepository.addToEnd(item.id)
+
+        playbackController.play(item, "Feed")
+
+        assertFalse(queueRepository.isQueued(item.id))
     }
 }

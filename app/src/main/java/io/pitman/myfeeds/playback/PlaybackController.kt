@@ -192,8 +192,19 @@ class PlaybackController @Inject constructor(
         }
     }
 
-    /** Returns false without starting playback if streaming is disallowed and nothing is downloaded. */
-    suspend fun play(item: FeedItem, feedTitle: String?): Boolean = loadMedia(item, feedTitle, autoPlay = true)
+    /**
+     * Returns false without starting playback if streaming is disallowed and nothing is
+     * downloaded. Removes [item] from the Next Up queue unconditionally, even when playback then
+     * fails to start -- issue #171: it's already shown pinned to the top of the Next Up screen via
+     * the current-playback player bar, so a leftover queue entry for it would just be a duplicate
+     * further down the list. Mirrors the dequeue-then-play behavior [QueueRepository] callers used
+     * to have to do themselves (e.g. the old `QueueViewModel.playNow`), but now for every path that
+     * starts playback.
+     */
+    suspend fun play(item: FeedItem, feedTitle: String?): Boolean {
+        queueRepository.remove(item.id)
+        return loadMedia(item, feedTitle, autoPlay = true)
+    }
 
     /**
      * Restores the episode the player had loaded before the process died (issue #108), so the
