@@ -282,6 +282,45 @@ class ArticleListViewModelTest {
     }
 
     @Test
+    fun addSelectedToQueue_queuesOnlyPodcastEpisodesAndClearsSelection() = runTest(testDispatcher) {
+        // issue #159: selection mode isn't podcast-specific, so a plain article ("read-1", no
+        // enclosure) mixed into the selection should be silently skipped rather than queued.
+        repository.insertItems(
+            listOf(
+                FeedItem(
+                    id = "episode-1",
+                    feedId = feedId,
+                    title = "Episode One",
+                    itemGuid = "g-episode-1",
+                    enclosureUrl = "https://example.com/ep1.mp3",
+                    enclosureType = "audio/mpeg",
+                ),
+                FeedItem(
+                    id = "episode-2",
+                    feedId = feedId,
+                    title = "Episode Two",
+                    itemGuid = "g-episode-2",
+                    enclosureUrl = "https://example.com/ep2.mp3",
+                    enclosureType = "audio/mpeg",
+                ),
+            ),
+        )
+        val viewModel = createViewModel()
+        viewModel.setShowUnreadOnly(false)
+        viewModel.uiState.first { !it.showUnreadOnly && it.articles.size == 4 }
+        viewModel.toggleSelection("episode-1")
+        viewModel.toggleSelection("episode-2")
+        viewModel.toggleSelection("read-1")
+        viewModel.uiState.first { it.selectedIds.size == 3 }
+
+        viewModel.addSelectedToQueue()
+        viewModel.uiState.first { !it.isSelectionMode }
+
+        val queue = queueRepository.observeQueue().first { it.size == 2 }
+        assertEquals(setOf("episode-1", "episode-2"), queue.map { it.item.id }.toSet())
+    }
+
+    @Test
     fun deleteSelected_removesItemsAndClearsSelection() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.setShowUnreadOnly(false)

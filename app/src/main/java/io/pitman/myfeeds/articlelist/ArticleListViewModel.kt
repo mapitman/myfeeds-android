@@ -11,6 +11,7 @@ import io.pitman.myfeeds.data.feed.AutoQueueAndDownloadEnforcer
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.feed.FeedUpdateResult
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.local.isPodcastEpisode
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.FontSize
@@ -163,6 +164,24 @@ class ArticleListViewModel @Inject constructor(
             _queueFeedback.value = context.getString(
                 if (added) R.string.queue_feedback_added else R.string.queue_feedback_already_queued,
             )
+        }
+    }
+
+    /**
+     * Adds every selected podcast episode to Next Up (issue #159). Selection mode isn't
+     * podcast-specific, so non-episode articles in the selection are silently skipped.
+     */
+    fun addSelectedToQueue() {
+        val ids = selectedIds.value
+        viewModelScope.launch {
+            val episodeIds = uiState.value.articles.filter { it.id in ids && it.isPodcastEpisode }.map { it.id }
+            val addedCount = episodeIds.count { queueRepository.addToEnd(it) }
+            _queueFeedback.value = when (addedCount) {
+                0 -> context.getString(R.string.queue_feedback_already_queued)
+                1 -> context.getString(R.string.queue_feedback_added)
+                else -> context.getString(R.string.queue_feedback_added_multiple, addedCount)
+            }
+            clearSelection()
         }
     }
 

@@ -110,6 +110,9 @@ fun ArticleListScreen(
                         IconButton(onClick = { viewModel.markSelectedRead(false) }) {
                             Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.cd_mark_unread))
                         }
+                        IconButton(onClick = viewModel::addSelectedToQueue) {
+                            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = stringResource(R.string.cd_add_to_queue))
+                        }
                         IconButton(onClick = viewModel::deleteSelected) {
                             Icon(Icons.Filled.Delete, contentDescription = stringResource(R.string.cd_delete))
                         }
