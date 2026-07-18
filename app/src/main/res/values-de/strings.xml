@@ -86,6 +86,7 @@
     <string name="settings_update_interval">Aktualisierungsintervall: %1$d Min.</string>
     <string name="settings_update_interval_minutes_chip">%1$dm</string>
     <string name="settings_max_articles_per_feed">Max. Elemente pro Feed: %1$d</string>
+    <string name="settings_feed_refresh_concurrency">Gleichzeitig aktualisierte Feeds: %1$d</string>
     <string name="settings_article_font_size">Schriftgröße des Lesebereichs</string>
     <string name="settings_article_list_font_size">Schriftgröße der Liste</string>
     <string name="settings_feed_list_font_size">Schriftgröße der Feedliste</string>

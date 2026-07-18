@@ -52,6 +52,10 @@ class SettingsViewModel @Inject constructor(
         viewModelScope.launch { settingsDataStore.setMaxArticles(count) }
     }
 
+    fun setFeedRefreshConcurrency(count: Int) {
+        viewModelScope.launch { settingsDataStore.setFeedRefreshConcurrency(count) }
+    }
+
     fun setArticleFontSize(size: FontSize) {
         viewModelScope.launch { settingsDataStore.setArticleFontSize(size) }
     }

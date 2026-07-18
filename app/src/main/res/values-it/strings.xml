@@ -86,6 +86,7 @@
     <string name="settings_update_interval">Intervallo di aggiornamento: %1$d min</string>
     <string name="settings_update_interval_minutes_chip">%1$dm</string>
     <string name="settings_max_articles_per_feed">Elementi massimi per feed: %1$d</string>
+    <string name="settings_feed_refresh_concurrency">Feed aggiornati contemporaneamente: %1$d</string>
     <string name="settings_article_font_size">Dimensione carattere lettura</string>
     <string name="settings_article_list_font_size">Dimensione carattere elenco</string>
     <string name="settings_feed_list_font_size">Dimensione carattere elenco feed</string>

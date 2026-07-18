@@ -13,6 +13,9 @@ data class AppSettings(
     val articleFontSize: FontSize = FontSize.NORMAL,
     val enableImageDisplay: Boolean = true,
     val maxArticles: Int = 20,
+    /** How many feeds FeedUpdateEngine refreshes at once (issue #177), trading refresh speed
+     *  against network/server load. Mirrors FeedUpdateEngine's prior fixed cap as the default. */
+    val feedRefreshConcurrency: Int = 2,
     val defaultToAllArticleView: Boolean = false,
     val allowPodcastDownloadOnBattery: Boolean = false,
     val allowPodcastDownloadOnCellular: Boolean = false,
