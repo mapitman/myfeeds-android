@@ -19,7 +19,8 @@ import javax.inject.Inject
  * dedup incoming items by itemGuid (existing items keep their id/isRead/enclosurePosition, new
  * items get a fresh UUID), extract each item's first image, trim to itemsToKeep, and update the
  * feed's lastGet. Multiple feeds refresh with bounded concurrency, mirroring the original's
- * intent to not hammer the network/DB with unlimited parallel requests.
+ * intent to not hammer the network/DB with unlimited parallel requests -- user-configurable
+ * (issue #177) via [SettingsDataStore.settings]' `feedRefreshConcurrency`.
  */
 class FeedUpdateEngine @Inject constructor(
     private val feedFetcher: FeedFetcher,
@@ -37,7 +38,8 @@ class FeedUpdateEngine @Inject constructor(
     }
 
     suspend fun updateFeeds(feeds: List<Feed>): List<FeedUpdateResult> = coroutineScope {
-        val semaphore = Semaphore(MAX_CONCURRENT_UPDATES)
+        val concurrency = settingsDataStore.settings.first().feedRefreshConcurrency.coerceAtLeast(1)
+        val semaphore = Semaphore(concurrency)
         feeds.map { feed -> async { semaphore.withPermit { updateFeed(feed) } } }.awaitAll()
     }
 
@@ -101,7 +103,6 @@ class FeedUpdateEngine @Inject constructor(
     }
 
     companion object {
-        private const val MAX_CONCURRENT_UPDATES = 2
         private const val NEW_PODCAST_AUTO_QUEUE_CAP = 5
     }
 }

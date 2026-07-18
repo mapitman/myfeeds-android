@@ -23,6 +23,7 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
                 ?: AppSettings().articleFontSize,
             enableImageDisplay = prefs[Keys.ENABLE_IMAGE_DISPLAY] ?: AppSettings().enableImageDisplay,
             maxArticles = prefs[Keys.MAX_ARTICLES] ?: AppSettings().maxArticles,
+            feedRefreshConcurrency = prefs[Keys.FEED_REFRESH_CONCURRENCY] ?: AppSettings().feedRefreshConcurrency,
             defaultToAllArticleView = prefs[Keys.DEFAULT_TO_ALL_ARTICLE_VIEW]
                 ?: AppSettings().defaultToAllArticleView,
             allowPodcastDownloadOnBattery = prefs[Keys.ALLOW_PODCAST_DOWNLOAD_ON_BATTERY]
@@ -66,6 +67,10 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
 
     suspend fun setMaxArticles(count: Int) {
         dataStore.edit { it[Keys.MAX_ARTICLES] = count }
+    }
+
+    suspend fun setFeedRefreshConcurrency(count: Int) {
+        dataStore.edit { it[Keys.FEED_REFRESH_CONCURRENCY] = count }
     }
 
     suspend fun setDefaultToAllArticleView(value: Boolean) {
@@ -128,6 +133,7 @@ class SettingsDataStore @Inject constructor(private val dataStore: DataStore<Pre
         val ARTICLE_FONT_SIZE = intPreferencesKey("article_font_size")
         val ENABLE_IMAGE_DISPLAY = booleanPreferencesKey("enable_image_display")
         val MAX_ARTICLES = intPreferencesKey("max_articles")
+        val FEED_REFRESH_CONCURRENCY = intPreferencesKey("feed_refresh_concurrency")
         val DEFAULT_TO_ALL_ARTICLE_VIEW = booleanPreferencesKey("default_to_all_article_view")
         val ALLOW_PODCAST_DOWNLOAD_ON_BATTERY = booleanPreferencesKey("allow_podcast_download_on_battery")
         val ALLOW_PODCAST_DOWNLOAD_ON_CELLULAR = booleanPreferencesKey("allow_podcast_download_on_cellular")

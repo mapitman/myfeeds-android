@@ -13,8 +13,10 @@ import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.Dispatcher
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -26,6 +28,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
+import java.util.concurrent.atomic.AtomicInteger
 
 /** Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet. */
 @RunWith(RobolectricTestRunner::class)
@@ -230,5 +233,29 @@ class FeedUpdateEngineTest {
         assertTrue(results.all { it is FeedUpdateResult.Success })
         assertEquals(1, repository.observeItems(feedA.id).first().size)
         assertEquals(1, repository.observeItems(feedB.id).first().size)
+    }
+
+    /** issue #177: verifies the configured concurrency actually bounds in-flight fetches, not
+     *  just that multiple feeds can update in the same [FeedUpdateEngine.updateFeeds] call. */
+    @Test
+    fun updateFeeds_respectsConfiguredConcurrencyLimit() = runTest {
+        settingsDataStore.setFeedRefreshConcurrency(1)
+        val feedA = subscribeFeed()
+        val feedB = subscribeFeed()
+        val activeRequests = AtomicInteger(0)
+        val maxObservedConcurrency = AtomicInteger(0)
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                val active = activeRequests.incrementAndGet()
+                maxObservedConcurrency.updateAndGet { current -> maxOf(current, active) }
+                Thread.sleep(200)
+                activeRequests.decrementAndGet()
+                return MockResponse().setResponseCode(200).setBody(rssWithItems("a-1" to "A1"))
+            }
+        }
+
+        engine.updateFeeds(listOf(feedA, feedB))
+
+        assertEquals(1, maxObservedConcurrency.get())
     }
 }

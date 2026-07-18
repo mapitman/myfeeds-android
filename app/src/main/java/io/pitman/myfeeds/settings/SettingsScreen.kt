@@ -107,6 +107,7 @@ fun SettingsScreen(
                 },
             )
             MaxArticlesSetting(settings, viewModel)
+            FeedRefreshConcurrencySetting(settings, viewModel)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             SectionHeader(stringResource(R.string.settings_section_fonts))
@@ -211,6 +212,22 @@ private fun MaxArticlesSetting(settings: AppSettings, viewModel: SettingsViewMod
             onValueChange = { viewModel.setMaxArticles(it.toInt()) },
             valueRange = 5f..100f,
             steps = 18,
+        )
+    }
+}
+
+@Composable
+private fun FeedRefreshConcurrencySetting(settings: AppSettings, viewModel: SettingsViewModel) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(
+            stringResource(R.string.settings_feed_refresh_concurrency, settings.feedRefreshConcurrency),
+            style = MaterialTheme.typography.bodyLarge,
+        )
+        Slider(
+            value = settings.feedRefreshConcurrency.toFloat(),
+            onValueChange = { viewModel.setFeedRefreshConcurrency(it.toInt()) },
+            valueRange = 1f..10f,
+            steps = 8,
         )
     }
 }
