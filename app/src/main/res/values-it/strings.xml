@@ -60,6 +60,7 @@
     <string name="queue_title">In arrivo</string>
     <string name="queue_empty">Niente in coda</string>
     <string name="queue_feedback_added">Aggiunto a In arrivo</string>
+    <string name="queue_feedback_added_multiple">%1$d episodi aggiunti a In arrivo</string>
     <string name="queue_feedback_already_queued">Già in In arrivo</string>
 
     <!-- Downloads -->
