@@ -3,6 +3,7 @@ package io.pitman.myfeeds.playback
 import android.app.PendingIntent
 import android.content.Intent
 import androidx.annotation.OptIn
+import androidx.media3.common.AudioAttributes
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -62,7 +63,12 @@ class PlaybackService : MediaSessionService() {
     @OptIn(markerClass = [UnstableApi::class])
     override fun onCreate() {
         super.onCreate()
-        player = ExoPlayer.Builder(this).build()
+        // ExoPlayer.Builder defaults to *not* managing audio focus at all, so without this,
+        // playback talks straight over things like a navigation app's turn-by-turn announcements
+        // instead of ducking/pausing for them and resuming after (issue #180).
+        player = ExoPlayer.Builder(this)
+            .setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus= */ true)
+            .build()
         player.addListener(playerListener)
 
         // Without an explicit small icon, DefaultMediaNotificationProvider falls back to the
