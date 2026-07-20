@@ -34,6 +34,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
@@ -87,8 +88,11 @@ fun MiniPlayerBar(
             tonalElevation = 3.dp,
         ) {
         Box {
-            // Blurred cover art as a backdrop, dimmed by a scrim matching the bar's own surface
-            // color so text/controls on top stay readable regardless of the artwork's own colors.
+            // Blurred cover art as a backdrop. The scrim fades from mostly-transparent at the top
+            // to the bar's own solid surface color at the bottom -- rather than a flat dim -- so
+            // when this is the player sheet's header (issue #195), the art visually merges into
+            // the plain-colored Next Up list starting right where this bar ends, instead of
+            // cutting off abruptly.
             if (playbackState.artworkUrl != null) {
                 AsyncImage(
                     model = playbackState.artworkUrl,
@@ -97,8 +101,12 @@ fun MiniPlayerBar(
                     modifier = Modifier.matchParentSize().blur(24.dp).alpha(0.6f),
                 )
                 Box(
-                    modifier = Modifier.matchParentSize()
-                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f)),
+                    modifier = Modifier.matchParentSize().background(
+                        Brush.verticalGradient(
+                            0f to MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f),
+                            1f to MaterialTheme.colorScheme.surfaceContainerHighest,
+                        ),
+                    ),
                 )
             }
         Column(modifier = Modifier.navigationBarsPadding()) {
@@ -225,6 +233,55 @@ fun MiniPlayerBar(
             }
         }
         }
+        }
+    }
+}
+
+/**
+ * An even more minimal now-playing indicator (issue #197) -- swiping [MiniPlayerBar] down further
+ * (past its own resting/peek position, when it's the player sheet's collapsed header) shrinks to
+ * this instead of dismissing playback entirely: just enough to see what's playing and toggle it.
+ */
+@Composable
+fun NowPlayingMiniStrip(
+    playbackState: PlaybackUiState,
+    onClick: () -> Unit,
+    onTogglePlayPause: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 3.dp,
+    ) {
+        Row(
+            modifier = Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (playbackState.artworkUrl != null) {
+                AsyncImage(
+                    model = playbackState.artworkUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)),
+                )
+            }
+            Text(
+                text = playbackState.title.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+            )
+            IconButton(onClick = onTogglePlayPause) {
+                if (playbackState.isBuffering) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(
+                        if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = stringResource(if (playbackState.isPlaying) R.string.cd_pause else R.string.cd_play),
+                    )
+                }
+            }
         }
     }
 }

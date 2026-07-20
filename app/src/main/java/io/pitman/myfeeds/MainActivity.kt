@@ -23,7 +23,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -56,6 +58,7 @@ import io.pitman.myfeeds.feedlist.FeedListScreen
 import io.pitman.myfeeds.feedproperties.FeedPropertiesScreen
 import io.pitman.myfeeds.feedriver.FeedRiverScreen
 import io.pitman.myfeeds.playback.MiniPlayerViewModel
+import io.pitman.myfeeds.playback.NowPlayingMiniStrip
 import io.pitman.myfeeds.playback.PlayerBottomSheetContent
 import io.pitman.myfeeds.queue.QueueViewModel
 import io.pitman.myfeeds.reader.ReaderScreen
@@ -141,7 +144,13 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(Unit) { miniPlayerViewModel.restoreLastPlayingItem() }
                     val currentBackStackEntry by navController.currentBackStackEntryAsState()
                     var currentReaderItemId by remember { mutableStateOf<String?>(null) }
-                    val scaffoldState = rememberBottomSheetScaffoldState()
+                    // skipHiddenState=false (issue #197) adds a third, further-than-peek anchor:
+                    // swiping the collapsed player down past its own resting position hides it
+                    // down to just NowPlayingMiniStrip instead of only ever resting at the full
+                    // MiniPlayerBar peek.
+                    val scaffoldState = rememberBottomSheetScaffoldState(
+                        bottomSheetState = rememberStandardBottomSheetState(skipHiddenState = false),
+                    )
                     val coroutineScope = rememberCoroutineScope()
 
                     // The reader screen has its own full player for the episode it's showing (issue #97),
@@ -169,8 +178,13 @@ class MainActivity : ComponentActivity() {
                     // expanded state of the persistent player bottom sheet -- opened by expanding it.
                     val onQueueClick: () -> Unit = { coroutineScope.launch { scaffoldState.bottomSheetState.expand() } }
 
+                    Box(modifier = Modifier.fillMaxSize()) {
                     BottomSheetScaffold(
                         scaffoldState = scaffoldState,
+                        // Matches MiniPlayerBar's own surface color so its bottom-fading cover-art
+                        // gradient (issue #195) blends into the sheet's background seamlessly,
+                        // rather than meeting BottomSheetScaffold's default (a different tone).
+                        sheetContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         sheetPeekHeight = if (playbackState.currentItemId != null && !isOnPlayingEpisodeReader) {
                             PLAYER_SHEET_PEEK_HEIGHT
                         } else {
@@ -294,6 +308,18 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+                    }
+                    if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden &&
+                        playbackState.currentItemId != null &&
+                        !isOnPlayingEpisodeReader
+                    ) {
+                        NowPlayingMiniStrip(
+                            playbackState = playbackState,
+                            onClick = { coroutineScope.launch { scaffoldState.bottomSheetState.partialExpand() } },
+                            onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
+                    }
                     }
                 }
             }
