@@ -3,6 +3,7 @@ package io.pitman.myfeeds.playback
 import android.app.PendingIntent
 import android.content.Intent
 import android.media.audiofx.LoudnessEnhancer
+import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.MediaItem
@@ -12,6 +13,10 @@ import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
+import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionResult
+import com.google.common.util.concurrent.Futures
+import com.google.common.util.concurrent.ListenableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import io.pitman.myfeeds.MainActivity
 import io.pitman.myfeeds.R
@@ -98,6 +103,7 @@ class PlaybackService : MediaSessionService() {
         )
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(sessionActivityIntent)
+            .setCallback(mediaSessionCallback)
             .build()
     }
 
@@ -116,9 +122,34 @@ class PlaybackService : MediaSessionService() {
         super.onDestroy()
     }
 
+    /** Grants [CUSTOM_COMMAND_SET_VOLUME_BOOST] to controllers (issue #202) and applies it live to
+     *  [loudnessEnhancer], since it's not a standard [MediaSession]/[Player] command. */
+    private val mediaSessionCallback = object : MediaSession.Callback {
+        override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+            val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
+                .add(SessionCommand(CUSTOM_COMMAND_SET_VOLUME_BOOST, Bundle.EMPTY))
+                .build()
+            return MediaSession.ConnectionResult.accept(sessionCommands, MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
+        }
+
+        override fun onCustomCommand(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            customCommand: SessionCommand,
+            args: Bundle,
+        ): ListenableFuture<SessionResult> {
+            if (customCommand.customAction == CUSTOM_COMMAND_SET_VOLUME_BOOST) {
+                applyVolumeBoost(args.getInt(EXTRA_VOLUME_BOOST_MILLIBELS, 0))
+                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            }
+            return Futures.immediateFuture(SessionResult(SessionResult.RESULT_ERROR_NOT_SUPPORTED))
+        }
+    }
+
     private val playerListener = object : Player.Listener {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
-            applyVolumeBoost(mediaItem)
+            val millibels = mediaItem?.mediaMetadata?.extras?.getInt(VOLUME_BOOST_EXTRA_KEY, 0) ?: 0
+            applyVolumeBoost(millibels)
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
@@ -192,12 +223,11 @@ class PlaybackService : MediaSessionService() {
         }
     }
 
-    /** Reads the boost carried on the media item (issue #199, set by [PlaybackMediaItemFactory])
-     *  rather than looking up the feed here, so this stays synchronous in the listener callback --
-     *  covers both [PlaybackController]-driven loads and this service's own [playNextQueued]. */
-    private fun applyVolumeBoost(mediaItem: MediaItem?) {
+    /** Sets [loudnessEnhancer]'s live gain -- called both with the boost baked into a newly loaded
+     *  media item (issue #199) and with a live override pushed by [PlaybackController] via
+     *  [CUSTOM_COMMAND_SET_VOLUME_BOOST] while the same episode keeps playing (issue #202). */
+    private fun applyVolumeBoost(millibels: Int) {
         val enhancer = loudnessEnhancer ?: return
-        val millibels = mediaItem?.mediaMetadata?.extras?.getInt(VOLUME_BOOST_EXTRA_KEY, 0) ?: 0
         runCatching {
             enhancer.setTargetGain(millibels)
             enhancer.enabled = millibels > 0

@@ -80,6 +80,21 @@ class PlaybackControllerTest {
         assertEquals(1.0f, playbackController.uiState.value.speed)
     }
 
+    @Test
+    fun uiState_defaultsToNoVolumeBoost() = runTest {
+        assertEquals(0, playbackController.uiState.value.volumeBoostMillibels)
+    }
+
+    /** Issue #202: with no [androidx.media3.session.MediaController] connected (no active
+     *  playback in this Robolectric setup), the optimistic UI update still applies even though the
+     *  custom session command and feed persistence are skipped/no-ops. */
+    @Test
+    fun setVolumeBoost_noActivePlayback_updatesUiStateOptimisticallyAndDoesNotCrash() = runTest {
+        playbackController.setVolumeBoost(1200)
+
+        assertEquals(1200, playbackController.uiState.value.volumeBoostMillibels)
+    }
+
     /**
      * issue #171: the currently playing episode is already shown pinned to the top of the Next Up
      * screen via the current-playback player bar, so a leftover Next Up queue entry for it would

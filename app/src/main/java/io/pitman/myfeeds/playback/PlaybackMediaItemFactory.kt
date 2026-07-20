@@ -11,7 +11,12 @@ import kotlinx.coroutines.flow.first
 import java.io.File
 
 /** Everything a Media3 player needs to start [FeedItem], resolved outside the player itself. */
-data class ResolvedPlaybackMedia(val mediaItem: MediaItem, val speed: Float, val startPositionMs: Long)
+data class ResolvedPlaybackMedia(
+    val mediaItem: MediaItem,
+    val speed: Float,
+    val startPositionMs: Long,
+    val volumeBoostMillibels: Int,
+)
 
 /** Key into [MediaMetadata.extras] carrying the episode's feed ID (issue #179): [PlaybackController]
  *  reads this back off the player's current item rather than tracking its own feedId field, since
@@ -24,6 +29,15 @@ const val FEED_ID_EXTRA_KEY = "io.pitman.myfeeds.feedId"
  *  media item rather than looked up separately so [PlaybackService] can apply it synchronously
  *  from its player listener, the same way [FEED_ID_EXTRA_KEY] is read back. */
 const val VOLUME_BOOST_EXTRA_KEY = "io.pitman.myfeeds.volumeBoostMillibels"
+
+/** Custom [androidx.media3.session.SessionCommand] letting [PlaybackController] change the
+ *  volume boost of whatever's currently playing (issue #202) without a full media item reload --
+ *  ordinary [androidx.media3.common.Player] commands have no notion of the
+ *  [android.media.audiofx.LoudnessEnhancer] gain [PlaybackService] applies. */
+const val CUSTOM_COMMAND_SET_VOLUME_BOOST = "io.pitman.myfeeds.SET_VOLUME_BOOST"
+
+/** Bundle key for the millibel value sent with [CUSTOM_COMMAND_SET_VOLUME_BOOST]. */
+const val EXTRA_VOLUME_BOOST_MILLIBELS = "millibels"
 
 /**
  * Resolves a [FeedItem] into playable Media3 pieces, shared by [PlaybackController] (playback
@@ -76,6 +90,7 @@ object PlaybackMediaItemFactory {
             mediaItem = mediaItem,
             speed = speed,
             startPositionMs = startPositionMs,
+            volumeBoostMillibels = volumeBoostMillibels,
         )
     }
 }

@@ -18,6 +18,7 @@
     <string name="cd_share">Compartir</string>
     <string name="cd_rewind">Retroceder 15 segundos</string>
     <string name="cd_forward">Avanzar 30 segundos</string>
+    <string name="cd_volume_boost">Aumento de volumen</string>
     <string name="cd_previous_chapter">Capítulo anterior</string>
     <string name="cd_next_chapter">Siguiente capítulo</string>
     <string name="cd_pause">Pausar</string>

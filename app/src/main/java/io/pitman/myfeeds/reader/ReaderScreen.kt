@@ -26,6 +26,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
@@ -205,6 +206,7 @@ fun ReaderScreen(
                 onDownload = { viewModel.downloadEnclosure(uiState.items[page]) },
                 onDelete = { viewModel.deleteDownload(uiState.items[page]) },
                 onSpeedChange = viewModel::setPlaybackSpeed,
+                onVolumeBoostChange = viewModel::setVolumeBoost,
                 onSkipBackward = viewModel::skipBackward,
                 onSkipForward = viewModel::skipForward,
                 onNextChapter = viewModel::nextChapter,
@@ -233,6 +235,7 @@ private fun ArticlePage(
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onSpeedChange: (Float) -> Unit,
+    onVolumeBoostChange: (Int) -> Unit,
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
     onNextChapter: () -> Unit,
@@ -309,6 +312,7 @@ private fun ArticlePage(
                     onDownload = onDownload,
                     onDelete = onDelete,
                     onSpeedChange = onSpeedChange,
+                    onVolumeBoostChange = onVolumeBoostChange,
                     onSkipBackward = onSkipBackward,
                     onSkipForward = onSkipForward,
                     onNextChapter = onNextChapter,
@@ -353,6 +357,7 @@ private fun PodcastPlayerControls(
     onDownload: () -> Unit,
     onDelete: () -> Unit,
     onSpeedChange: (Float) -> Unit,
+    onVolumeBoostChange: (Int) -> Unit,
     onSkipBackward: () -> Unit,
     onSkipForward: () -> Unit,
     onNextChapter: () -> Unit,
@@ -502,6 +507,26 @@ private fun PodcastPlayerControls(
                 }) {
                     Text(formatSpeed(playbackState.speed))
                 }
+                // issue #202: cycles the same discrete levels as Feed Properties, so the value
+                // stays consistent whichever surface changed it last.
+                TextButton(onClick = {
+                    val currentIndex = VOLUME_BOOST_LEVELS.indexOf(playbackState.volumeBoostMillibels).let {
+                        if (it < 0) 0 else it
+                    }
+                    onVolumeBoostChange(VOLUME_BOOST_LEVELS[(currentIndex + 1) % VOLUME_BOOST_LEVELS.size])
+                }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = stringResource(R.string.cd_volume_boost),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    if (playbackState.volumeBoostMillibels > 0) {
+                        Text(
+                            text = "+${playbackState.volumeBoostMillibels / 100}dB",
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+                }
                 if (hasChapters) {
                     IconButton(onClick = onNextChapter) {
                         Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
@@ -513,6 +538,10 @@ private fun PodcastPlayerControls(
 }
 
 private val PLAYBACK_SPEEDS = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+
+/** Millibel gain levels cycled by the player's volume boost button (issue #202) -- matches the
+ *  Off/Low/Medium/High levels offered in Feed Properties. */
+private val VOLUME_BOOST_LEVELS = listOf(0, 600, 1200, 1800)
 
 /** issue #186: bigger than the default 48dp/24dp IconButton so transport controls stay easy to
  *  hit at a glance (e.g. while driving), with play/pause sized up further as the primary action. */
