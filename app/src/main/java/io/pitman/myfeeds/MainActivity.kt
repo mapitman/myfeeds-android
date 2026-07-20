@@ -78,7 +78,7 @@ private val PLAYER_SHEET_PEEK_HEIGHT = 312.dp
 private fun SlimDragHandle(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
-            .padding(vertical = 10.dp)
+            .padding(vertical = 14.dp)
             .size(width = 28.dp, height = 3.dp)
             .clip(RoundedCornerShape(50))
             .background(MaterialTheme.colorScheme.onSurfaceVariant),
