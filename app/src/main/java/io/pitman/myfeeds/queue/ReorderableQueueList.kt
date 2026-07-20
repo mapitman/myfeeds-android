@@ -73,7 +73,10 @@ fun ReorderableQueueList(
         if (!isReordering) items = queue
     }
 
-    LazyColumn(modifier = modifier.fillMaxSize()) {
+    // fillMaxWidth only, not fillMaxSize -- callers that want this to shrink-to-fit a short queue
+    // (issue #197) rather than always claim a forced/weighted height pass a bounded heightIn(max=)
+    // instead, which a plain LazyColumn already respects by sizing to its actual content within it.
+    LazyColumn(modifier = modifier.fillMaxWidth()) {
         itemsIndexed(items, key = { _, episode -> episode.item.id }) { _, episode ->
             val isDragged = episode.item.id == draggedItemId
             Row(

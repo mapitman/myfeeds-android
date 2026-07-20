@@ -75,6 +75,12 @@ fun MiniPlayerBar(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
+    // True for every standalone/pinned-at-the-bottom use of this bar, where the nav bar sits right
+    // below it and needs the padding reserved. Only the player sheet's *expanded* content (issue
+    // #197) -- where this is a sticky header with the Next Up list following below it, not the
+    // screen's actual bottom edge -- passes false, since that reserved space just becomes unwanted
+    // blank space between the speed-button row and the list beneath it.
+    applyNavigationBarsPadding: Boolean = true,
 ) {
     val hasChapters = playbackState.chapters.isNotEmpty()
     with(sharedTransitionScope) {
@@ -109,7 +115,7 @@ fun MiniPlayerBar(
                     ),
                 )
             }
-        Column(modifier = Modifier.navigationBarsPadding()) {
+        Column(modifier = if (applyNavigationBarsPadding) Modifier.navigationBarsPadding() else Modifier) {
             val progress = if (playbackState.durationMs > 0) {
                 (playbackState.positionMs.toFloat() / playbackState.durationMs).coerceIn(0f, 1f)
             } else {
