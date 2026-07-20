@@ -47,6 +47,10 @@ class MiniPlayerViewModel @Inject constructor(
         playbackController.seekTo(positionMs)
     }
 
+    fun setSpeed(speed: Float) {
+        playbackController.setSpeed(speed)
+    }
+
     fun stop() {
         playbackController.stop()
     }
