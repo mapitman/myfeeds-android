@@ -47,6 +47,16 @@ class MigrationTest {
     }
 
     @Test
+    fun version11Schema_opensSuccessfully() {
+        helper.createDatabase(TEST_DB, 11).close()
+    }
+
+    @Test
+    fun version12Schema_opensSuccessfully() {
+        helper.createDatabase(TEST_DB, 12).close()
+    }
+
+    @Test
     fun migrate1To2_addsDownloadColumnsWithoutDataLoss() {
         helper.createDatabase(TEST_DB, 1).apply {
             execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
@@ -251,6 +261,48 @@ class MigrationTest {
         migrated.query("SELECT autoQueuePosition FROM feeds WHERE id = 1").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals("BOTTOM", cursor.getString(0))
+        }
+        migrated.close()
+    }
+
+    @Test
+    fun migrate10To11_addsVolumeBoostColumnDefaultingToZero() {
+        helper.createDatabase(TEST_DB, 10).apply {
+            execSQL(
+                "INSERT INTO feeds (id, title, userTitle, description, feedUrl, siteUrl, imageUrl, " +
+                    "displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, autoQueueEnabled, " +
+                    "autoQueueMaxCount, playbackSpeed, autoQueuePosition) " +
+                    "VALUES (1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, 1.0, 'BOTTOM')",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 11, true, MIGRATION_10_11)
+
+        migrated.query("SELECT volumeBoostMillibels FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
+        migrated.close()
+    }
+
+    @Test
+    fun migrate11To12_addsStartSkipSecondsColumnDefaultingToZero() {
+        helper.createDatabase(TEST_DB, 11).apply {
+            execSQL(
+                "INSERT INTO feeds (id, title, userTitle, description, feedUrl, siteUrl, imageUrl, " +
+                    "displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, autoQueueEnabled, " +
+                    "autoQueueMaxCount, playbackSpeed, autoQueuePosition, volumeBoostMillibels) " +
+                    "VALUES (1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, 1.0, 'BOTTOM', 0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 12, true, MIGRATION_11_12)
+
+        migrated.query("SELECT startSkipSeconds FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
         }
         migrated.close()
     }

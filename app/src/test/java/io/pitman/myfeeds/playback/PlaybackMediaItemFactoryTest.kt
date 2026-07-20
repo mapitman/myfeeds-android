@@ -76,6 +76,65 @@ class PlaybackMediaItemFactoryTest {
     }
 
     @Test
+    fun resolve_freshStart_skipsFeedsConfiguredStartSkip() = runTest {
+        val feedId = feedRepository.subscribe(Feed(title = "A Feed", startSkipSeconds = 20))
+        val item = FeedItem(
+            id = "episode-1",
+            feedId = feedId,
+            title = "Episode One",
+            itemGuid = "g1",
+            enclosureUrl = "https://example.com/ep1.mp3",
+            enclosureType = "audio/mpeg",
+            enclosurePosition = null,
+        )
+        feedRepository.insertItems(listOf(item))
+
+        val resolved = PlaybackMediaItemFactory.resolve(item, "A Feed", feedRepository, settingsDataStore)
+
+        requireNotNull(resolved)
+        assertEquals(20_000L, resolved.startPositionMs)
+    }
+
+    @Test
+    fun resolve_hasSavedResumePosition_doesNotReapplyStartSkip() = runTest {
+        val feedId = feedRepository.subscribe(Feed(title = "A Feed", startSkipSeconds = 20))
+        val item = FeedItem(
+            id = "episode-1",
+            feedId = feedId,
+            title = "Episode One",
+            itemGuid = "g1",
+            enclosureUrl = "https://example.com/ep1.mp3",
+            enclosureType = "audio/mpeg",
+            enclosurePosition = 5.0,
+        )
+        feedRepository.insertItems(listOf(item))
+
+        val resolved = PlaybackMediaItemFactory.resolve(item, "A Feed", feedRepository, settingsDataStore)
+
+        requireNotNull(resolved)
+        assertEquals(5_000L, resolved.startPositionMs)
+    }
+
+    @Test
+    fun resolve_carriesFeedsVolumeBoostAsMediaItemExtra() = runTest {
+        val feedId = feedRepository.subscribe(Feed(title = "A Feed", volumeBoostMillibels = 1200))
+        val item = FeedItem(
+            id = "episode-1",
+            feedId = feedId,
+            title = "Episode One",
+            itemGuid = "g1",
+            enclosureUrl = "https://example.com/ep1.mp3",
+            enclosureType = "audio/mpeg",
+        )
+        feedRepository.insertItems(listOf(item))
+
+        val resolved = PlaybackMediaItemFactory.resolve(item, "A Feed", feedRepository, settingsDataStore)
+
+        requireNotNull(resolved)
+        assertEquals(1200, resolved.mediaItem.mediaMetadata.extras?.getInt(VOLUME_BOOST_EXTRA_KEY))
+    }
+
+    @Test
     fun resolve_streamingDisallowedAndNotDownloaded_returnsNull() = runTest {
         settingsDataStore.setAllowPodcastStreaming(false)
         val feedId = feedRepository.subscribe(Feed(title = "A Feed"))

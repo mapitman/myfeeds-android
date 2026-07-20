@@ -152,6 +152,14 @@
     <string name="feed_properties_auto_queue_position_top">En haut de la file d\'attente</string>
     <string name="feed_properties_auto_queue_position_bottom">En bas de la file d\'attente</string>
     <string name="feed_properties_playback_speed">Vitesse de lecture</string>
+    <string name="feed_properties_volume_boost">Amplification du volume</string>
+    <string name="feed_properties_volume_boost_off">Désactivé</string>
+    <string name="feed_properties_volume_boost_low">Faible</string>
+    <string name="feed_properties_volume_boost_medium">Moyen</string>
+    <string name="feed_properties_volume_boost_high">Élevé</string>
+    <string name="feed_properties_start_skip">Ignorer au début</string>
+    <string name="feed_properties_start_skip_off">Désactivé</string>
+    <string name="feed_properties_start_skip_seconds">%1$d s</string>
     <string name="feed_properties_unsubscribe">Se désabonner</string>
     <string name="feed_properties_confirm_unsubscribe_title">Se désabonner de ce flux ?</string>
     <string name="feed_properties_confirm_unsubscribe_message">Cela supprime définitivement le flux et ses articles.</string>

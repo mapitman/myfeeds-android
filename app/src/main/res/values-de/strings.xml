@@ -152,6 +152,14 @@
     <string name="feed_properties_auto_queue_position_top">Anfang der Warteschlange</string>
     <string name="feed_properties_auto_queue_position_bottom">Ende der Warteschlange</string>
     <string name="feed_properties_playback_speed">Wiedergabegeschwindigkeit</string>
+    <string name="feed_properties_volume_boost">Lautstärkeverstärkung</string>
+    <string name="feed_properties_volume_boost_off">Aus</string>
+    <string name="feed_properties_volume_boost_low">Niedrig</string>
+    <string name="feed_properties_volume_boost_medium">Mittel</string>
+    <string name="feed_properties_volume_boost_high">Hoch</string>
+    <string name="feed_properties_start_skip">Am Anfang überspringen</string>
+    <string name="feed_properties_start_skip_off">Aus</string>
+    <string name="feed_properties_start_skip_seconds">%1$d s</string>
     <string name="feed_properties_unsubscribe">Abbestellen</string>
     <string name="feed_properties_confirm_unsubscribe_title">Diesen Feed abbestellen?</string>
     <string name="feed_properties_confirm_unsubscribe_message">Dadurch werden der Feed und seine Artikel dauerhaft gelöscht.</string>

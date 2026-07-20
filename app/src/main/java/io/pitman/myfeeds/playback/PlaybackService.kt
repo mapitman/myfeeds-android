@@ -2,8 +2,10 @@ package io.pitman.myfeeds.playback
 
 import android.app.PendingIntent
 import android.content.Intent
+import android.media.audiofx.LoudnessEnhancer
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -52,6 +54,11 @@ class PlaybackService : MediaSessionService() {
 
     private lateinit var player: ExoPlayer
     private var mediaSession: MediaSession? = null
+
+    // Boosts loudness beyond ExoPlayer's unity-gain volume cap (issue #199), keyed to the
+    // player's audio session ID which is fixed for the lifetime of this ExoPlayer instance. Some
+    // devices/OEMs don't ship the underlying effect, so creation is best-effort.
+    private var loudnessEnhancer: LoudnessEnhancer? = null
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var positionSaveJob: Job? = null
 
@@ -70,6 +77,7 @@ class PlaybackService : MediaSessionService() {
             .setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus= */ true)
             .build()
         player.addListener(playerListener)
+        loudnessEnhancer = runCatching { LoudnessEnhancer(player.audioSessionId) }.getOrNull()
 
         // Without an explicit small icon, DefaultMediaNotificationProvider falls back to the
         // app's adaptive launcher icon (android.R.attr.icon), which the system can't flatten
@@ -97,6 +105,8 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         positionSaveJob?.cancel()
+        loudnessEnhancer?.release()
+        loudnessEnhancer = null
         mediaSession?.let { session ->
             player.release()
             session.release()
@@ -107,6 +117,10 @@ class PlaybackService : MediaSessionService() {
     }
 
     private val playerListener = object : Player.Listener {
+        override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            applyVolumeBoost(mediaItem)
+        }
+
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying) {
                 startPositionSaveLoop()
@@ -175,6 +189,18 @@ class PlaybackService : MediaSessionService() {
                 saveCurrentPosition()
                 delay(5_000)
             }
+        }
+    }
+
+    /** Reads the boost carried on the media item (issue #199, set by [PlaybackMediaItemFactory])
+     *  rather than looking up the feed here, so this stays synchronous in the listener callback --
+     *  covers both [PlaybackController]-driven loads and this service's own [playNextQueued]. */
+    private fun applyVolumeBoost(mediaItem: MediaItem?) {
+        val enhancer = loudnessEnhancer ?: return
+        val millibels = mediaItem?.mediaMetadata?.extras?.getInt(VOLUME_BOOST_EXTRA_KEY, 0) ?: 0
+        runCatching {
+            enhancer.setTargetGain(millibels)
+            enhancer.enabled = millibels > 0
         }
     }
 

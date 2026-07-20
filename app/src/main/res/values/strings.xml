@@ -154,6 +154,14 @@
     <string name="feed_properties_auto_queue_position_top">Top of queue</string>
     <string name="feed_properties_auto_queue_position_bottom">Bottom of queue</string>
     <string name="feed_properties_playback_speed">Playback speed</string>
+    <string name="feed_properties_volume_boost">Volume boost</string>
+    <string name="feed_properties_volume_boost_off">Off</string>
+    <string name="feed_properties_volume_boost_low">Low</string>
+    <string name="feed_properties_volume_boost_medium">Medium</string>
+    <string name="feed_properties_volume_boost_high">High</string>
+    <string name="feed_properties_start_skip">Skip at start</string>
+    <string name="feed_properties_start_skip_off">Off</string>
+    <string name="feed_properties_start_skip_seconds">%1$d s</string>
     <string name="feed_properties_unsubscribe">Unsubscribe</string>
     <string name="feed_properties_confirm_unsubscribe_title">Unsubscribe from this feed?</string>
     <string name="feed_properties_confirm_unsubscribe_message">This permanently deletes the feed and its articles.</string>
