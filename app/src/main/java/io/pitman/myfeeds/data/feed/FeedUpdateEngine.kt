@@ -88,11 +88,16 @@ class FeedUpdateEngine @Inject constructor(
             }
         }
 
-        var updatedFeed = feed.copy(lastGet = Instant.now().toEpochMilli(), imageUrl = parsed.imageUrl ?: feed.imageUrl)
+        // Re-fetched right before the write rather than reusing the [feed] snapshot passed in at
+        // the start of this refresh (issue #189): a fetch can take long enough for the user to
+        // change something else on this feed meanwhile (e.g. playback speed via the player) --
+        // writing back a Feed built from the stale snapshot would silently clobber that edit.
+        val currentFeed = feedRepository.getFeed(feed.id) ?: feed
+        var updatedFeed = currentFeed.copy(lastGet = Instant.now().toEpochMilli(), imageUrl = parsed.imageUrl ?: currentFeed.imageUrl)
         // New podcast subscriptions default to auto-queuing, capped at a small number of episodes
         // rather than unlimited (issue #137), so Next Up doesn't get flooded by a feed's entire
         // back catalog on the very first fetch.
-        if (isFirstFetch && hasPodcastEpisode && !feed.autoQueueEnabled) {
+        if (isFirstFetch && hasPodcastEpisode && !currentFeed.autoQueueEnabled) {
             updatedFeed = updatedFeed.copy(autoQueueEnabled = true, autoQueueMaxCount = NEW_PODCAST_AUTO_QUEUE_CAP)
         }
         feedRepository.updateFeed(updatedFeed)
