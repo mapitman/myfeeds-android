@@ -28,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +48,13 @@ import io.pitman.myfeeds.R
  * (except mid-transition, which is exactly when Compose is meant to animate between them). */
 const val PLAYER_CONTAINER_KEY = "player-container"
 const val PLAYER_ARTWORK_KEY = "player-artwork"
+
+/** issue #186: bigger than the default 48dp/24dp IconButton so transport controls stay easy to
+ *  hit at a glance (e.g. while driving), with play/pause sized up further as the primary action. */
+private val TRANSPORT_BUTTON_SIZE = 56.dp
+private val TRANSPORT_ICON_SIZE = 32.dp
+private val PLAY_BUTTON_SIZE = 72.dp
+private val PLAY_ICON_SIZE = 44.dp
 
 /**
  * Persistent "now playing" bar (issue #66) shown across the app whenever [PlaybackController] has
@@ -143,37 +151,54 @@ fun MiniPlayerBar(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (hasChapters) {
-                    IconButton(onClick = onPreviousChapter) {
-                        Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
+                    IconButton(onClick = onPreviousChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                        Icon(
+                            Icons.Filled.SkipPrevious,
+                            contentDescription = stringResource(R.string.cd_previous_chapter),
+                            modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                        )
                     }
                 }
-                IconButton(onClick = onSkipBackward) {
-                    Icon(Icons.Filled.Replay, contentDescription = stringResource(R.string.cd_rewind))
+                IconButton(onClick = onSkipBackward, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                    Icon(
+                        Icons.Filled.Replay,
+                        contentDescription = stringResource(R.string.cd_rewind),
+                        modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                    )
                 }
-                IconButton(onClick = onTogglePlayPause) {
+                IconButton(onClick = onTogglePlayPause, modifier = Modifier.size(PLAY_BUTTON_SIZE)) {
                     if (playbackState.isBuffering) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(TRANSPORT_ICON_SIZE), strokeWidth = 3.dp)
                     } else {
                         Icon(
                             if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                             contentDescription = stringResource(if (playbackState.isPlaying) R.string.cd_pause else R.string.cd_play),
+                            modifier = Modifier.size(PLAY_ICON_SIZE),
                         )
                     }
                 }
-                IconButton(onClick = onSkipForward) {
+                IconButton(onClick = onSkipForward, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
                     Icon(
                         Icons.Filled.Replay,
                         contentDescription = stringResource(R.string.cd_forward),
-                        modifier = Modifier.graphicsLayer(scaleX = -1f),
+                        modifier = Modifier.size(TRANSPORT_ICON_SIZE).graphicsLayer(scaleX = -1f),
                     )
                 }
                 if (hasChapters) {
-                    IconButton(onClick = onNextChapter) {
-                        Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
+                    IconButton(onClick = onNextChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                        Icon(
+                            Icons.Filled.SkipNext,
+                            contentDescription = stringResource(R.string.cd_next_chapter),
+                            modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                        )
                     }
                 }
-                IconButton(onClick = onStop) {
-                    Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_stop_playback))
+                IconButton(onClick = onStop, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                    Icon(
+                        Icons.Filled.Close,
+                        contentDescription = stringResource(R.string.cd_stop_playback),
+                        modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                    )
                 }
             }
         }
@@ -197,6 +222,7 @@ fun ExpandedPlayerBar(
     onSkipForward: () -> Unit,
     onNextChapter: () -> Unit,
     onPreviousChapter: () -> Unit,
+    onSpeedChange: (Float) -> Unit,
     onStop: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -277,38 +303,61 @@ fun ExpandedPlayerBar(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
+                    TextButton(onClick = {
+                        val currentIndex = PLAYBACK_SPEEDS.indexOfFirst { it >= playbackState.speed }.coerceAtLeast(0)
+                        onSpeedChange(PLAYBACK_SPEEDS[(currentIndex + 1) % PLAYBACK_SPEEDS.size])
+                    }) {
+                        Text(formatSpeed(playbackState.speed))
+                    }
                     if (hasChapters) {
-                        IconButton(onClick = onPreviousChapter) {
-                            Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
+                        IconButton(onClick = onPreviousChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                            Icon(
+                                Icons.Filled.SkipPrevious,
+                                contentDescription = stringResource(R.string.cd_previous_chapter),
+                                modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                            )
                         }
                     }
-                    IconButton(onClick = onSkipBackward) {
-                        Icon(Icons.Filled.Replay, contentDescription = stringResource(R.string.cd_rewind))
+                    IconButton(onClick = onSkipBackward, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                        Icon(
+                            Icons.Filled.Replay,
+                            contentDescription = stringResource(R.string.cd_rewind),
+                            modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                        )
                     }
-                    IconButton(onClick = onTogglePlayPause) {
+                    IconButton(onClick = onTogglePlayPause, modifier = Modifier.size(PLAY_BUTTON_SIZE)) {
                         if (playbackState.isBuffering) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                            CircularProgressIndicator(modifier = Modifier.size(TRANSPORT_ICON_SIZE), strokeWidth = 3.dp)
                         } else {
                             Icon(
                                 if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                                 contentDescription = stringResource(if (playbackState.isPlaying) R.string.cd_pause else R.string.cd_play),
+                                modifier = Modifier.size(PLAY_ICON_SIZE),
                             )
                         }
                     }
-                    IconButton(onClick = onSkipForward) {
+                    IconButton(onClick = onSkipForward, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
                         Icon(
                             Icons.Filled.Replay,
                             contentDescription = stringResource(R.string.cd_forward),
-                            modifier = Modifier.graphicsLayer(scaleX = -1f),
+                            modifier = Modifier.size(TRANSPORT_ICON_SIZE).graphicsLayer(scaleX = -1f),
                         )
                     }
                     if (hasChapters) {
-                        IconButton(onClick = onNextChapter) {
-                            Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
+                        IconButton(onClick = onNextChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                            Icon(
+                                Icons.Filled.SkipNext,
+                                contentDescription = stringResource(R.string.cd_next_chapter),
+                                modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                            )
                         }
                     }
-                    IconButton(onClick = onStop) {
-                        Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.cd_stop_playback))
+                    IconButton(onClick = onStop, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                        Icon(
+                            Icons.Filled.Close,
+                            contentDescription = stringResource(R.string.cd_stop_playback),
+                            modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                        )
                     }
                 }
             }
@@ -328,6 +377,11 @@ private fun chapterLabel(playbackState: PlaybackUiState): String {
     val title = playbackState.currentChapter?.title
     return if (title != null) "$label: $title" else label
 }
+
+private val PLAYBACK_SPEEDS = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+
+private fun formatSpeed(speed: Float): String =
+    "${"%.2f".format(speed).trimEnd('0').trimEnd('.')}x"
 
 private fun formatDuration(millis: Long): String {
     val totalSeconds = millis / 1000

@@ -441,35 +441,48 @@ private fun PodcastPlayerControls(
             // (circular-arrow Replay, mirrored for forward), so the two controls read as different
             // actions at a glance (issue #95).
             if (hasChapters) {
-                IconButton(onClick = onPreviousChapter) {
-                    Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
+                IconButton(onClick = onPreviousChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                    Icon(
+                        Icons.Filled.SkipPrevious,
+                        contentDescription = stringResource(R.string.cd_previous_chapter),
+                        modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                    )
                 }
             }
             // No stock Material icon for an exact 15s glyph (only 5/10/30) -- the plain circular
             // Replay arrow (mirrored for forward) reads as "skip" without implying a wrong duration.
-            IconButton(onClick = onSkipBackward, enabled = isCurrentItem) {
-                Icon(Icons.Filled.Replay, contentDescription = stringResource(R.string.cd_rewind))
+            IconButton(onClick = onSkipBackward, enabled = isCurrentItem, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                Icon(
+                    Icons.Filled.Replay,
+                    contentDescription = stringResource(R.string.cd_rewind),
+                    modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                )
             }
-            IconButton(onClick = onTogglePlayPause) {
+            IconButton(onClick = onTogglePlayPause, modifier = Modifier.size(PLAY_BUTTON_SIZE)) {
                 if (isCurrentItem && playbackState.isBuffering) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.size(TRANSPORT_ICON_SIZE), strokeWidth = 3.dp)
                 } else {
                     Icon(
                         if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
                         contentDescription = stringResource(if (isPlaying) R.string.cd_pause else R.string.cd_play),
+                        modifier = Modifier.size(PLAY_ICON_SIZE),
                     )
                 }
             }
-            IconButton(onClick = onSkipForward, enabled = isCurrentItem) {
+            IconButton(onClick = onSkipForward, enabled = isCurrentItem, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
                 Icon(
                     Icons.Filled.Replay,
                     contentDescription = stringResource(R.string.cd_forward),
-                    modifier = Modifier.graphicsLayer(scaleX = -1f),
+                    modifier = Modifier.size(TRANSPORT_ICON_SIZE).graphicsLayer(scaleX = -1f),
                 )
             }
             if (hasChapters) {
-                IconButton(onClick = onNextChapter) {
-                    Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
+                IconButton(onClick = onNextChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
+                    Icon(
+                        Icons.Filled.SkipNext,
+                        contentDescription = stringResource(R.string.cd_next_chapter),
+                        modifier = Modifier.size(TRANSPORT_ICON_SIZE),
+                    )
                 }
             }
             when {
@@ -503,6 +516,13 @@ private fun PodcastPlayerControls(
 }
 
 private val PLAYBACK_SPEEDS = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+
+/** issue #186: bigger than the default 48dp/24dp IconButton so transport controls stay easy to
+ *  hit at a glance (e.g. while driving), with play/pause sized up further as the primary action. */
+private val TRANSPORT_BUTTON_SIZE = 56.dp
+private val TRANSPORT_ICON_SIZE = 32.dp
+private val PLAY_BUTTON_SIZE = 72.dp
+private val PLAY_ICON_SIZE = 44.dp
 
 private fun formatSpeed(speed: Float): String =
     "${"%.2f".format(speed).trimEnd('0').trimEnd('.')}x"
