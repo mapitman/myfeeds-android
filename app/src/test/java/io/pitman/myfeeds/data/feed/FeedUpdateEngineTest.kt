@@ -11,6 +11,7 @@ import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.repository.QueueRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import okhttp3.OkHttpClient
 import okhttp3.mockwebserver.Dispatcher
@@ -218,6 +219,24 @@ class FeedUpdateEngineTest {
         engine.updateFeed(feed)
 
         assertTrue(queueRepository.isQueued(itemId))
+    }
+
+    @Test
+    fun updateFeed_doesNotClobberPlaybackSpeedChangedDuringFetch() = runTest {
+        // issue #189: persist() used to write back a Feed built from the snapshot passed in at
+        // the start of the refresh, silently reverting anything the user changed on that feed
+        // (e.g. playback speed via the player) while the network fetch was still in flight.
+        val feed = subscribeFeed()
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                runBlocking { repository.updateFeed(repository.getFeed(feed.id)!!.copy(playbackSpeed = 1.75f)) }
+                return MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First"))
+            }
+        }
+
+        engine.updateFeed(feed)
+
+        assertEquals(1.75f, repository.getFeed(feed.id)!!.playbackSpeed)
     }
 
     @Test
