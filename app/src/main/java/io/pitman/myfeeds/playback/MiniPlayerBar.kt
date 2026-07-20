@@ -3,7 +3,9 @@ package io.pitman.myfeeds.playback
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,8 +31,12 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -69,6 +75,12 @@ fun MiniPlayerBar(
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
+    // True for every standalone/pinned-at-the-bottom use of this bar, where the nav bar sits right
+    // below it and needs the padding reserved. Only the player sheet's *expanded* content (issue
+    // #197) -- where this is a sticky header with the Next Up list following below it, not the
+    // screen's actual bottom edge -- passes false, since that reserved space just becomes unwanted
+    // blank space between the speed-button row and the list beneath it.
+    applyNavigationBarsPadding: Boolean = true,
 ) {
     val hasChapters = playbackState.chapters.isNotEmpty()
     with(sharedTransitionScope) {
@@ -81,7 +93,29 @@ fun MiniPlayerBar(
             color = MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 3.dp,
         ) {
-        Column(modifier = Modifier.navigationBarsPadding()) {
+        Box {
+            // Blurred cover art as a backdrop. The scrim fades from mostly-transparent at the top
+            // to the bar's own solid surface color at the bottom -- rather than a flat dim -- so
+            // when this is the player sheet's header (issue #195), the art visually merges into
+            // the plain-colored Next Up list starting right where this bar ends, instead of
+            // cutting off abruptly.
+            if (playbackState.artworkUrl != null) {
+                AsyncImage(
+                    model = playbackState.artworkUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize().blur(24.dp).alpha(0.6f),
+                )
+                Box(
+                    modifier = Modifier.matchParentSize().background(
+                        Brush.verticalGradient(
+                            0f to MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.3f),
+                            1f to MaterialTheme.colorScheme.surfaceContainerHighest,
+                        ),
+                    ),
+                )
+            }
+        Column(modifier = if (applyNavigationBarsPadding) Modifier.navigationBarsPadding() else Modifier) {
             val progress = if (playbackState.durationMs > 0) {
                 (playbackState.positionMs.toFloat() / playbackState.durationMs).coerceIn(0f, 1f)
             } else {
@@ -204,6 +238,56 @@ fun MiniPlayerBar(
                 }
             }
         }
+        }
+        }
+    }
+}
+
+/**
+ * An even more minimal now-playing indicator (issue #197) -- swiping [MiniPlayerBar] down further
+ * (past its own resting/peek position, when it's the player sheet's collapsed header) shrinks to
+ * this instead of dismissing playback entirely: just enough to see what's playing and toggle it.
+ */
+@Composable
+fun NowPlayingMiniStrip(
+    playbackState: PlaybackUiState,
+    onClick: () -> Unit,
+    onTogglePlayPause: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Surface(
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        tonalElevation = 3.dp,
+    ) {
+        Row(
+            modifier = Modifier.navigationBarsPadding().padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (playbackState.artworkUrl != null) {
+                AsyncImage(
+                    model = playbackState.artworkUrl,
+                    contentDescription = null,
+                    modifier = Modifier.size(40.dp).clip(RoundedCornerShape(4.dp)),
+                )
+            }
+            Text(
+                text = playbackState.title.orEmpty(),
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+            )
+            IconButton(onClick = onTogglePlayPause) {
+                if (playbackState.isBuffering) {
+                    CircularProgressIndicator(modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(
+                        if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
+                        contentDescription = stringResource(if (playbackState.isPlaying) R.string.cd_pause else R.string.cd_play),
+                    )
+                }
+            }
         }
     }
 }

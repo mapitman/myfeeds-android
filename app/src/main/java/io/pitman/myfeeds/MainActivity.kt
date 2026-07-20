@@ -14,12 +14,19 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SheetValue
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.material3.rememberStandardBottomSheetState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -50,6 +58,7 @@ import io.pitman.myfeeds.feedlist.FeedListScreen
 import io.pitman.myfeeds.feedproperties.FeedPropertiesScreen
 import io.pitman.myfeeds.feedriver.FeedRiverScreen
 import io.pitman.myfeeds.playback.MiniPlayerViewModel
+import io.pitman.myfeeds.playback.NowPlayingMiniStrip
 import io.pitman.myfeeds.playback.PlayerBottomSheetContent
 import io.pitman.myfeeds.queue.QueueViewModel
 import io.pitman.myfeeds.reader.ReaderScreen
@@ -64,6 +73,20 @@ import javax.inject.Inject
 /** Height of the player bottom sheet's collapsed/peek state (issue #195) -- tall enough for
  *  [io.pitman.myfeeds.playback.MiniPlayerBar]'s full two-row control layout. */
 private val PLAYER_SHEET_PEEK_HEIGHT = 312.dp
+
+/** [androidx.compose.material3.BottomSheetDefaults.DragHandle] hardcodes 22dp of vertical padding
+ *  around its pill -- much taller than the pill itself and not exposed as a parameter -- so this
+ *  reproduces its look with a slim 6dp padding instead. */
+@Composable
+private fun SlimDragHandle(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .padding(vertical = 14.dp)
+            .size(width = 28.dp, height = 3.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.onSurfaceVariant),
+    )
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @AndroidEntryPoint
@@ -121,7 +144,13 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(Unit) { miniPlayerViewModel.restoreLastPlayingItem() }
                     val currentBackStackEntry by navController.currentBackStackEntryAsState()
                     var currentReaderItemId by remember { mutableStateOf<String?>(null) }
-                    val scaffoldState = rememberBottomSheetScaffoldState()
+                    // skipHiddenState=false (issue #197) adds a third, further-than-peek anchor:
+                    // swiping the collapsed player down past its own resting position hides it
+                    // down to just NowPlayingMiniStrip instead of only ever resting at the full
+                    // MiniPlayerBar peek.
+                    val scaffoldState = rememberBottomSheetScaffoldState(
+                        bottomSheetState = rememberStandardBottomSheetState(skipHiddenState = false),
+                    )
                     val coroutineScope = rememberCoroutineScope()
 
                     // The reader screen has its own full player for the episode it's showing (issue #97),
@@ -149,15 +178,20 @@ class MainActivity : ComponentActivity() {
                     // expanded state of the persistent player bottom sheet -- opened by expanding it.
                     val onQueueClick: () -> Unit = { coroutineScope.launch { scaffoldState.bottomSheetState.expand() } }
 
+                    Box(modifier = Modifier.fillMaxSize()) {
                     BottomSheetScaffold(
                         scaffoldState = scaffoldState,
+                        // Matches MiniPlayerBar's own surface color so its bottom-fading cover-art
+                        // gradient (issue #195) blends into the sheet's background seamlessly,
+                        // rather than meeting BottomSheetScaffold's default (a different tone).
+                        sheetContainerColor = MaterialTheme.colorScheme.surfaceContainerHighest,
                         sheetPeekHeight = if (playbackState.currentItemId != null && !isOnPlayingEpisodeReader) {
                             PLAYER_SHEET_PEEK_HEIGHT
                         } else {
                             0.dp
                         },
                         sheetDragHandle = if (playbackState.currentItemId != null || queue.isNotEmpty()) {
-                            { BottomSheetDefaults.DragHandle() }
+                            { SlimDragHandle() }
                         } else {
                             null
                         },
@@ -274,6 +308,18 @@ class MainActivity : ComponentActivity() {
                                 )
                             }
                         }
+                    }
+                    if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden &&
+                        playbackState.currentItemId != null &&
+                        !isOnPlayingEpisodeReader
+                    ) {
+                        NowPlayingMiniStrip(
+                            playbackState = playbackState,
+                            onClick = { coroutineScope.launch { scaffoldState.bottomSheetState.partialExpand() } },
+                            onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
+                            modifier = Modifier.align(Alignment.BottomCenter),
+                        )
+                    }
                     }
                 }
             }
