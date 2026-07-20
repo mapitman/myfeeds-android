@@ -51,10 +51,10 @@ const val PLAYER_ARTWORK_KEY = "player-artwork"
 
 /** issue #186: bigger than the default 48dp/24dp IconButton so transport controls stay easy to
  *  hit at a glance (e.g. while driving), with play/pause sized up further as the primary action. */
-private val TRANSPORT_BUTTON_SIZE = 56.dp
-private val TRANSPORT_ICON_SIZE = 32.dp
-private val PLAY_BUTTON_SIZE = 72.dp
-private val PLAY_ICON_SIZE = 44.dp
+private val TRANSPORT_BUTTON_SIZE = 64.dp
+private val TRANSPORT_ICON_SIZE = 40.dp
+private val PLAY_BUTTON_SIZE = 88.dp
+private val PLAY_ICON_SIZE = 56.dp
 
 /**
  * Persistent "now playing" bar (issue #66) shown across the app whenever [PlaybackController] has
@@ -303,21 +303,6 @@ fun ExpandedPlayerBar(
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    TextButton(onClick = {
-                        val currentIndex = PLAYBACK_SPEEDS.indexOfFirst { it >= playbackState.speed }.coerceAtLeast(0)
-                        onSpeedChange(PLAYBACK_SPEEDS[(currentIndex + 1) % PLAYBACK_SPEEDS.size])
-                    }) {
-                        Text(formatSpeed(playbackState.speed))
-                    }
-                    if (hasChapters) {
-                        IconButton(onClick = onPreviousChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
-                            Icon(
-                                Icons.Filled.SkipPrevious,
-                                contentDescription = stringResource(R.string.cd_previous_chapter),
-                                modifier = Modifier.size(TRANSPORT_ICON_SIZE),
-                            )
-                        }
-                    }
                     IconButton(onClick = onSkipBackward, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
                         Icon(
                             Icons.Filled.Replay,
@@ -343,21 +328,36 @@ fun ExpandedPlayerBar(
                             modifier = Modifier.size(TRANSPORT_ICON_SIZE).graphicsLayer(scaleX = -1f),
                         )
                     }
-                    if (hasChapters) {
-                        IconButton(onClick = onNextChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
-                            Icon(
-                                Icons.Filled.SkipNext,
-                                contentDescription = stringResource(R.string.cd_next_chapter),
-                                modifier = Modifier.size(TRANSPORT_ICON_SIZE),
-                            )
-                        }
-                    }
                     IconButton(onClick = onStop, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
                         Icon(
                             Icons.Filled.Close,
                             contentDescription = stringResource(R.string.cd_stop_playback),
                             modifier = Modifier.size(TRANSPORT_ICON_SIZE),
                         )
+                    }
+                }
+                // Chapter nav flanks the speed selector on its own row (issue #185/#186) -- keeps
+                // the main transport row to just 4 buttons so it never overflows screen width.
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    if (hasChapters) {
+                        IconButton(onClick = onPreviousChapter) {
+                            Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
+                        }
+                    }
+                    TextButton(onClick = {
+                        val currentIndex = PLAYBACK_SPEEDS.indexOfFirst { it >= playbackState.speed }.coerceAtLeast(0)
+                        onSpeedChange(PLAYBACK_SPEEDS[(currentIndex + 1) % PLAYBACK_SPEEDS.size])
+                    }) {
+                        Text(formatSpeed(playbackState.speed))
+                    }
+                    if (hasChapters) {
+                        IconButton(onClick = onNextChapter) {
+                            Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
+                        }
                     }
                 }
             }
