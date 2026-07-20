@@ -129,8 +129,9 @@ class PlaybackController @Inject constructor(
 
     /**
      * On completion the episode is no longer "current" (issue #107): position resets and the item
-     * stops being treated as playing -- the same as an explicit [stop], just triggered by reaching
-     * the end instead of the user tapping close. If anything is up next, [PlaybackService] (not
+     * stops being treated as playing -- same UI-reset as an explicit [stop], but the episode is
+     * actually finished here (unlike [stop], issue #191) so it's not requeued. If anything is up
+     * next, [PlaybackService] (not
      * here -- issue #179) advances the underlying player to it directly, and the next
      * [Player.Listener.onEvents] this controller receives will reflect that automatically via the
      * normal (non-ended) branch below, so the mini-player picks it up without this needing to do
@@ -321,12 +322,19 @@ class PlaybackController @Inject constructor(
         // Player.stop() alone halts playback but retains currentMediaItem, which would leave
         // the mini-player (issue #66) stuck on-screen -- clearMediaItems() is what actually
         // drops it so currentItemId (and therefore mini-player visibility) goes back to null.
+        val itemId = currentItemId
         controller?.stop()
         controller?.clearMediaItems()
         currentFeedId = null
         currentItemId = null
         currentChapters = emptyList()
-        positionTickerScope.launch(Dispatchers.IO) { settingsDataStore.setLastPlayingItem(null, null) }
+        positionTickerScope.launch(Dispatchers.IO) {
+            settingsDataStore.setLastPlayingItem(null, null)
+            // Explicit stop just ends "now playing" -- unlike natural completion, the episode
+            // isn't finished, so it goes back into Next Up the same way switching to a different
+            // episode already does (issue #191), instead of disappearing from the app entirely.
+            itemId?.let { requeuePreviousEpisode(it) }
+        }
     }
 
     fun release() {
