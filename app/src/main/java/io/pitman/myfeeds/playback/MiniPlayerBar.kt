@@ -3,7 +3,9 @@ package io.pitman.myfeeds.playback
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -29,8 +31,11 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -81,6 +86,21 @@ fun MiniPlayerBar(
             color = MaterialTheme.colorScheme.surfaceContainerHighest,
             tonalElevation = 3.dp,
         ) {
+        Box {
+            // Blurred cover art as a backdrop, dimmed by a scrim matching the bar's own surface
+            // color so text/controls on top stay readable regardless of the artwork's own colors.
+            if (playbackState.artworkUrl != null) {
+                AsyncImage(
+                    model = playbackState.artworkUrl,
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.matchParentSize().blur(24.dp).alpha(0.6f),
+                )
+                Box(
+                    modifier = Modifier.matchParentSize()
+                        .background(MaterialTheme.colorScheme.surfaceContainerHighest.copy(alpha = 0.7f)),
+                )
+            }
         Column(modifier = Modifier.navigationBarsPadding()) {
             val progress = if (playbackState.durationMs > 0) {
                 (playbackState.positionMs.toFloat() / playbackState.durationMs).coerceIn(0f, 1f)
@@ -203,6 +223,7 @@ fun MiniPlayerBar(
                     }
                 }
             }
+        }
         }
         }
     }

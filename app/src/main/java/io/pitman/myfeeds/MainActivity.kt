@@ -14,12 +14,17 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.BottomSheetScaffold
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.rememberBottomSheetScaffoldState
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -29,6 +34,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -64,6 +70,20 @@ import javax.inject.Inject
 /** Height of the player bottom sheet's collapsed/peek state (issue #195) -- tall enough for
  *  [io.pitman.myfeeds.playback.MiniPlayerBar]'s full two-row control layout. */
 private val PLAYER_SHEET_PEEK_HEIGHT = 312.dp
+
+/** [androidx.compose.material3.BottomSheetDefaults.DragHandle] hardcodes 22dp of vertical padding
+ *  around its pill -- much taller than the pill itself and not exposed as a parameter -- so this
+ *  reproduces its look with a slim 6dp padding instead. */
+@Composable
+private fun SlimDragHandle(modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier
+            .padding(vertical = 10.dp)
+            .size(width = 28.dp, height = 3.dp)
+            .clip(RoundedCornerShape(50))
+            .background(MaterialTheme.colorScheme.onSurfaceVariant),
+    )
+}
 
 @OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @AndroidEntryPoint
@@ -157,7 +177,7 @@ class MainActivity : ComponentActivity() {
                             0.dp
                         },
                         sheetDragHandle = if (playbackState.currentItemId != null || queue.isNotEmpty()) {
-                            { BottomSheetDefaults.DragHandle() }
+                            { SlimDragHandle() }
                         } else {
                             null
                         },

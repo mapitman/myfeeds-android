@@ -5,14 +5,18 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.pitman.myfeeds.R
@@ -25,9 +29,13 @@ import io.pitman.myfeeds.queue.ReorderableQueueList
  * Up queue revealed below it as the sheet is dragged open. The whole column has to be naturally
  * taller than the sheet's peek height (not conditionally sized to it) for
  * [androidx.compose.material3.BottomSheetScaffold] to compute a distinct "expanded" anchor at
- * all; [Modifier.fillMaxHeight] on the column is what makes that always the case, letting
- * [ReorderableQueueList]'s [androidx.compose.foundation.lazy.LazyColumn] claim the remaining
- * bounded space via `weight`.
+ * all, which is what a fixed [Modifier.height] here is for -- letting [ReorderableQueueList]'s
+ * [androidx.compose.foundation.lazy.LazyColumn] claim the remaining bounded space via `weight`.
+ *
+ * That height is the screen height minus the status bar inset, not the full screen -- edge-to-edge
+ * means [androidx.compose.material3.BottomSheetScaffold] otherwise has no notion of the status bar
+ * at all, so a plain `fillMaxHeight()` here let the sheet (and its drag handle) expand straight
+ * into it.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -49,7 +57,9 @@ fun PlayerBottomSheetContent(
     animatedVisibilityScope: AnimatedVisibilityScope,
     modifier: Modifier = Modifier,
 ) {
-    Column(modifier = modifier.fillMaxHeight()) {
+    val statusBarHeight = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val screenHeight = LocalConfiguration.current.screenHeightDp.dp
+    Column(modifier = modifier.fillMaxWidth().height(screenHeight - statusBarHeight)) {
         if (playbackState.currentItemId != null) {
             MiniPlayerBar(
                 playbackState = playbackState,
