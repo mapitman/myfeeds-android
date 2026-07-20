@@ -3,9 +3,7 @@ package io.pitman.myfeeds.playback
 import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -25,27 +23,23 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import io.pitman.myfeeds.R
 
-/** Shared-element keys (issue #112) matching across [MiniPlayerBar], [ExpandedPlayerBar], and the
- * reader's hero image -- only one of those three is ever on-screen carrying a given key at once
- * (except mid-transition, which is exactly when Compose is meant to animate between them). */
+/** Shared-element keys (issue #112) matching across [MiniPlayerBar] and the reader's hero image --
+ * only one of those two is ever on-screen carrying a given key at once (except mid-transition,
+ * which is exactly when Compose is meant to animate between them). */
 const val PLAYER_CONTAINER_KEY = "player-container"
 const val PLAYER_ARTWORK_KEY = "player-artwork"
 
@@ -214,167 +208,7 @@ fun MiniPlayerBar(
     }
 }
 
-/**
- * A taller now-playing player, swapped in for [MiniPlayerBar] on the Next Up screen (issue #106)
- * -- it's the screen most about "what's playing/coming up next", so it gets the full transport
- * controls and cover art background rather than the compact bar shown everywhere else.
- */
-@OptIn(ExperimentalSharedTransitionApi::class)
-@Composable
-fun ExpandedPlayerBar(
-    playbackState: PlaybackUiState,
-    onClick: () -> Unit,
-    onSeek: (Long) -> Unit,
-    onTogglePlayPause: () -> Unit,
-    onSkipBackward: () -> Unit,
-    onSkipForward: () -> Unit,
-    onNextChapter: () -> Unit,
-    onPreviousChapter: () -> Unit,
-    onSpeedChange: (Float) -> Unit,
-    onStop: () -> Unit,
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    modifier: Modifier = Modifier,
-) {
-    val hasChapters = playbackState.chapters.isNotEmpty()
-    with(sharedTransitionScope) {
-    Surface(
-        modifier = modifier.fillMaxWidth()
-            .sharedBounds(
-                rememberSharedContentState(key = PLAYER_CONTAINER_KEY),
-                animatedVisibilityScope = animatedVisibilityScope,
-            ),
-        color = MaterialTheme.colorScheme.surfaceContainerHighest,
-        tonalElevation = 3.dp,
-    ) {
-        Box(modifier = Modifier.fillMaxWidth()) {
-            if (playbackState.artworkUrl != null) {
-                AsyncImage(
-                    model = playbackState.artworkUrl,
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.matchParentSize().blur(24.dp).alpha(0.6f),
-                )
-                Box(
-                    modifier = Modifier.matchParentSize()
-                        .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.55f)),
-                )
-            }
-            Column(modifier = Modifier.navigationBarsPadding().padding(16.dp)) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth().clickable(onClick = onClick),
-                ) {
-                    if (playbackState.artworkUrl != null) {
-                        AsyncImage(
-                            model = playbackState.artworkUrl,
-                            contentDescription = null,
-                            modifier = Modifier.size(64.dp).clip(RoundedCornerShape(8.dp))
-                                .sharedElement(
-                                    rememberSharedContentState(key = PLAYER_ARTWORK_KEY),
-                                    animatedVisibilityScope = animatedVisibilityScope,
-                                ),
-                        )
-                    }
-                    Column(modifier = Modifier.weight(1f).padding(horizontal = 12.dp)) {
-                        Text(
-                            text = playbackState.title.orEmpty(),
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                        )
-                        if (hasChapters) {
-                            Text(
-                                text = chapterLabel(playbackState),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.primary,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                            )
-                        }
-                    }
-                }
-                Slider(
-                    value = playbackState.positionMs.toFloat(),
-                    onValueChange = { onSeek(it.toLong()) },
-                    valueRange = 0f..playbackState.durationMs.coerceAtLeast(1L).toFloat(),
-                )
-                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween) {
-                    Text(formatDuration(playbackState.positionMs), style = MaterialTheme.typography.bodySmall)
-                    Text(
-                        formatDuration((playbackState.durationMs - playbackState.positionMs).coerceAtLeast(0L)),
-                        style = MaterialTheme.typography.bodySmall,
-                    )
-                }
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    IconButton(onClick = onSkipBackward, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
-                        Icon(
-                            Icons.Filled.Replay,
-                            contentDescription = stringResource(R.string.cd_rewind),
-                            modifier = Modifier.size(TRANSPORT_ICON_SIZE),
-                        )
-                    }
-                    IconButton(onClick = onTogglePlayPause, modifier = Modifier.size(PLAY_BUTTON_SIZE)) {
-                        if (playbackState.isBuffering) {
-                            CircularProgressIndicator(modifier = Modifier.size(TRANSPORT_ICON_SIZE), strokeWidth = 3.dp)
-                        } else {
-                            Icon(
-                                if (playbackState.isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                                contentDescription = stringResource(if (playbackState.isPlaying) R.string.cd_pause else R.string.cd_play),
-                                modifier = Modifier.size(PLAY_ICON_SIZE),
-                            )
-                        }
-                    }
-                    IconButton(onClick = onSkipForward, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
-                        Icon(
-                            Icons.Filled.Replay,
-                            contentDescription = stringResource(R.string.cd_forward),
-                            modifier = Modifier.size(TRANSPORT_ICON_SIZE).graphicsLayer(scaleX = -1f),
-                        )
-                    }
-                    IconButton(onClick = onStop, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
-                        Icon(
-                            Icons.Filled.Close,
-                            contentDescription = stringResource(R.string.cd_stop_playback),
-                            modifier = Modifier.size(TRANSPORT_ICON_SIZE),
-                        )
-                    }
-                }
-                // Chapter nav flanks the speed selector on its own row (issue #185/#186) -- keeps
-                // the main transport row to just 4 buttons so it never overflows screen width.
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    if (hasChapters) {
-                        IconButton(onClick = onPreviousChapter) {
-                            Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
-                        }
-                    }
-                    TextButton(onClick = {
-                        val currentIndex = PLAYBACK_SPEEDS.indexOfFirst { it >= playbackState.speed }.coerceAtLeast(0)
-                        onSpeedChange(PLAYBACK_SPEEDS[(currentIndex + 1) % PLAYBACK_SPEEDS.size])
-                    }) {
-                        Text(formatSpeed(playbackState.speed))
-                    }
-                    if (hasChapters) {
-                        IconButton(onClick = onNextChapter) {
-                            Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
-                        }
-                    }
-                }
-            }
-        }
-    }
-    }
-}
-
-/** "Chapter N of M[: Title]" (issue #95), shared by [MiniPlayerBar] and [ExpandedPlayerBar]. */
+/** "Chapter N of M[: Title]" (issue #95). */
 @Composable
 private fun chapterLabel(playbackState: PlaybackUiState): String {
     val label = stringResource(

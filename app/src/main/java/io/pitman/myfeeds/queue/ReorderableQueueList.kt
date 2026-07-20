@@ -1,16 +1,9 @@
 package io.pitman.myfeeds.queue
 
-import androidx.compose.animation.AnimatedVisibilityScope
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,19 +13,14 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DragHandle
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -48,135 +36,18 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
-import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.articlelist.ArticleDateFormatter
 import io.pitman.myfeeds.data.local.QueuedEpisode
-import io.pitman.myfeeds.playback.ExpandedPlayerBar
-import io.pitman.myfeeds.playback.MiniPlayerViewModel
 import kotlin.math.roundToInt
 
-private val ROW_HEIGHT = 84.dp
+val QUEUE_ROW_HEIGHT = 84.dp
 private val THUMBNAIL_SIZE = 48.dp
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalSharedTransitionApi::class)
+/** The Next Up queue as a drag-to-reorder list (issue #106), shared by wherever it's shown. */
 @Composable
-fun QueueScreen(
-    sharedTransitionScope: SharedTransitionScope,
-    animatedVisibilityScope: AnimatedVisibilityScope,
-    modifier: Modifier = Modifier,
-    viewModel: QueueViewModel = hiltViewModel(),
-    miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel(),
-    onEpisodeClick: (Long, String) -> Unit = { _, _ -> },
-    onBack: () -> Unit = {},
-) {
-    val queue by viewModel.queue.collectAsState()
-    val playbackState by miniPlayerViewModel.playbackState.collectAsState()
-
-    Scaffold(
-        modifier = modifier,
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.queue_title)) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.cd_back))
-                    }
-                },
-            )
-        },
-    ) { innerPadding ->
-        if (queue.isEmpty() && playbackState.currentItemId == null) {
-            Box(modifier = Modifier.fillMaxSize().padding(innerPadding), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.queue_empty))
-            }
-            return@Scaffold
-        }
-
-        // issue #158: measuring available width vs. height (rather than checking
-        // Configuration.orientation) also does the right thing in split-screen/multi-window and on
-        // foldables, where the window can be wider than it is tall without the device itself being
-        // held sideways.
-        BoxWithConstraints(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-            val isLandscape = maxWidth > maxHeight
-            if (isLandscape) {
-                Row(modifier = Modifier.fillMaxSize()) {
-                    if (playbackState.currentItemId != null) {
-                        ExpandedPlayerBar(
-                            playbackState = playbackState,
-                            onClick = {
-                                val feedId = playbackState.feedId
-                                val itemId = playbackState.currentItemId
-                                if (feedId != null && itemId != null) onEpisodeClick(feedId, itemId)
-                            },
-                            onSeek = miniPlayerViewModel::seekTo,
-                            onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
-                            onSkipBackward = miniPlayerViewModel::skipBackward,
-                            onSkipForward = miniPlayerViewModel::skipForward,
-                            onNextChapter = miniPlayerViewModel::nextChapter,
-                            onPreviousChapter = miniPlayerViewModel::previousChapter,
-                            onSpeedChange = miniPlayerViewModel::setSpeed,
-                            onStop = miniPlayerViewModel::stop,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                            modifier = Modifier.weight(1f).fillMaxHeight(),
-                        )
-                    }
-                    ReorderableQueueList(
-                        modifier = Modifier.weight(1f).fillMaxHeight(),
-                        queue = queue,
-                        onReorder = { ids, onComplete -> viewModel.reorder(ids, onComplete) },
-                        onRemove = viewModel::remove,
-                        onClick = { episode ->
-                            viewModel.playNow(episode)
-                            onEpisodeClick(episode.item.feedId, episode.item.id)
-                        },
-                    )
-                }
-            } else {
-                Column(modifier = Modifier.fillMaxSize()) {
-                    // Next Up (issue #106) is the screen most about "what's playing", so the
-                    // currently playing episode gets the full player -- with cover art and
-                    // transport controls -- as the top of the list, rather than a plain pinned row.
-                    if (playbackState.currentItemId != null) {
-                        ExpandedPlayerBar(
-                            playbackState = playbackState,
-                            onClick = {
-                                val feedId = playbackState.feedId
-                                val itemId = playbackState.currentItemId
-                                if (feedId != null && itemId != null) onEpisodeClick(feedId, itemId)
-                            },
-                            onSeek = miniPlayerViewModel::seekTo,
-                            onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
-                            onSkipBackward = miniPlayerViewModel::skipBackward,
-                            onSkipForward = miniPlayerViewModel::skipForward,
-                            onNextChapter = miniPlayerViewModel::nextChapter,
-                            onPreviousChapter = miniPlayerViewModel::previousChapter,
-                            onSpeedChange = miniPlayerViewModel::setSpeed,
-                            onStop = miniPlayerViewModel::stop,
-                            sharedTransitionScope = sharedTransitionScope,
-                            animatedVisibilityScope = animatedVisibilityScope,
-                        )
-                    }
-                    ReorderableQueueList(
-                        modifier = Modifier.weight(1f),
-                        queue = queue,
-                        onReorder = { ids, onComplete -> viewModel.reorder(ids, onComplete) },
-                        onRemove = viewModel::remove,
-                        onClick = { episode ->
-                            viewModel.playNow(episode)
-                            onEpisodeClick(episode.item.feedId, episode.item.id)
-                        },
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ReorderableQueueList(
+fun ReorderableQueueList(
     modifier: Modifier,
     queue: List<QueuedEpisode>,
     onReorder: (List<String>, onComplete: () -> Unit) -> Unit,
@@ -196,7 +67,7 @@ private fun ReorderableQueueList(
     // unrelated `queue` re-emission landing before the (async, fire-and-forget) reorder write
     // completes and clobbering the just-dropped order with the stale pre-reorder one.
     var isReordering by remember { mutableStateOf(false) }
-    val itemHeightPx = with(LocalDensity.current) { ROW_HEIGHT.toPx() }
+    val itemHeightPx = with(LocalDensity.current) { QUEUE_ROW_HEIGHT.toPx() }
 
     LaunchedEffect(queue) {
         if (!isReordering) items = queue
@@ -208,7 +79,7 @@ private fun ReorderableQueueList(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(ROW_HEIGHT)
+                    .height(QUEUE_ROW_HEIGHT)
                     // Clips any content that overflows this row's fixed height (e.g. at larger
                     // system font scales) to its own bounds -- otherwise the dragged row's
                     // elevated zIndex below makes that overflow paint visibly on top of the row
@@ -313,7 +184,7 @@ private fun ReorderableQueueList(
                             .graphicsLayer(),
                     )
                 }
-                Column(modifier = Modifier.weight(1f)) {
+                androidx.compose.foundation.layout.Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = episode.item.title.orEmpty(),
                         style = MaterialTheme.typography.titleSmall,
