@@ -7,8 +7,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
 import androidx.compose.animation.core.tween
@@ -16,16 +14,22 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.BottomSheetScaffold
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.rememberBottomSheetScaffoldState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.GlanceAppWidgetManager
 import androidx.glance.appwidget.updateAll
@@ -45,9 +49,9 @@ import io.pitman.myfeeds.downloads.DownloadsScreen
 import io.pitman.myfeeds.feedlist.FeedListScreen
 import io.pitman.myfeeds.feedproperties.FeedPropertiesScreen
 import io.pitman.myfeeds.feedriver.FeedRiverScreen
-import io.pitman.myfeeds.playback.MiniPlayerBar
 import io.pitman.myfeeds.playback.MiniPlayerViewModel
-import io.pitman.myfeeds.queue.QueueScreen
+import io.pitman.myfeeds.playback.PlayerBottomSheetContent
+import io.pitman.myfeeds.queue.QueueViewModel
 import io.pitman.myfeeds.reader.ReaderScreen
 import io.pitman.myfeeds.refresh.FeedRefreshScheduler
 import io.pitman.myfeeds.settings.SettingsScreen
@@ -57,7 +61,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-@OptIn(ExperimentalSharedTransitionApi::class)
+/** Height of the player bottom sheet's collapsed/peek state (issue #195) -- tall enough for
+ *  [io.pitman.myfeeds.playback.MiniPlayerBar]'s full two-row control layout. */
+private val PLAYER_SHEET_PEEK_HEIGHT = 312.dp
+
+@OptIn(ExperimentalSharedTransitionApi::class, ExperimentalMaterial3Api::class)
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
@@ -99,20 +107,25 @@ class MainActivity : ComponentActivity() {
             MyFeedsTheme {
                 // Backs the mini-player <-> full-player shared-element morph (issue #112): the
                 // artwork image and player container carry matching shared keys across
-                // MiniPlayerBar, ExpandedPlayerBar (Next Up), and the reader's hero image, so
-                // Compose animates bounds/position/size between whichever pair is transitioning
-                // in/out at once instead of an instant cut.
+                // MiniPlayerBar (used both standalone and as the player sheet's sticky header,
+                // issue #195) and the reader's hero image, so Compose animates bounds/position/
+                // size between whichever pair is transitioning in/out at once instead of an
+                // instant cut.
                 SharedTransitionLayout {
                     val sharedTransitionScope = this
                     val navController = rememberNavController()
                     val miniPlayerViewModel: MiniPlayerViewModel = hiltViewModel()
+                    val queueViewModel: QueueViewModel = hiltViewModel()
                     val playbackState by miniPlayerViewModel.playbackState.collectAsState()
+                    val queue by queueViewModel.queue.collectAsState()
                     LaunchedEffect(Unit) { miniPlayerViewModel.restoreLastPlayingItem() }
                     val currentBackStackEntry by navController.currentBackStackEntryAsState()
                     var currentReaderItemId by remember { mutableStateOf<String?>(null) }
+                    val scaffoldState = rememberBottomSheetScaffoldState()
+                    val coroutineScope = rememberCoroutineScope()
 
                     // The reader screen has its own full player for the episode it's showing (issue #97),
-                    // so the mini-player would be redundant there -- hide it only in that exact case, not
+                    // so the player sheet would be redundant there -- hide it only in that exact case, not
                     // just "some reader screen is open" (could be a different, non-playing episode). The
                     // nav route's itemId argument only reflects the episode the reader was *opened* on --
                     // HorizontalPager swipes don't renavigate -- so the on-screen item is tracked
@@ -121,22 +134,71 @@ class MainActivity : ComponentActivity() {
                         currentBackStackEntry?.arguments?.getLong("feedId") == playbackState.feedId &&
                         currentReaderItemId == playbackState.currentItemId
 
-                    // Next Up (issue #106) shows the current episode as the top of its own list, with
-                    // the full-size player, rather than needing the global bar rendered underneath it.
-                    val isOnQueueScreen = currentBackStackEntry?.destination?.route == "queue"
+                    // Collapses the sheet back down (and out of the way, since it's then hidden below)
+                    // if it happened to be left expanded when landing on that exact reader page.
+                    LaunchedEffect(isOnPlayingEpisodeReader) {
+                        if (isOnPlayingEpisodeReader) scaffoldState.bottomSheetState.partialExpand()
+                    }
 
-                    Column(modifier = Modifier.fillMaxSize()) {
+                    val onOpenCurrentEpisode: () -> Unit = {
+                        val feedId = playbackState.feedId
+                        val itemId = playbackState.currentItemId
+                        if (feedId != null && itemId != null) navController.navigate("reader/$feedId/$itemId")
+                    }
+                    // Next Up (issue #106, #195): rather than a separate destination, it's the
+                    // expanded state of the persistent player bottom sheet -- opened by expanding it.
+                    val onQueueClick: () -> Unit = { coroutineScope.launch { scaffoldState.bottomSheetState.expand() } }
+
+                    BottomSheetScaffold(
+                        scaffoldState = scaffoldState,
+                        sheetPeekHeight = if (playbackState.currentItemId != null && !isOnPlayingEpisodeReader) {
+                            PLAYER_SHEET_PEEK_HEIGHT
+                        } else {
+                            0.dp
+                        },
+                        sheetDragHandle = if (playbackState.currentItemId != null || queue.isNotEmpty()) {
+                            { BottomSheetDefaults.DragHandle() }
+                        } else {
+                            null
+                        },
+                        sheetContent = {
+                            AnimatedVisibility(
+                                visible = !isOnPlayingEpisodeReader && (playbackState.currentItemId != null || queue.isNotEmpty()),
+                            ) {
+                                PlayerBottomSheetContent(
+                                    playbackState = playbackState,
+                                    queue = queue,
+                                    onOpenCurrentEpisode = onOpenCurrentEpisode,
+                                    onQueueEpisodeClick = { episode ->
+                                        queueViewModel.playNow(episode)
+                                        navController.navigate("reader/${episode.item.feedId}/${episode.item.id}")
+                                    },
+                                    onReorder = { ids, onComplete -> queueViewModel.reorder(ids, onComplete) },
+                                    onRemoveFromQueue = queueViewModel::remove,
+                                    onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
+                                    onSkipBackward = miniPlayerViewModel::skipBackward,
+                                    onSkipForward = miniPlayerViewModel::skipForward,
+                                    onNextChapter = miniPlayerViewModel::nextChapter,
+                                    onPreviousChapter = miniPlayerViewModel::previousChapter,
+                                    onSpeedChange = miniPlayerViewModel::setSpeed,
+                                    onStop = miniPlayerViewModel::stop,
+                                    sharedTransitionScope = sharedTransitionScope,
+                                    animatedVisibilityScope = this,
+                                )
+                            }
+                        },
+                    ) { innerPadding ->
                         NavHost(
                             navController = navController,
                             startDestination = startDestination,
-                            modifier = Modifier.weight(1f),
+                            modifier = Modifier.fillMaxSize().padding(innerPadding),
                         ) {
                             composable("feedList") {
                                 FeedListScreen(
                                     onAddFeedClick = { navController.navigate("addFeed") },
                                     onFeedClick = { feedId -> navController.navigate("articleList/$feedId") },
                                     onSettingsClick = { navController.navigate("settings") },
-                                    onQueueClick = { navController.navigate("queue") },
+                                    onQueueClick = onQueueClick,
                                     onFeedLongClick = { feedId -> navController.navigate("feedProperties/$feedId") },
                                     onReadAllFeedsClick = { navController.navigate("feedRiver") },
                                     onDownloadsClick = { navController.navigate("downloads") },
@@ -149,27 +211,7 @@ class MainActivity : ComponentActivity() {
                                 FeedRiverScreen(
                                     onBack = { navController.popBackStack() },
                                     onArticleClick = { feedId, itemId -> navController.navigate("reader/$feedId/$itemId") },
-                                    onQueueClick = { navController.navigate("queue") },
-                                )
-                            }
-                            composable(
-                                "queue",
-                                // None rather than a fade: the destination still gets a real,
-                                // timed AnimatedContentScope transition (so the shared player
-                                // elements have a window to interpolate through on both push and
-                                // pop), but the screen content itself doesn't *also* fade/scale --
-                                // doing both at once was fighting the shared-element motion and
-                                // reading as a jarring jump instead of a smooth morph.
-                                enterTransition = { EnterTransition.None },
-                                exitTransition = { ExitTransition.None },
-                                popEnterTransition = { EnterTransition.None },
-                                popExitTransition = { ExitTransition.None },
-                            ) {
-                                QueueScreen(
-                                    onBack = { navController.popBackStack() },
-                                    onEpisodeClick = { feedId, itemId -> navController.navigate("reader/$feedId/$itemId") },
-                                    sharedTransitionScope = sharedTransitionScope,
-                                    animatedVisibilityScope = this,
+                                    onQueueClick = onQueueClick,
                                 )
                             }
                             composable(
@@ -205,7 +247,7 @@ class MainActivity : ComponentActivity() {
                                 ArticleListScreen(
                                     onBack = { navController.popBackStack() },
                                     onArticleClick = { itemId -> navController.navigate("reader/$feedId/$itemId") },
-                                    onQueueClick = { navController.navigate("queue") },
+                                    onQueueClick = onQueueClick,
                                     onFeedSettingsClick = { navController.navigate("feedProperties/$feedId") },
                                 )
                             }
@@ -226,35 +268,11 @@ class MainActivity : ComponentActivity() {
                                 ReaderScreen(
                                     onBack = { navController.popBackStack() },
                                     onCurrentItemChange = { currentReaderItemId = it },
-                                    onQueueClick = { navController.navigate("queue") },
+                                    onQueueClick = onQueueClick,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = this,
                                 )
                             }
-                        }
-
-                        AnimatedVisibility(
-                            visible = playbackState.currentItemId != null && !isOnPlayingEpisodeReader && !isOnQueueScreen,
-                        ) {
-                            MiniPlayerBar(
-                                playbackState = playbackState,
-                                onClick = {
-                                    val feedId = playbackState.feedId
-                                    val itemId = playbackState.currentItemId
-                                    if (feedId != null && itemId != null) {
-                                        navController.navigate("reader/$feedId/$itemId")
-                                    }
-                                },
-                                onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
-                                onSkipBackward = miniPlayerViewModel::skipBackward,
-                                onSkipForward = miniPlayerViewModel::skipForward,
-                                onNextChapter = miniPlayerViewModel::nextChapter,
-                                onPreviousChapter = miniPlayerViewModel::previousChapter,
-                                onSpeedChange = miniPlayerViewModel::setSpeed,
-                                onStop = miniPlayerViewModel::stop,
-                                sharedTransitionScope = sharedTransitionScope,
-                                animatedVisibilityScope = this,
-                            )
                         }
                     }
                 }
