@@ -250,6 +250,7 @@ class MainActivity : ComponentActivity() {
                                 onSkipForward = miniPlayerViewModel::skipForward,
                                 onNextChapter = miniPlayerViewModel::nextChapter,
                                 onPreviousChapter = miniPlayerViewModel::previousChapter,
+                                onSpeedChange = miniPlayerViewModel::setSpeed,
                                 onStop = miniPlayerViewModel::stop,
                                 sharedTransitionScope = sharedTransitionScope,
                                 animatedVisibilityScope = this,
