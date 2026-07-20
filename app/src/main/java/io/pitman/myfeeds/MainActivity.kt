@@ -215,6 +215,7 @@ class MainActivity : ComponentActivity() {
                                     onNextChapter = miniPlayerViewModel::nextChapter,
                                     onPreviousChapter = miniPlayerViewModel::previousChapter,
                                     onSpeedChange = miniPlayerViewModel::setSpeed,
+                                    onVolumeBoostChange = miniPlayerViewModel::setVolumeBoost,
                                     onStop = miniPlayerViewModel::stop,
                                     sharedTransitionScope = sharedTransitionScope,
                                     animatedVisibilityScope = this,

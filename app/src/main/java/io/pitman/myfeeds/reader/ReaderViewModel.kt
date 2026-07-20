@@ -115,6 +115,10 @@ class ReaderViewModel @Inject constructor(
         playbackController.setSpeed(speed)
     }
 
+    fun setVolumeBoost(millibels: Int) {
+        playbackController.setVolumeBoost(millibels)
+    }
+
     fun downloadEnclosure(item: FeedItem) {
         viewModelScope.launch { downloadRepository.startDownload(item) }
     }

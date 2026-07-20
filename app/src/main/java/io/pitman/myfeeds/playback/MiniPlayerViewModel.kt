@@ -51,6 +51,10 @@ class MiniPlayerViewModel @Inject constructor(
         playbackController.setSpeed(speed)
     }
 
+    fun setVolumeBoost(millibels: Int) {
+        playbackController.setVolumeBoost(millibels)
+    }
+
     fun stop() {
         playbackController.stop()
     }

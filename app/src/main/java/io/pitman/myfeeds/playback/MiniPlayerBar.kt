@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
@@ -71,6 +72,7 @@ fun MiniPlayerBar(
     onNextChapter: () -> Unit,
     onPreviousChapter: () -> Unit,
     onSpeedChange: (Float) -> Unit,
+    onVolumeBoostChange: (Int) -> Unit,
     onStop: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -231,6 +233,26 @@ fun MiniPlayerBar(
                 }) {
                     Text(formatSpeed(playbackState.speed))
                 }
+                // issue #202: cycles the same discrete levels as Feed Properties, so the value
+                // stays consistent whichever surface changed it last.
+                TextButton(onClick = {
+                    val currentIndex = VOLUME_BOOST_LEVELS.indexOf(playbackState.volumeBoostMillibels).let {
+                        if (it < 0) 0 else it
+                    }
+                    onVolumeBoostChange(VOLUME_BOOST_LEVELS[(currentIndex + 1) % VOLUME_BOOST_LEVELS.size])
+                }) {
+                    Icon(
+                        Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = stringResource(R.string.cd_volume_boost),
+                        modifier = Modifier.size(18.dp),
+                    )
+                    if (playbackState.volumeBoostMillibels > 0) {
+                        Text(
+                            text = "+${playbackState.volumeBoostMillibels / 100}dB",
+                            modifier = Modifier.padding(start = 4.dp),
+                        )
+                    }
+                }
                 if (hasChapters) {
                     IconButton(onClick = onNextChapter) {
                         Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
@@ -305,6 +327,10 @@ private fun chapterLabel(playbackState: PlaybackUiState): String {
 }
 
 private val PLAYBACK_SPEEDS = listOf(1.0f, 1.25f, 1.5f, 1.75f, 2.0f)
+
+/** Millibel gain levels cycled by the player's volume boost button (issue #202) -- matches the
+ *  Off/Low/Medium/High levels offered in Feed Properties. */
+private val VOLUME_BOOST_LEVELS = listOf(0, 600, 1200, 1800)
 
 private fun formatSpeed(speed: Float): String =
     "${"%.2f".format(speed).trimEnd('0').trimEnd('.')}x"

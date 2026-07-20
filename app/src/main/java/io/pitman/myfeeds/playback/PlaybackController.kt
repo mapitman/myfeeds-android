@@ -2,8 +2,10 @@ package io.pitman.myfeeds.playback
 
 import android.content.ComponentName
 import android.content.Context
+import android.os.Bundle
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
+import androidx.media3.session.SessionCommand
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -44,6 +46,7 @@ data class PlaybackUiState(
     val durationMs: Long = 0L,
     val isEnded: Boolean = false,
     val speed: Float = 1.0f,
+    val volumeBoostMillibels: Int = 0,
     val artworkUrl: String? = null,
     /** Chapters for the current episode (issue #95), fetched lazily and possibly still empty
      *  while the fetch is in flight, or permanently empty if the episode has none. */
@@ -88,6 +91,14 @@ class PlaybackController @Inject constructor(
     // re-queue it (issue #106).
     private var currentItemId: String? = null
 
+    // Issue #202: unlike speed, volume boost isn't a real Player property -- it only ever exists as
+    // this locally tracked value (pushed to PlaybackService via a custom session command) plus the
+    // baked-in initial value on each MediaItem's extras. Re-read from those extras in onEvents only
+    // when currentItemId actually changes (a real track transition), not on every event, so a
+    // setVolumeBoost() call made mid-episode isn't immediately clobbered back to the stale value
+    // that was baked in when this item first loaded.
+    private var currentVolumeBoostMillibels: Int = 0
+
     private val _uiState = MutableStateFlow(PlaybackUiState())
     val uiState: StateFlow<PlaybackUiState> = _uiState.asStateFlow()
 
@@ -108,6 +119,7 @@ class PlaybackController @Inject constructor(
         durationMs = player.duration.coerceAtLeast(0L),
         isEnded = player.playbackState == Player.STATE_ENDED,
         speed = player.playbackParameters.speed,
+        volumeBoostMillibels = currentVolumeBoostMillibels,
         artworkUrl = player.currentMediaItem?.mediaMetadata?.artworkUri?.toString(),
         chapters = currentChapters,
     )
@@ -121,7 +133,12 @@ class PlaybackController @Inject constructor(
                 // in sync even when the current item changed via a path that doesn't call loadMedia,
                 // e.g. PlaybackService's backgrounded auto-advance (issue #179).
                 currentFeedId = player.currentMediaItem?.mediaMetadata?.extras?.getLong(FEED_ID_EXTRA_KEY)?.takeIf { it != 0L }
-                currentItemId = player.currentMediaItem?.mediaId
+                val newItemId = player.currentMediaItem?.mediaId
+                if (newItemId != currentItemId) {
+                    currentVolumeBoostMillibels = player.currentMediaItem?.mediaMetadata?.extras
+                        ?.getInt(VOLUME_BOOST_EXTRA_KEY, 0) ?: 0
+                }
+                currentItemId = newItemId
                 _uiState.value = snapshotState(player)
             }
         }
@@ -220,6 +237,7 @@ class PlaybackController @Inject constructor(
 
         currentFeedId = item.feedId
         currentItemId = item.id
+        currentVolumeBoostMillibels = resolved.volumeBoostMillibels
         // Cleared synchronously so the previous episode's chapters never briefly show for the new
         // one while the fetch below (if any) is still in flight.
         currentChapters = emptyList()
@@ -277,6 +295,27 @@ class PlaybackController @Inject constructor(
         val feedId = currentFeedId ?: return
         positionTickerScope.launch(Dispatchers.IO) {
             feedRepository.getFeed(feedId)?.let { feedRepository.updateFeed(it.copy(playbackSpeed = speed)) }
+        }
+    }
+
+    /**
+     * Changes volume boost for the current playback session and persists it as the playing
+     * episode's feed's default (issue #202), mirroring [setSpeed]. Unlike speed, boost isn't a
+     * standard [Player] property -- [PlaybackService] applies it via a
+     * [android.media.audiofx.LoudnessEnhancer], so it's pushed there through a custom session
+     * command rather than a [MediaController] method. Updated optimistically here too so the
+     * player UI reflects the change immediately rather than waiting on a round trip.
+     */
+    fun setVolumeBoost(millibels: Int) {
+        currentVolumeBoostMillibels = millibels
+        _uiState.value = _uiState.value.copy(volumeBoostMillibels = millibels)
+        controller?.sendCustomCommand(
+            SessionCommand(CUSTOM_COMMAND_SET_VOLUME_BOOST, Bundle.EMPTY),
+            Bundle().apply { putInt(EXTRA_VOLUME_BOOST_MILLIBELS, millibels) },
+        )
+        val feedId = currentFeedId ?: return
+        positionTickerScope.launch(Dispatchers.IO) {
+            feedRepository.getFeed(feedId)?.let { feedRepository.updateFeed(it.copy(volumeBoostMillibels = millibels)) }
         }
     }
 
