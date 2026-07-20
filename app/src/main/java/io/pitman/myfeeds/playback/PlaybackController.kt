@@ -99,7 +99,7 @@ class PlaybackController @Inject constructor(
 
     private fun snapshotState(player: Player) = PlaybackUiState(
         currentItemId = player.currentMediaItem?.mediaId,
-        feedId = currentFeedId,
+        feedId = player.currentMediaItem?.mediaMetadata?.extras?.getLong(FEED_ID_EXTRA_KEY)?.takeIf { it != 0L },
         title = player.currentMediaItem?.mediaMetadata?.title?.toString(),
         feedTitle = player.currentMediaItem?.mediaMetadata?.artist?.toString(),
         isPlaying = player.isPlaying,
@@ -117,6 +117,11 @@ class PlaybackController @Inject constructor(
             if (player.playbackState == Player.STATE_ENDED) {
                 handlePlaybackEnded()
             } else {
+                // Keeps these fields (used by setSpeed/requeuePreviousEpisode/restoreLastPlayingItem)
+                // in sync even when the current item changed via a path that doesn't call loadMedia,
+                // e.g. PlaybackService's backgrounded auto-advance (issue #179).
+                currentFeedId = player.currentMediaItem?.mediaMetadata?.extras?.getLong(FEED_ID_EXTRA_KEY)?.takeIf { it != 0L }
+                currentItemId = player.currentMediaItem?.mediaId
                 _uiState.value = snapshotState(player)
             }
         }
