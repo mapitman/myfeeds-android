@@ -161,6 +161,28 @@ class FeedPropertiesViewModelTest {
     }
 
     @Test
+    fun setVolumeBoostMillibels_persists() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.uiState.first { it.displayTitle == "A Feed" }
+
+        viewModel.setVolumeBoostMillibels(1200)
+
+        val state = viewModel.uiState.first { it.volumeBoostMillibels == 1200 }
+        assertEquals(1200, state.volumeBoostMillibels)
+    }
+
+    @Test
+    fun setStartSkipSeconds_persists() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
+        viewModel.uiState.first { it.displayTitle == "A Feed" }
+
+        viewModel.setStartSkipSeconds(30)
+
+        val state = viewModel.uiState.first { it.startSkipSeconds == 30 }
+        assertEquals(30, state.startSkipSeconds)
+    }
+
+    @Test
     fun unsubscribe_deletesFeedAndReflectsInUiState() = runTest(testDispatcher) {
         val viewModel = createViewModel()
         viewModel.uiState.first { it.displayTitle == "A Feed" }

@@ -19,6 +19,12 @@ data class ResolvedPlaybackMedia(val mediaItem: MediaItem, val speed: Float, val
  *  going through [PlaybackController.loadMedia]. */
 const val FEED_ID_EXTRA_KEY = "io.pitman.myfeeds.feedId"
 
+/** Key into [MediaMetadata.extras] carrying the feed's volume boost, in
+ *  [android.media.audiofx.LoudnessEnhancer] target-gain millibels (issue #199). Carried on the
+ *  media item rather than looked up separately so [PlaybackService] can apply it synchronously
+ *  from its player listener, the same way [FEED_ID_EXTRA_KEY] is read back. */
+const val VOLUME_BOOST_EXTRA_KEY = "io.pitman.myfeeds.volumeBoostMillibels"
+
 /**
  * Resolves a [FeedItem] into playable Media3 pieces, shared by [PlaybackController] (playback
  * requests from the UI) and [PlaybackService] (issue #179: auto-advancing to the next Next Up
@@ -40,6 +46,7 @@ object PlaybackMediaItemFactory {
         val feed = feedRepository.getFeed(item.feedId)
         val speed = feed?.playbackSpeed ?: 1.0f
         val artworkUrl = item.imageUrl ?: feed?.imageUrl
+        val volumeBoostMillibels = feed?.volumeBoostMillibels ?: 0
 
         val mediaItem = MediaItem.Builder()
             .setMediaId(item.id)
@@ -49,15 +56,26 @@ object PlaybackMediaItemFactory {
                     .setTitle(item.title)
                     .setArtist(feedTitle)
                     .setArtworkUri(artworkUrl?.let(Uri::parse))
-                    .setExtras(Bundle().apply { putLong(FEED_ID_EXTRA_KEY, item.feedId) })
+                    .setExtras(
+                        Bundle().apply {
+                            putLong(FEED_ID_EXTRA_KEY, item.feedId)
+                            putInt(VOLUME_BOOST_EXTRA_KEY, volumeBoostMillibels)
+                        },
+                    )
                     .build(),
             )
             .build()
 
+        // issue #200: only skip the feed's configured intro length on a genuinely fresh start --
+        // enclosurePosition being set means either a real resume point or a completed episode
+        // being replayed, neither of which should jump forward automatically.
+        val startPositionMs = item.enclosurePosition?.let { (it * 1000).toLong() }
+            ?: (feed?.startSkipSeconds ?: 0).toLong() * 1000L
+
         return ResolvedPlaybackMedia(
             mediaItem = mediaItem,
             speed = speed,
-            startPositionMs = item.enclosurePosition?.let { (it * 1000).toLong() } ?: 0L,
+            startPositionMs = startPositionMs,
         )
     }
 }

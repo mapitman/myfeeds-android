@@ -152,6 +152,14 @@
     <string name="feed_properties_auto_queue_position_top">In cima alla coda</string>
     <string name="feed_properties_auto_queue_position_bottom">In fondo alla coda</string>
     <string name="feed_properties_playback_speed">Velocità di riproduzione</string>
+    <string name="feed_properties_volume_boost">Aumento del volume</string>
+    <string name="feed_properties_volume_boost_off">Disattivato</string>
+    <string name="feed_properties_volume_boost_low">Basso</string>
+    <string name="feed_properties_volume_boost_medium">Medio</string>
+    <string name="feed_properties_volume_boost_high">Alto</string>
+    <string name="feed_properties_start_skip">Salta all\'inizio</string>
+    <string name="feed_properties_start_skip_off">Disattivato</string>
+    <string name="feed_properties_start_skip_seconds">%1$d s</string>
     <string name="feed_properties_unsubscribe">Annulla iscrizione</string>
     <string name="feed_properties_confirm_unsubscribe_title">Annullare l\'iscrizione a questo feed?</string>
     <string name="feed_properties_confirm_unsubscribe_message">Questo elimina definitivamente il feed e i suoi articoli.</string>

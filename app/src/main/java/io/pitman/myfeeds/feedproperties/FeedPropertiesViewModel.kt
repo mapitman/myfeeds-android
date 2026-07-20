@@ -25,6 +25,8 @@ data class FeedPropertiesUiState(
     val autoQueueMaxCount: Int? = null,
     val autoQueuePosition: AutoQueuePosition = AutoQueuePosition.BOTTOM,
     val playbackSpeed: Float = 1.0f,
+    val volumeBoostMillibels: Int = 0,
+    val startSkipSeconds: Int = 0,
     val isUnsubscribed: Boolean = false,
     val isPodcastFeed: Boolean = false,
 )
@@ -56,6 +58,8 @@ class FeedPropertiesViewModel @Inject constructor(
                 autoQueueMaxCount = feed.autoQueueMaxCount,
                 autoQueuePosition = feed.autoQueuePosition,
                 playbackSpeed = feed.playbackSpeed,
+                volumeBoostMillibels = feed.volumeBoostMillibels,
+                startSkipSeconds = feed.startSkipSeconds,
                 isPodcastFeed = feedId in podcastFeedIds,
             )
         }
@@ -109,6 +113,20 @@ class FeedPropertiesViewModel @Inject constructor(
         viewModelScope.launch {
             val feed = feedRepository.getFeed(feedId) ?: return@launch
             feedRepository.updateFeed(feed.copy(playbackSpeed = speed))
+        }
+    }
+
+    fun setVolumeBoostMillibels(millibels: Int) {
+        viewModelScope.launch {
+            val feed = feedRepository.getFeed(feedId) ?: return@launch
+            feedRepository.updateFeed(feed.copy(volumeBoostMillibels = millibels))
+        }
+    }
+
+    fun setStartSkipSeconds(seconds: Int) {
+        viewModelScope.launch {
+            val feed = feedRepository.getFeed(feedId) ?: return@launch
+            feedRepository.updateFeed(feed.copy(startSkipSeconds = seconds))
         }
     }
 

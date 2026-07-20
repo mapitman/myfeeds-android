@@ -250,6 +250,51 @@ fun FeedPropertiesScreen(
                 }
             }
 
+            Text(
+                text = stringResource(R.string.feed_properties_volume_boost),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(top = 24.dp),
+            )
+            Row(modifier = Modifier.padding(top = 4.dp).horizontalScroll(rememberScrollState())) {
+                listOf(
+                    0 to R.string.feed_properties_volume_boost_off,
+                    600 to R.string.feed_properties_volume_boost_low,
+                    1200 to R.string.feed_properties_volume_boost_medium,
+                    1800 to R.string.feed_properties_volume_boost_high,
+                ).forEach { (millibels, labelRes) ->
+                    FilterChip(
+                        selected = uiState.volumeBoostMillibels == millibels,
+                        onClick = { viewModel.setVolumeBoostMillibels(millibels) },
+                        label = { Text(stringResource(labelRes)) },
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            }
+
+            Text(
+                text = stringResource(R.string.feed_properties_start_skip),
+                style = MaterialTheme.typography.bodyLarge,
+                modifier = Modifier.padding(top = 24.dp),
+            )
+            Row(modifier = Modifier.padding(top = 4.dp).horizontalScroll(rememberScrollState())) {
+                listOf(0, 15, 30, 45, 60).forEach { seconds ->
+                    FilterChip(
+                        selected = uiState.startSkipSeconds == seconds,
+                        onClick = { viewModel.setStartSkipSeconds(seconds) },
+                        label = {
+                            Text(
+                                if (seconds == 0) {
+                                    stringResource(R.string.feed_properties_start_skip_off)
+                                } else {
+                                    stringResource(R.string.feed_properties_start_skip_seconds, seconds)
+                                },
+                            )
+                        },
+                        modifier = Modifier.padding(end = 8.dp),
+                    )
+                }
+            }
+
             Button(
                 onClick = { showUnsubscribeConfirm = true },
                 modifier = Modifier.padding(top = 32.dp).fillMaxWidth(),

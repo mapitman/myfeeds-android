@@ -117,3 +117,19 @@ val MIGRATION_9_10 = object : Migration(9, 10) {
         db.execSQL("ALTER TABLE feeds ADD COLUMN autoQueuePosition TEXT NOT NULL DEFAULT 'BOTTOM'")
     }
 }
+
+/** Adds per-feed volume boost (issue #199), applied via a LoudnessEnhancer target gain in
+ *  millibels when playing an episode of that feed. */
+val MIGRATION_10_11 = object : Migration(10, 11) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE feeds ADD COLUMN volumeBoostMillibels INTEGER NOT NULL DEFAULT 0")
+    }
+}
+
+/** Adds per-feed start-skip (issue #200): seconds to skip from the start when an episode of that
+ *  feed begins playing fresh (no saved resume position). */
+val MIGRATION_11_12 = object : Migration(11, 12) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE feeds ADD COLUMN startSkipSeconds INTEGER NOT NULL DEFAULT 0")
+    }
+}

@@ -35,6 +35,12 @@ data class Feed(
     /** Where new episodes land in the Next Up queue when [autoQueueEnabled] (issue #166). Defaults
      *  to [AutoQueuePosition.BOTTOM] to preserve pre-existing auto-queue behavior for existing feeds. */
     val autoQueuePosition: AutoQueuePosition = AutoQueuePosition.BOTTOM,
+    /** Volume boost applied when playing an episode of this feed (issue #199), as an
+     *  [android.media.audiofx.LoudnessEnhancer] target gain in millibels; 0 means no boost. */
+    val volumeBoostMillibels: Int = 0,
+    /** Seconds to skip from the start when an episode of this feed begins playing fresh, i.e. has
+     *  no saved resume position (issue #200); 0 means no skip. */
+    val startSkipSeconds: Int = 0,
 )
 
 /** Where auto-queued episodes are inserted in the Next Up queue (issue #166). Room stores enums
