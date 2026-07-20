@@ -70,6 +70,7 @@ fun MiniPlayerBar(
     onSkipForward: () -> Unit,
     onNextChapter: () -> Unit,
     onPreviousChapter: () -> Unit,
+    onSpeedChange: (Float) -> Unit,
     onStop: () -> Unit,
     sharedTransitionScope: SharedTransitionScope,
     animatedVisibilityScope: AnimatedVisibilityScope,
@@ -145,20 +146,14 @@ fun MiniPlayerBar(
                     }
                 }
             }
+            // Same control layout as ExpandedPlayerBar/the reader's inline player (issue #194):
+            // main row is always just rewind/play/forward/stop, chapter nav flanks the speed
+            // selector on its own row below.
             Row(
                 modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
                 horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                if (hasChapters) {
-                    IconButton(onClick = onPreviousChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
-                        Icon(
-                            Icons.Filled.SkipPrevious,
-                            contentDescription = stringResource(R.string.cd_previous_chapter),
-                            modifier = Modifier.size(TRANSPORT_ICON_SIZE),
-                        )
-                    }
-                }
                 IconButton(onClick = onSkipBackward, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
                     Icon(
                         Icons.Filled.Replay,
@@ -184,21 +179,34 @@ fun MiniPlayerBar(
                         modifier = Modifier.size(TRANSPORT_ICON_SIZE).graphicsLayer(scaleX = -1f),
                     )
                 }
-                if (hasChapters) {
-                    IconButton(onClick = onNextChapter, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
-                        Icon(
-                            Icons.Filled.SkipNext,
-                            contentDescription = stringResource(R.string.cd_next_chapter),
-                            modifier = Modifier.size(TRANSPORT_ICON_SIZE),
-                        )
-                    }
-                }
                 IconButton(onClick = onStop, modifier = Modifier.size(TRANSPORT_BUTTON_SIZE)) {
                     Icon(
                         Icons.Filled.Close,
                         contentDescription = stringResource(R.string.cd_stop_playback),
                         modifier = Modifier.size(TRANSPORT_ICON_SIZE),
                     )
+                }
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(bottom = 4.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (hasChapters) {
+                    IconButton(onClick = onPreviousChapter) {
+                        Icon(Icons.Filled.SkipPrevious, contentDescription = stringResource(R.string.cd_previous_chapter))
+                    }
+                }
+                TextButton(onClick = {
+                    val currentIndex = PLAYBACK_SPEEDS.indexOfFirst { it >= playbackState.speed }.coerceAtLeast(0)
+                    onSpeedChange(PLAYBACK_SPEEDS[(currentIndex + 1) % PLAYBACK_SPEEDS.size])
+                }) {
+                    Text(formatSpeed(playbackState.speed))
+                }
+                if (hasChapters) {
+                    IconButton(onClick = onNextChapter) {
+                        Icon(Icons.Filled.SkipNext, contentDescription = stringResource(R.string.cd_next_chapter))
+                    }
                 }
             }
         }
