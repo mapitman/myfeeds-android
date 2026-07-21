@@ -16,6 +16,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -37,6 +40,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.glance.appwidget.GlanceAppWidgetManager
@@ -178,6 +184,19 @@ class MainActivity : ComponentActivity() {
                     // expanded state of the persistent player bottom sheet -- opened by expanding it.
                     val onQueueClick: () -> Unit = { coroutineScope.launch { scaffoldState.bottomSheetState.expand() } }
 
+                    // Swiped down past peek to just NowPlayingMiniStrip (issue #197) -- the sheet
+                    // itself is Hidden, so BottomSheetScaffold's innerPadding still reserves
+                    // PLAYER_SHEET_PEEK_HEIGHT below the list content (its own peek height, unaware
+                    // of this further collapsed state), leaving a large gap between the strip and
+                    // whatever it's laid over (issue #203). Swapped for the strip's own measured
+                    // height instead once it's this state.
+                    val bottomSheetHidden = scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden &&
+                        playbackState.currentItemId != null &&
+                        !isOnPlayingEpisodeReader
+                    var miniStripHeight by remember { mutableStateOf(0.dp) }
+                    val density = LocalDensity.current
+                    val layoutDirection = LocalLayoutDirection.current
+
                     Box(modifier = Modifier.fillMaxSize()) {
                     BottomSheetScaffold(
                         scaffoldState = scaffoldState,
@@ -223,10 +242,20 @@ class MainActivity : ComponentActivity() {
                             }
                         },
                     ) { innerPadding ->
+                        val contentPadding = if (bottomSheetHidden) {
+                            PaddingValues(
+                                start = innerPadding.calculateStartPadding(layoutDirection),
+                                top = innerPadding.calculateTopPadding(),
+                                end = innerPadding.calculateEndPadding(layoutDirection),
+                                bottom = miniStripHeight,
+                            )
+                        } else {
+                            innerPadding
+                        }
                         NavHost(
                             navController = navController,
                             startDestination = startDestination,
-                            modifier = Modifier.fillMaxSize().padding(innerPadding),
+                            modifier = Modifier.fillMaxSize().padding(contentPadding),
                         ) {
                             composable("feedList") {
                                 FeedListScreen(
@@ -310,15 +339,14 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                    if (scaffoldState.bottomSheetState.currentValue == SheetValue.Hidden &&
-                        playbackState.currentItemId != null &&
-                        !isOnPlayingEpisodeReader
-                    ) {
+                    if (bottomSheetHidden) {
                         NowPlayingMiniStrip(
                             playbackState = playbackState,
                             onClick = { coroutineScope.launch { scaffoldState.bottomSheetState.partialExpand() } },
                             onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
-                            modifier = Modifier.align(Alignment.BottomCenter),
+                            modifier = Modifier.align(Alignment.BottomCenter).onGloballyPositioned {
+                                miniStripHeight = with(density) { it.size.height.toDp() }
+                            },
                         )
                     }
                     }
