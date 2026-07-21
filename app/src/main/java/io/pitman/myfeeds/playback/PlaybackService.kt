@@ -6,6 +6,7 @@ import android.media.audiofx.LoudnessEnhancer
 import android.os.Bundle
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -77,9 +78,21 @@ class PlaybackService : MediaSessionService() {
         super.onCreate()
         // ExoPlayer.Builder defaults to *not* managing audio focus at all, so without this,
         // playback talks straight over things like a navigation app's turn-by-turn announcements
-        // instead of ducking/pausing for them and resuming after (issue #180).
+        // instead of pausing for them and resuming after (issue #180). AudioAttributes.DEFAULT's
+        // content type is AUDIO_CONTENT_TYPE_UNKNOWN, under which Media3's AudioFocusManager only
+        // ducks (lowers volume) rather than pauses on a transient "may duck" focus loss -- the
+        // request type nav apps use for spoken prompts -- since its willPauseWhenDucked() only
+        // returns true for AUDIO_CONTENT_TYPE_SPEECH. Podcast speech talking under a nav prompt at
+        // reduced volume is still unintelligible, so mark the content as speech to get an outright
+        // pause/resume instead of a duck.
         player = ExoPlayer.Builder(this)
-            .setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus= */ true)
+            .setAudioAttributes(
+                AudioAttributes.Builder()
+                    .setUsage(C.USAGE_MEDIA)
+                    .setContentType(C.AUDIO_CONTENT_TYPE_SPEECH)
+                    .build(),
+                /* handleAudioFocus= */ true,
+            )
             .build()
         player.addListener(playerListener)
         loudnessEnhancer = runCatching { LoudnessEnhancer(player.audioSessionId) }.getOrNull()
