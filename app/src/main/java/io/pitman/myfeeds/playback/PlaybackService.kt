@@ -1,9 +1,11 @@
 package io.pitman.myfeeds.playback
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.media.audiofx.LoudnessEnhancer
 import android.os.Bundle
+import android.os.PowerManager
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -36,6 +38,10 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+// Safety cap on the advance-to-next-episode wake lock below, so a stuck/crashed advance can't
+// hold it forever.
+private const val ADVANCE_WAKE_LOCK_TIMEOUT_MS = 30_000L
+
 /**
  * Ported from MyFeeds.AudioPlaybackAgent AudioPlayer.cs OnPlayStateChanged: while playing, saves
  * the current position every 5s (the original used 1s against isolated-storage LINQ-to-SQL; DB
@@ -59,6 +65,7 @@ class PlaybackService : MediaSessionService() {
     lateinit var queueRepository: QueueRepository
 
     private lateinit var player: ExoPlayer
+    private lateinit var advanceWakeLock: PowerManager.WakeLock
     private var mediaSession: MediaSession? = null
 
     // Boosts loudness beyond ExoPlayer's unity-gain volume cap (issue #199), keyed to the
@@ -102,6 +109,14 @@ class PlaybackService : MediaSessionService() {
         player.addListener(playerListener)
         loudnessEnhancer = runCatching { LoudnessEnhancer(player.audioSessionId) }.getOrNull()
 
+        // ExoPlayer's own WAKE_MODE_NETWORK lock only covers actively-playing time -- it releases
+        // the instant an episode hits STATE_ENDED, before the auto-advance coroutine below has run
+        // (issue #179). With the screen off and nothing else holding a wake lock in that gap, the
+        // system can suspend the CPU before the next episode's connection ever opens. This lock
+        // covers exactly that transition window instead.
+        val powerManager = getSystemService(Context.POWER_SERVICE) as PowerManager
+        advanceWakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "myfeeds:playback-advance")
+
         // Without an explicit small icon, DefaultMediaNotificationProvider falls back to the
         // app's adaptive launcher icon (android.R.attr.icon), which the system can't flatten
         // into the monochrome silhouette a notification/lock-screen icon needs, so it renders
@@ -129,6 +144,7 @@ class PlaybackService : MediaSessionService() {
 
     override fun onDestroy() {
         positionSaveJob?.cancel()
+        if (advanceWakeLock.isHeld) advanceWakeLock.release()
         loudnessEnhancer?.release()
         loudnessEnhancer = null
         mediaSession?.let { session ->
@@ -188,6 +204,7 @@ class PlaybackService : MediaSessionService() {
             if (playbackState != Player.STATE_ENDED || advancingFromEnded) return
             val itemId = player.currentMediaItem?.mediaId ?: return
             advancingFromEnded = true
+            advanceWakeLock.acquire(ADVANCE_WAKE_LOCK_TIMEOUT_MS)
             serviceScope.launch {
                 try {
                     feedRepository.setEnclosurePosition(itemId, null)
@@ -203,6 +220,7 @@ class PlaybackService : MediaSessionService() {
                     playNextQueued()
                 } finally {
                     advancingFromEnded = false
+                    if (advanceWakeLock.isHeld) advanceWakeLock.release()
                 }
             }
         }
