@@ -7,6 +7,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- ExoPlayer's WAKE_MODE_NETWORK (below) needs this to hold a CPU/Wi-Fi wake lock so a new
+         episode's stream can actually open while the screen is off (issue #179). -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
 
     <application
         android:name=".MyFeedsApp"

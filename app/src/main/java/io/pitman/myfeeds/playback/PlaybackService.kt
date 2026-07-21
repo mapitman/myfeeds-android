@@ -93,6 +93,11 @@ class PlaybackService : MediaSessionService() {
                     .build(),
                 /* handleAudioFocus= */ true,
             )
+            // Without this, continuing an already-open stream in the background works fine, but
+            // opening a *new* one (auto-advancing to the next Next Up episode while backgrounded,
+            // issue #179) can stall indefinitely once the device dozes / Wi-Fi goes idle, since
+            // nothing is holding a CPU/Wi-Fi wake lock to let the new connection actually open.
+            .setWakeMode(C.WAKE_MODE_NETWORK)
             .build()
         player.addListener(playerListener)
         loudnessEnhancer = runCatching { LoudnessEnhancer(player.audioSessionId) }.getOrNull()
