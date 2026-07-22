@@ -49,6 +49,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
@@ -122,7 +123,9 @@ fun ArticleListScreen(
                 TopAppBar(
                     title = {
                         Column {
-                            Text(uiState.feedTitle)
+                            // issue #238: an unconstrained title could wrap to two lines and push
+                            // the unread/unplayed count below out of the TopAppBar's fixed height.
+                            Text(uiState.feedTitle, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             Text(
                                 text = stringResource(
                                     if (uiState.isPodcastFeed) R.string.article_list_unplayed_count else R.string.article_list_unread_count,
