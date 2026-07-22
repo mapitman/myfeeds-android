@@ -191,6 +191,38 @@ class FeedUpdateEngineTest {
     }
 
     @Test
+    fun updateFeed_capsDescriptionLengthSoRowCannotExceedCursorWindowLimit() = runTest {
+        // issue #234: a feed publishing a long-form full-text post large enough on its own made a
+        // single row too big for Room/CursorWindow to read back, crashing the app.
+        val feed = subscribeFeed()
+        val hugeDescription = "x".repeat(500_000)
+        server.enqueue(
+            MockResponse().setResponseCode(200).setBody(
+                """
+                <?xml version="1.0" encoding="UTF-8"?>
+                <rss version="2.0"><channel>
+                  <title>Test Feed</title>
+                  <link>https://example.com</link>
+                  <description>desc</description>
+                  <item>
+                    <title>Huge Post</title>
+                    <link>https://example.com/huge</link>
+                    <guid>guid-huge</guid>
+                    <description>$hugeDescription</description>
+                    <pubDate>Mon, 03 Jun 2013 11:05:30 GMT</pubDate>
+                  </item>
+                </channel></rss>
+                """.trimIndent(),
+            ),
+        )
+
+        engine.updateFeed(feed)
+
+        val stored = repository.observeItems(feed.id).first().single().description
+        assertEquals(200_000, stored!!.length)
+    }
+
+    @Test
     fun updateFeed_trimsToItemsToKeepAfterPersisting() = runTest {
         val feed = subscribeFeed(itemsToKeep = 1)
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First", "guid-2" to "Second")))
