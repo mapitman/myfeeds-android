@@ -3,9 +3,9 @@ package io.pitman.myfeeds.settings
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.TrackedViewModelStore
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
@@ -41,13 +41,17 @@ import kotlin.time.Duration.Companion.seconds
  * Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet.
  *
  * The test dispatcher is shared between setMain and runTest so runTest's automatic
- * child-coroutine cleanup also covers the ViewModel's viewModelScope children (see the
- * article-reader PR for the full explanation of the flakiness this avoids).
+ * child-coroutine cleanup also covers the ViewModel's viewModelScope children.
  *
  * Skipped in CI only (see setUp): this file hangs reliably in GitHub Actions -- always timing out
  * at runTest's dispatch timeout (raised 60s -> 120s below, which still wasn't enough) -- but has
  * never reproduced locally despite many repeated full-suite and CPU-constrained runs. Tracked in
  * https://github.com/mapitman/myfeeds-android/issues/54; still runs normally outside CI.
+ *
+ * The quiescent tearDown below (clear + join before resetMain, via TrackedViewModelStore) fixes
+ * one real source of cross-test corruption -- see that class's doc -- but CI still hangs even
+ * with it in place, so the skip stays. See issue #215 for further diagnostics on this general
+ * class of timing-dependent coroutine-test flakiness.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
@@ -63,12 +67,10 @@ class SettingsViewModelTest {
     private lateinit var settingsDataStore: SettingsDataStore
     private lateinit var viewModel: SettingsViewModel
 
-    // ViewModels here are constructed directly (not via a real ViewModelProvider), so nothing
-    // would otherwise call ViewModel.clear() to cancel their viewModelScope between tests. A
-    // leaked WhileSubscribed collector then outlives the test method and races the next test's
-    // Dispatchers.setMain/resetMain. Routing creation through a real ViewModelStore and clearing
-    // it in tearDown cancels those coroutines properly, the same way the Android framework does.
-    private val viewModelStore = ViewModelStore()
+    // Cleared *and joined* in tearDown so no ViewModel coroutine is still in flight when
+    // Dispatchers.resetMain runs -- see TrackedViewModelStore's doc for the full leak mechanics
+    // behind the #54/#60 flakiness this prevents.
+    private val viewModelStore = TrackedViewModelStore()
 
     @Before
     fun setUp() {
@@ -108,7 +110,9 @@ class SettingsViewModelTest {
         // setUp bails out early via Assume when skipped in CI (see setUp/issue #54), leaving db
         // uninitialized -- guard against that so the skip doesn't itself register as a failure.
         if (!::db.isInitialized) return
-        viewModelStore.clear()
+        // Inside runTest (same scheduler as Dispatchers.Main) so the scheduler keeps getting
+        // pumped while clearAndJoin waits out in-flight ViewModel coroutines (issues #54/#60).
+        runTest(testDispatcher) { viewModelStore.clearAndJoin() }
         db.close()
         Dispatchers.resetMain()
     }

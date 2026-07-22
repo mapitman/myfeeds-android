@@ -4,9 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.TrackedViewModelStore
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.repository.FeedRepository
@@ -51,7 +51,11 @@ class FeedPropertiesViewModelTest {
     private lateinit var repository: FeedRepository
     private lateinit var settingsDataStore: SettingsDataStore
     private var feedId: Long = 0
-    private val viewModelStore = ViewModelStore()
+
+    // Cleared *and joined* in tearDown so no ViewModel coroutine is still in flight when
+    // Dispatchers.resetMain runs -- see TrackedViewModelStore's doc for the full leak mechanics
+    // behind the #54/#60 flakiness this prevents.
+    private val viewModelStore = TrackedViewModelStore()
 
     private fun createViewModel(): FeedPropertiesViewModel =
         FeedPropertiesViewModel(
@@ -76,7 +80,9 @@ class FeedPropertiesViewModelTest {
 
     @After
     fun tearDown() {
-        viewModelStore.clear()
+        // Inside runTest (same scheduler as Dispatchers.Main) so the scheduler keeps getting
+        // pumped while clearAndJoin waits out in-flight ViewModel coroutines (issues #54/#60).
+        runTest(testDispatcher) { viewModelStore.clearAndJoin() }
         db.close()
         Dispatchers.resetMain()
     }

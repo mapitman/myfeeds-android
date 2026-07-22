@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.TrackedViewModelStore
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
@@ -12,8 +13,13 @@ import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import io.pitman.myfeeds.download.DownloadScheduling
 import io.pitman.myfeeds.download.EnclosureDownloadRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.test.setMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -28,9 +34,20 @@ import org.robolectric.annotation.Config
 import java.io.File
 
 /** Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet. */
+@OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class DownloadsViewModelTest {
+    private val testDispatcher = UnconfinedTestDispatcher()
+
+    // Cleared *and joined* in tearDown so no ViewModel coroutine is still in flight when
+    // Dispatchers.resetMain runs -- see TrackedViewModelStore's doc for the full leak mechanics
+    // behind the #54/#60 flakiness this prevents. This file didn't swap Dispatchers.Main before;
+    // it now has to (like every other ViewModel test here), because joining a ViewModel's real
+    // job requires a dispatcher that actually runs -- the real Main dispatcher is a paused
+    // Robolectric looper that nothing here pumps, so the join hung forever without this.
+    private val viewModelStore = TrackedViewModelStore()
+
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -40,7 +57,8 @@ class DownloadsViewModelTest {
     private var feedId: Long = 0
 
     @Before
-    fun setUp() = runTest {
+    fun setUp() = runTest(testDispatcher) {
+        Dispatchers.setMain(testDispatcher)
         val context = ApplicationProvider.getApplicationContext<android.content.Context>()
         db = Room.inMemoryDatabaseBuilder(context, AppDatabase::class.java).allowMainThreadQueries().build()
         repository = FeedRepository(db.feedDao(), db.feedItemDao(), db.queueDao())
@@ -56,17 +74,22 @@ class DownloadsViewModelTest {
             settingsDataStore = SettingsDataStore(dataStore),
         )
         viewModel = DownloadsViewModel(repository, downloadRepository)
+        viewModelStore.put("downloads", viewModel)
 
         feedId = repository.subscribe(Feed(title = "A Podcast"))
     }
 
     @After
     fun tearDown() {
+        // Inside runTest (same scheduler as Dispatchers.Main) so the scheduler keeps getting
+        // pumped while clearAndJoin waits out in-flight ViewModel coroutines (issues #54/#60).
+        runTest(testDispatcher) { viewModelStore.clearAndJoin() }
         db.close()
+        Dispatchers.resetMain()
     }
 
     @Test
-    fun uiState_completedDownload_usesFileSizeOnDisk() = runTest {
+    fun uiState_completedDownload_usesFileSizeOnDisk() = runTest(testDispatcher) {
         val file = tempFolder.newFile("episode.mp3").apply { writeBytes(ByteArray(1024)) }
         repository.insertItems(
             listOf(FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1", downloadedFilePath = file.absolutePath)),
@@ -81,7 +104,7 @@ class DownloadsViewModelTest {
     }
 
     @Test
-    fun uiState_inProgressDownload_usesDownloadedBytes() = runTest {
+    fun uiState_inProgressDownload_usesDownloadedBytes() = runTest(testDispatcher) {
         repository.insertItems(
             listOf(FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1", downloadedBytes = 512L)),
         )
@@ -94,7 +117,7 @@ class DownloadsViewModelTest {
     }
 
     @Test
-    fun delete_removesDownloadAndClearsState() = runTest {
+    fun delete_removesDownloadAndClearsState() = runTest(testDispatcher) {
         val file = tempFolder.newFile("episode.mp3").apply { writeBytes(ByteArray(1024)) }
         repository.insertItems(
             listOf(FeedItem(id = "ep-1", feedId = feedId, title = "Episode 1", itemGuid = "g1", downloadedFilePath = file.absolutePath)),
@@ -103,7 +126,7 @@ class DownloadsViewModelTest {
 
         viewModel.delete(item)
 
-        assertTrue(repository.observeDownloadedItems().first().isEmpty())
+        assertTrue(repository.observeDownloadedItems().first { it.isEmpty() }.isEmpty())
         assertFalse(file.exists())
     }
 }

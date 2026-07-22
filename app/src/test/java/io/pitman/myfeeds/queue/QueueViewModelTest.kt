@@ -3,9 +3,9 @@ package io.pitman.myfeeds.queue
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.TrackedViewModelStore
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
@@ -39,7 +39,11 @@ import java.io.File
 @Config(sdk = [35])
 class QueueViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
-    private val viewModelStore = ViewModelStore()
+
+    // Cleared *and joined* in tearDown so no ViewModel coroutine is still in flight when
+    // Dispatchers.resetMain runs -- see TrackedViewModelStore's doc for the full leak mechanics
+    // behind the #54/#60 flakiness this prevents.
+    private val viewModelStore = TrackedViewModelStore()
 
     @get:Rule
     val tempFolder = TemporaryFolder()
@@ -85,7 +89,14 @@ class QueueViewModelTest {
 
     @After
     fun tearDown() {
-        viewModelStore.clear()
+        // Inside runTest (same scheduler as Dispatchers.Main) so the scheduler keeps getting
+        // pumped while the joins wait out in-flight coroutines (issues #54/#60). The
+        // PlaybackController's own Main-bound scope (which playNow launches into) has to be
+        // drained too -- it isn't a ViewModel, so the store's clear doesn't cover it.
+        runTest(testDispatcher) {
+            viewModelStore.clearAndJoin()
+            playbackController.awaitShutdownForTest()
+        }
         db.close()
         Dispatchers.resetMain()
     }
