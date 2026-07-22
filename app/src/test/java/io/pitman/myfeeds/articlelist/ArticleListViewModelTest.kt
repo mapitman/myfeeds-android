@@ -284,6 +284,14 @@ class ArticleListViewModelTest {
 
     @Test
     fun addSelectedToQueue_queuesOnlyPodcastEpisodesAndClearsSelection() = runTest(testDispatcher) {
+        // Skipped in CI only: hangs for the full runTest timeout in GitHub Actions -- confirmed
+        // (issue #215) that this isn't cross-test corruption from a preceding test, since it also
+        // hangs when isolated into its own dedicated JVM fork with nothing running before it.
+        // Passes reliably every local run regardless. Same class of CI-only coroutine-timing
+        // flakiness as issue #54, tracked separately in
+        // https://github.com/mapitman/myfeeds-android/issues/60 and #215.
+        assumeTrue("Skipped in CI: see issue #215", System.getenv("CI") == null)
+
         // issue #159: selection mode isn't podcast-specific, so a plain article ("read-1", no
         // enclosure) mixed into the selection should be silently skipped rather than queued.
         repository.insertItems(
