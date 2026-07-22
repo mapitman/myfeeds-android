@@ -67,7 +67,11 @@ class FeedUpdateEngine @Inject constructor(
                 id = id,
                 feedId = feed.id,
                 title = parsedItem.title,
-                description = firstImage.descriptionWithoutImage,
+                // Capped well under Android's ~2MB CursorWindow-per-row limit (issue #234) -- a
+                // handful of feeds publish long-form full-text posts large enough on their own to
+                // make a single row too big for Room to read back, crashing the app. The item's own
+                // url still lets the user read the rest on the web if it's truncated.
+                description = firstImage.descriptionWithoutImage.take(MAX_DESCRIPTION_LENGTH),
                 url = parsedItem.url,
                 imageUrl = firstImage.url,
                 itemGuid = itemGuid,
@@ -116,5 +120,6 @@ class FeedUpdateEngine @Inject constructor(
 
     companion object {
         private const val NEW_PODCAST_AUTO_QUEUE_CAP = 5
+        private const val MAX_DESCRIPTION_LENGTH = 200_000
     }
 }
