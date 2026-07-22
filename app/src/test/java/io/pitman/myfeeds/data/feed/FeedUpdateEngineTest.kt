@@ -167,6 +167,30 @@ class FeedUpdateEngineTest {
     }
 
     @Test
+    fun updateFeed_backfillsBlankTitleFromParsedFeed() = runTest {
+        // issue #219: an OPML outline with no title/text attribute imports with a blank Feed.title --
+        // the next refresh should fill it in from the fetched feed's own <title>.
+        val url = server.url("/feed.xml").toString()
+        val feedId = repository.subscribe(Feed(title = "", feedUrl = url))
+        val feed = repository.getFeed(feedId)!!
+        server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First")))
+
+        engine.updateFeed(feed)
+
+        assertEquals("Test Feed", repository.getFeed(feed.id)!!.title)
+    }
+
+    @Test
+    fun updateFeed_doesNotOverwriteExistingTitle() = runTest {
+        val feed = subscribeFeed()
+        server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First")))
+
+        engine.updateFeed(feed)
+
+        assertEquals("Test Feed", repository.getFeed(feed.id)!!.title)
+    }
+
+    @Test
     fun updateFeed_trimsToItemsToKeepAfterPersisting() = runTest {
         val feed = subscribeFeed(itemsToKeep = 1)
         server.enqueue(MockResponse().setResponseCode(200).setBody(rssWithItems("guid-1" to "First", "guid-2" to "Second")))
