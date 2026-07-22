@@ -43,7 +43,14 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import java.io.File
 
-/** Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet. */
+/**
+ * Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet.
+ *
+ * addSelectedToQueue_queuesOnlyPodcastEpisodesAndClearsSelection lives in its own
+ * ArticleListViewModelAddSelectedToQueueTest file (issue #215): it hung whenever it ran after
+ * certain other tests in this class, in a JVM-static cross-test way TrackedViewModelStore's
+ * quiescent teardown doesn't fully cover. See that file's doc for the isolation approach.
+ */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
@@ -280,45 +287,6 @@ class ArticleListViewModelTest {
         val state = viewModel.uiState.first { it.feedTitle == "A Feed" && it.isPodcastFeed }
 
         assertTrue(state.isPodcastFeed)
-    }
-
-    @Test
-    fun addSelectedToQueue_queuesOnlyPodcastEpisodesAndClearsSelection() = runTest(testDispatcher) {
-        // issue #159: selection mode isn't podcast-specific, so a plain article ("read-1", no
-        // enclosure) mixed into the selection should be silently skipped rather than queued.
-        repository.insertItems(
-            listOf(
-                FeedItem(
-                    id = "episode-1",
-                    feedId = feedId,
-                    title = "Episode One",
-                    itemGuid = "g-episode-1",
-                    enclosureUrl = "https://example.com/ep1.mp3",
-                    enclosureType = "audio/mpeg",
-                ),
-                FeedItem(
-                    id = "episode-2",
-                    feedId = feedId,
-                    title = "Episode Two",
-                    itemGuid = "g-episode-2",
-                    enclosureUrl = "https://example.com/ep2.mp3",
-                    enclosureType = "audio/mpeg",
-                ),
-            ),
-        )
-        val viewModel = createViewModel()
-        viewModel.setShowUnreadOnly(false)
-        viewModel.uiState.first { !it.showUnreadOnly && it.articles.size == 4 }
-        viewModel.toggleSelection("episode-1")
-        viewModel.toggleSelection("episode-2")
-        viewModel.toggleSelection("read-1")
-        viewModel.uiState.first { it.selectedIds.size == 3 }
-
-        viewModel.addSelectedToQueue()
-        viewModel.uiState.first { !it.isSelectionMode }
-
-        val queue = queueRepository.observeQueue().first { it.size == 2 }
-        assertEquals(setOf("episode-1", "episode-2"), queue.map { it.item.id }.toSet())
     }
 
     @Test

@@ -105,3 +105,11 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
 }
+
+// Robolectric unit tests can leak state through JVM statics (Dispatchers.Main,
+// kotlinx.coroutines.DefaultExecutor) across test classes run in the same forked process --
+// see issue #215. One test class per fork avoids that at the cost of JVM startup overhead per
+// class.
+tasks.withType<Test> {
+    forkEvery = 1
+}
