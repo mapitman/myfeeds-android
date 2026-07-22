@@ -64,8 +64,12 @@ object FeedParser {
     }
 
     private fun parseRssItem(item: Element): ParsedFeedItem {
-        val url = item.textOf("link")
         val guid = item.textOf("guid")
+        // <guid isPermaLink="true"> (the RSS spec's default when the attribute is omitted) is a
+        // valid substitute for <link> as the article's web URL -- many feeds only publish one or
+        // the other (issue #221).
+        val guidIsPermalink = item.firstChildElement("guid")?.getAttribute("isPermaLink") != "false"
+        val url = item.textOf("link").ifBlank { guid.takeIf { guidIsPermalink && it.startsWith("http") } }.orEmpty()
         val enclosure = item.firstChildElement("enclosure")?.let {
             ParsedEnclosure(
                 url = it.getAttribute("url"),
@@ -132,12 +136,16 @@ object FeedParser {
         )
     }
 
-    /** `rel="alternate" && type="text/html"`, or any link with no `type` attribute. */
+    /** `rel="alternate" && type="text/html"`, or any `rel="alternate"` link with no `type` attribute. */
     private fun Element.pickAtomLink(rel: String, preferNoType: Boolean): String =
         childElements("link").firstOrNull { link ->
-            val linkRel = link.getAttribute("rel")
+            // A <link> with no rel attribute defaults to rel="alternate" per the Atom spec
+            // (issue #221) -- previously this required a literal rel="alternate" match unless the
+            // type was also blank, so a plain <link href="..." type="text/html"/> with no rel was
+            // skipped entirely, leaving the item with no article URL.
+            val linkRel = link.getAttribute("rel").ifBlank { "alternate" }
             val type = link.getAttribute("type")
-            (linkRel == rel && type == "text/html") || (preferNoType && type.isBlank())
+            linkRel == rel && (type == "text/html" || (preferNoType && type.isBlank()))
         }?.getAttribute("href").orEmpty()
 
     // ---- RDF / RSS 1.0 ----
