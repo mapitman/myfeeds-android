@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.TrackedViewModelStore
 import io.pitman.myfeeds.data.DefaultFeedsSeeder
 import io.pitman.myfeeds.data.feed.AutoQueueAndDownloadEnforcer
 import io.pitman.myfeeds.data.feed.FeedFetcher
@@ -49,6 +50,12 @@ import java.io.File
 class FeedListViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
+    // This file previously never cleared its ViewModels at all -- their leaked viewModelScope
+    // coroutines could dispatch onto whatever Dispatchers.Main a *later* test class had
+    // installed. Cleared *and joined* in tearDown; see TrackedViewModelStore's doc for the full
+    // leak mechanics behind the #54/#60 flakiness this prevents.
+    private val viewModelStore = TrackedViewModelStore()
+
     @get:Rule
     val tempFolder = TemporaryFolder()
 
@@ -90,10 +97,14 @@ class FeedListViewModelTest {
             settingsDataStore = settingsDataStore,
             context = context,
         )
+        viewModelStore.put("feedList", viewModel)
     }
 
     @After
     fun tearDown() {
+        // Inside runTest (same scheduler as Dispatchers.Main) so the scheduler keeps getting
+        // pumped while clearAndJoin waits out in-flight ViewModel coroutines (issues #54/#60).
+        runTest(testDispatcher) { viewModelStore.clearAndJoin() }
         db.close()
         Dispatchers.resetMain()
     }

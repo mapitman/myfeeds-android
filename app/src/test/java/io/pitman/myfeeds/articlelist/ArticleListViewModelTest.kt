@@ -4,9 +4,9 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.TrackedViewModelStore
 import io.pitman.myfeeds.data.feed.AutoQueueAndDownloadEnforcer
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
@@ -63,12 +63,10 @@ class ArticleListViewModelTest {
     private var feedId: Long = 0
     private var nextViewModelKey = 0
 
-    // ViewModels here are constructed directly (not via a real ViewModelProvider), so nothing
-    // would otherwise call ViewModel.clear() to cancel their viewModelScope between tests. A
-    // leaked WhileSubscribed collector then outlives the test method and races the next test's
-    // Dispatchers.setMain/resetMain. Routing creation through a real ViewModelStore and clearing
-    // it in tearDown cancels those coroutines properly, the same way the Android framework does.
-    private val viewModelStore = ViewModelStore()
+    // Cleared *and joined* in tearDown so no ViewModel coroutine is still in flight when
+    // Dispatchers.resetMain runs -- see TrackedViewModelStore's doc for the full leak mechanics
+    // behind the #54/#60 flakiness this prevents.
+    private val viewModelStore = TrackedViewModelStore()
 
     private fun createViewModel(): ArticleListViewModel =
         ArticleListViewModel(
@@ -114,7 +112,9 @@ class ArticleListViewModelTest {
 
     @After
     fun tearDown() {
-        viewModelStore.clear()
+        // Inside runTest (same scheduler as Dispatchers.Main) so the scheduler keeps getting
+        // pumped while clearAndJoin waits out in-flight ViewModel coroutines (issues #54/#60).
+        runTest(testDispatcher) { viewModelStore.clearAndJoin() }
         db.close()
         Dispatchers.resetMain()
     }
@@ -135,7 +135,8 @@ class ArticleListViewModelTest {
         // Skipped in CI only: fails consistently in GitHub Actions with a plain AssertionError
         // (not a hang) despite passing reliably every time locally; the test itself is untouched
         // by the change that surfaced this. Same class of CI-only coroutine-timing flakiness as
-        // issue #54, tracked separately in https://github.com/mapitman/myfeeds-android/issues/60.
+        // issue #54, tracked separately in https://github.com/mapitman/myfeeds-android/issues/60
+        // (and issue #215, which has a deeper diagnostic writeup of this class of bug).
         assumeTrue("Skipped in CI: see issue #60", System.getenv("CI") == null)
 
         settingsDataStore.setDefaultToAllArticleView(true)

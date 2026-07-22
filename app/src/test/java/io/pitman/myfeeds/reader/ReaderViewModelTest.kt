@@ -4,10 +4,10 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.lifecycle.SavedStateHandle
-import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.R
+import io.pitman.myfeeds.TrackedViewModelStore
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
@@ -41,18 +41,16 @@ import java.io.File
 /**
  * Config pins Robolectric to API 35 -- Robolectric 4.14 doesn't support compileSdk 36 yet.
  *
- * The test dispatcher is shared between setMain and runTest, and ViewModels are routed through a
- * real ViewModelStore that's cleared in tearDown -- otherwise nothing cancels their
- * viewModelScope between tests (they're constructed directly, not via a ViewModelProvider), and
- * a leaked WhileSubscribed collector can outlive the test method and race the next test's
- * setMain/resetMain, intermittently throwing "Dispatchers.Main is used concurrently".
+ * The test dispatcher is shared between setMain and runTest, and ViewModels are routed through
+ * a TrackedViewModelStore that's cleared *and joined* in tearDown before resetMain -- see that
+ * class's doc for the full leak mechanics behind the #54/#60 flakiness this prevents.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])
 class ReaderViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
-    private val viewModelStore = ViewModelStore()
+    private val viewModelStore = TrackedViewModelStore()
     private var nextViewModelKey = 0
 
     @get:Rule
@@ -107,7 +105,14 @@ class ReaderViewModelTest {
 
     @After
     fun tearDown() {
-        viewModelStore.clear()
+        // Inside runTest (same scheduler as Dispatchers.Main) so the scheduler keeps getting
+        // pumped while the joins wait out in-flight coroutines (issues #54/#60). The
+        // PlaybackController's own Main-bound scope has to be drained too -- it isn't a
+        // ViewModel, so the store's clear doesn't cover it.
+        runTest(testDispatcher) {
+            viewModelStore.clearAndJoin()
+            playbackController.awaitShutdownForTest()
+        }
         db.close()
         Dispatchers.resetMain()
     }
@@ -143,13 +148,6 @@ class ReaderViewModelTest {
 
     @Test
     fun uiState_includesFeedTitle() = runTest(testDispatcher) {
-        // Skipped in CI only: intermittently throws "Dispatchers.Main is used concurrently" /
-        // IllegalStateException in GitHub Actions (leaked WhileSubscribed collector racing the
-        // next test's setMain/resetMain, per this class's own doc comment) while passing reliably
-        // every time locally. Same class of CI-only coroutine-timing flakiness as issue #54,
-        // tracked separately in https://github.com/mapitman/myfeeds-android/issues/60.
-        org.junit.Assume.assumeTrue("Skipped in CI: see issue #60", System.getenv("CI") == null)
-
         val viewModel = createViewModel("item-1")
 
         val state = viewModel.uiState.first { it.items.isNotEmpty() }

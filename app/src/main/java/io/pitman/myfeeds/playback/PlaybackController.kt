@@ -3,6 +3,7 @@ package io.pitman.myfeeds.playback
 import android.content.ComponentName
 import android.content.Context
 import android.os.Bundle
+import androidx.annotation.VisibleForTesting
 import androidx.media3.common.Player
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionCommand
@@ -17,12 +18,14 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -107,6 +110,17 @@ class PlaybackController @Inject constructor(
     // time driven by it, issue #75) would sit frozen at wherever it was during ongoing playback.
     private val positionTickerScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var positionTickerJob: Job? = null
+
+    /**
+     * Test-only teardown (issues #54/#60): cancels [positionTickerScope] and waits until every
+     * coroutine launched into it has actually finished, so nothing is left mid-flight to dispatch
+     * onto `Dispatchers.Main` after a test's `Dispatchers.resetMain()`. Production never calls
+     * this -- the controller is an app-lifetime @Singleton whose scope is never torn down.
+     */
+    @VisibleForTesting
+    internal suspend fun awaitShutdownForTest() {
+        positionTickerScope.coroutineContext.job.cancelAndJoin()
+    }
 
     private fun snapshotState(player: Player) = PlaybackUiState(
         currentItemId = player.currentMediaItem?.mediaId,

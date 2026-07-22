@@ -3,9 +3,9 @@ package io.pitman.myfeeds.addfeed
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.lifecycle.ViewModelStore
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import io.pitman.myfeeds.TrackedViewModelStore
 import io.pitman.myfeeds.data.directory.FeedDirectory
 import io.pitman.myfeeds.data.feed.FeedFetcher
 import io.pitman.myfeeds.data.feed.FeedUpdateEngine
@@ -41,12 +41,10 @@ import java.io.File
 class AddFeedViewModelTest {
     private val testDispatcher = UnconfinedTestDispatcher()
 
-    // ViewModels here are constructed directly (not via a real ViewModelProvider), so nothing
-    // would otherwise call ViewModel.clear() to cancel their viewModelScope between tests. A
-    // leaked WhileSubscribed collector then outlives the test method and races the next test's
-    // Dispatchers.setMain/resetMain. Routing creation through a real ViewModelStore and clearing
-    // it in tearDown cancels those coroutines properly, the same way the Android framework does.
-    private val viewModelStore = ViewModelStore()
+    // Cleared *and joined* in tearDown so no ViewModel coroutine is still in flight when
+    // Dispatchers.resetMain runs -- see TrackedViewModelStore's doc for the full leak mechanics
+    // behind the #54/#60 flakiness this prevents.
+    private val viewModelStore = TrackedViewModelStore()
 
     @get:Rule
     val tempFolder = TemporaryFolder()
@@ -98,7 +96,9 @@ class AddFeedViewModelTest {
 
     @After
     fun tearDown() {
-        viewModelStore.clear()
+        // Inside runTest (same scheduler as Dispatchers.Main) so the scheduler keeps getting
+        // pumped while clearAndJoin waits out in-flight ViewModel coroutines (issues #54/#60).
+        runTest(testDispatcher) { viewModelStore.clearAndJoin() }
         server.shutdown()
         db.close()
         Dispatchers.resetMain()
