@@ -21,6 +21,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -54,7 +57,9 @@ fun AddFeedScreen(
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+    val opmlImportMessage by viewModel.opmlImportMessage.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
 
     var url by remember { mutableStateOf(initialUrl.orEmpty()) }
     var opmlUrl by remember { mutableStateOf("") }
@@ -70,8 +75,16 @@ fun AddFeedScreen(
         if (uiState is AddFeedUiState.Success) onDone()
     }
 
+    LaunchedEffect(opmlImportMessage) {
+        opmlImportMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.consumeOpmlImportMessage()
+        }
+    }
+
     Scaffold(
         modifier = modifier,
+        snackbarHost = { SnackbarHost(snackbarHostState) { Snackbar(it) } },
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.add_feed_title)) },

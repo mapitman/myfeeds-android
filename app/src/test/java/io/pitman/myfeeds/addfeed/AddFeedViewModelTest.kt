@@ -146,7 +146,7 @@ class AddFeedViewModelTest {
     }
 
     @Test
-    fun importOpml_populatesFeeds() = runTest(testDispatcher) {
+    fun importOpml_populatesFeedsAndReportsCount() = runTest(testDispatcher) {
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0"><body>
@@ -157,15 +157,24 @@ class AddFeedViewModelTest {
         """.trimIndent()
 
         viewModel.importOpml(opml.byteInputStream())
-        val state = awaitTerminalState()
+        val message = viewModel.opmlImportMessage.first { it != null }
 
-        assertTrue("expected Success but got $state", state is AddFeedUiState.Success)
+        assertEquals("Imported 1 feeds", message)
         val feeds = db.feedDao().observeAll().first()
         assertEquals(listOf("Feed A"), feeds.map { it.title })
     }
 
     @Test
-    fun importOpmlFromText_populatesFeeds() = runTest(testDispatcher) {
+    fun importOpml_malformedXml_reportsErrorWithoutCrashing() = runTest(testDispatcher) {
+        viewModel.importOpml("not valid opml".byteInputStream())
+        val message = viewModel.opmlImportMessage.first { it != null }
+
+        assertEquals("Could not read that OPML file", message)
+        assertEquals(0, db.feedDao().observeAll().first().size)
+    }
+
+    @Test
+    fun importOpmlFromText_populatesFeedsAndReportsCount() = runTest(testDispatcher) {
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0"><body>
@@ -176,9 +185,9 @@ class AddFeedViewModelTest {
         """.trimIndent()
 
         viewModel.importOpmlFromText(opml)
-        val state = awaitTerminalState()
+        val message = viewModel.opmlImportMessage.first { it != null }
 
-        assertTrue("expected Success but got $state", state is AddFeedUiState.Success)
+        assertEquals("Imported 1 feeds", message)
         val feeds = db.feedDao().observeAll().first()
         assertEquals(listOf("Feed A"), feeds.map { it.title })
     }
@@ -186,9 +195,9 @@ class AddFeedViewModelTest {
     @Test
     fun importOpmlFromText_blankText_showsErrorWithoutParsing() = runTest(testDispatcher) {
         viewModel.importOpmlFromText("   ")
-        val state = awaitTerminalState()
+        val message = viewModel.opmlImportMessage.first { it != null }
 
-        assertTrue(state is AddFeedUiState.Error)
+        assertEquals("Paste OPML content to import", message)
         assertEquals(0, db.feedDao().observeAll().first().size)
     }
 }
