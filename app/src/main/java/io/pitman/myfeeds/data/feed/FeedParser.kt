@@ -202,8 +202,22 @@ object FeedParser {
     private fun Element.textOf(localName: String): String =
         firstChildElement(localName)?.textContent?.trim().orEmpty()
 
-    private fun Element.firstLocalNameOrNull(vararg localNames: String): String? =
-        childElements().firstOrNull { it.localName() in localNames }?.textContent?.trim()
+    /**
+     * Returns the text of the first non-blank element matching [localNames], trying each name in
+     * the given preference order across the *whole* element rather than a single document-order
+     * scan across the combined set (issue #223) -- otherwise an unrelated same-local-name element
+     * from another namespace (e.g. Media RSS's empty `<media:content>`, whose local name also
+     * collapses to "content") appearing earlier in the document could match first and be blank,
+     * silently discarding the real content that follows.
+     */
+    private fun Element.firstLocalNameOrNull(vararg localNames: String): String? {
+        val children = childElements()
+        for (name in localNames) {
+            val text = children.firstOrNull { it.localName() == name }?.textContent?.trim()
+            if (!text.isNullOrBlank()) return text
+        }
+        return null
+    }
 }
 
 // Cleartext HTTP image loads are blocked by default (targetSdk 28+), silently failing to render --

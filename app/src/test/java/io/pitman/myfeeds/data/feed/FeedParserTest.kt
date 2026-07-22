@@ -173,6 +173,49 @@ class FeedParserTest {
     }
 
     @Test
+    fun parseAtom_prefersContentOverSummaryRegardlessOfDocumentOrder() {
+        // issue #223: firstLocalNameOrNull("content", "summary") used to be a single document-order
+        // scan across both names combined, so a <summary> appearing before <content> would win.
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Test</title>
+              <entry>
+                <title>Summary First Entry</title>
+                <id>urn:uuid:summary-first</id>
+                <summary>Should not be used -- content takes precedence even though it's later.</summary>
+                <content type="html">Real content body.</content>
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val item = FeedParser.parse(xml)!!.items.single()
+
+        assertEquals("Real content body.", item.description)
+    }
+
+    @Test
+    fun parseAtom_ignoresUnrelatedNamespacedElementSharingContentLocalName() {
+        // issue #223: an empty Media RSS <media:content url="..."/> collapses to local name
+        // "content" once namespace prefixes are stripped -- it must not be mistaken for the real
+        // Atom <content> and short-circuit to a blank description.
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom" xmlns:media="http://search.yahoo.com/mrss/">
+              <title>Test</title>
+              <entry>
+                <title>Media Content Entry</title>
+                <id>urn:uuid:media-content</id>
+                <media:content url="https://example.com/thumb.jpg" />
+                <summary>The real summary text.</summary>
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val item = FeedParser.parse(xml)!!.items.single()
+
+        assertEquals("The real summary text.", item.description)
+    }
+
+    @Test
     fun parseAtom_fallsBackToSummaryAndLinkWhenNoContentOrId() {
         val feed = FeedParser.parse(fixture("atom.xml"))!!
 
