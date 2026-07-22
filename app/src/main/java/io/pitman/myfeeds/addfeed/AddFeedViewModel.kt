@@ -185,10 +185,10 @@ class AddFeedViewModel @Inject constructor(
     private suspend fun finishImport(document: OpmlDocument) {
         val importedCount = opmlImporter.import(document)
         _uiState.value = AddFeedUiState.Idle
-        _opmlImportMessage.value = if (importedCount > 0) {
-            context.getString(R.string.add_feed_imported_count, importedCount)
-        } else {
-            context.getString(R.string.add_feed_no_feeds_found_in_opml)
+        _opmlImportMessage.value = when {
+            importedCount > 0 -> context.getString(R.string.add_feed_imported_count, importedCount)
+            document.feeds.isEmpty() -> context.getString(R.string.add_feed_no_feeds_found_in_opml)
+            else -> context.getString(R.string.add_feed_all_feeds_already_subscribed)
         }
     }
 

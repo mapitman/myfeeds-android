@@ -67,4 +67,44 @@ class OpmlImporterTest {
 
         assertEquals(0, count)
     }
+
+    @Test
+    fun import_skipsFeedsAlreadySubscribedByFeedUrl() = runTest {
+        // issue #228: re-importing an OPML file that overlaps with existing subscriptions used to
+        // insert an unconditional duplicate Feed row for every entry.
+        val document = OpmlDocument(
+            folders = listOf(
+                OpmlFolder("Tech", listOf(OpmlFeed("Ars Technica", "https://arstechnica.com/feed"))),
+            ),
+        )
+        importer.import(document)
+
+        val secondImportCount = importer.import(document)
+
+        assertEquals(0, secondImportCount)
+        val feeds = db.feedDao().observeAll().first()
+        assertEquals(1, feeds.size)
+    }
+
+    @Test
+    fun import_onlyImportsTheNewFeedsWhenSomeAlreadySubscribed() = runTest {
+        importer.import(
+            OpmlDocument(folders = listOf(OpmlFolder("Tech", listOf(OpmlFeed("A", "https://a.example/feed"))))),
+        )
+
+        val count = importer.import(
+            OpmlDocument(
+                folders = listOf(
+                    OpmlFolder(
+                        "Tech",
+                        listOf(OpmlFeed("A", "https://a.example/feed"), OpmlFeed("B", "https://b.example/feed")),
+                    ),
+                ),
+            ),
+        )
+
+        assertEquals(1, count)
+        val feeds = db.feedDao().observeAll().first()
+        assertEquals(listOf("A", "B"), feeds.map { it.title })
+    }
 }

@@ -113,10 +113,10 @@ class SettingsViewModel @Inject constructor(
                 context.getString(R.string.add_feed_invalid_opml)
             } else {
                 val importedCount = opmlImporter.import(document)
-                if (importedCount > 0) {
-                    context.getString(R.string.add_feed_imported_count, importedCount)
-                } else {
-                    context.getString(R.string.add_feed_no_feeds_found_in_opml)
+                when {
+                    importedCount > 0 -> context.getString(R.string.add_feed_imported_count, importedCount)
+                    document.feeds.isEmpty() -> context.getString(R.string.add_feed_no_feeds_found_in_opml)
+                    else -> context.getString(R.string.add_feed_all_feeds_already_subscribed)
                 }
             }
         }
