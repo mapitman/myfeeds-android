@@ -64,4 +64,42 @@ class FirstImageExtractorTest {
     fun extractFirstImageUrl_blankHtml_returnsNull() {
         assertNull(FirstImageExtractor.extractFirstImageUrl("", "https://example.com"))
     }
+
+    @Test
+    fun extractAndStripFirstImage_removesOnlyTheMatchedImgFromDescription() {
+        // issue #222: the item's own description often already embeds this same lead image --
+        // once it's shown separately as the hero image, leaving it in the body renders it twice.
+        val html = "<p>Intro</p><img src=\"https://example.com/hero.jpg\" /><p>Body text</p>"
+
+        val result = FirstImageExtractor.extractAndStripFirstImage(html, "https://example.com")
+
+        assertEquals("https://example.com/hero.jpg", result.url)
+        assertEquals("<p>Intro</p>\n<p>Body text</p>", result.descriptionWithoutImage)
+    }
+
+    @Test
+    fun extractAndStripFirstImage_onlyRemovesTheFirstImage_keepsLaterOnes() {
+        val html = "<img src=\"https://example.com/first.jpg\" /><img src=\"https://example.com/second.jpg\" />"
+
+        val result = FirstImageExtractor.extractAndStripFirstImage(html, "https://example.com")
+
+        assertEquals("https://example.com/first.jpg", result.url)
+        assertEquals("<img src=\"https://example.com/second.jpg\">", result.descriptionWithoutImage)
+    }
+
+    @Test
+    fun extractAndStripFirstImage_noImgTags_returnsHtmlUnchanged() {
+        val result = FirstImageExtractor.extractAndStripFirstImage("<p>just text</p>", "https://example.com")
+
+        assertNull(result.url)
+        assertEquals("<p>just text</p>", result.descriptionWithoutImage)
+    }
+
+    @Test
+    fun extractAndStripFirstImage_blankHtml_returnsBlankUnchanged() {
+        val result = FirstImageExtractor.extractAndStripFirstImage("", "https://example.com")
+
+        assertNull(result.url)
+        assertEquals("", result.descriptionWithoutImage)
+    }
 }

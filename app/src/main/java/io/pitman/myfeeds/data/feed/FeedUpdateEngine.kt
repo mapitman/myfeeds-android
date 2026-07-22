@@ -60,16 +60,16 @@ class FeedUpdateEngine @Inject constructor(
             }
 
             val existing = feedRepository.findByItemGuid(feed.id, itemGuid)
-            val imageUrl = FirstImageExtractor.extractFirstImageUrl(parsedItem.description, parsedItem.url)
+            val firstImage = FirstImageExtractor.extractAndStripFirstImage(parsedItem.description, parsedItem.url)
             val id = existing?.id ?: UUID.randomUUID().toString()
 
             val entity = FeedItem(
                 id = id,
                 feedId = feed.id,
                 title = parsedItem.title,
-                description = parsedItem.description,
+                description = firstImage.descriptionWithoutImage,
                 url = parsedItem.url,
-                imageUrl = imageUrl,
+                imageUrl = firstImage.url,
                 itemGuid = itemGuid,
                 publishDate = parsedItem.publishDate?.toEpochMilli(),
                 isRead = existing?.isRead ?: false,
