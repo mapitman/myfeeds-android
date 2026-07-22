@@ -93,7 +93,14 @@ class FeedUpdateEngine @Inject constructor(
         // change something else on this feed meanwhile (e.g. playback speed via the player) --
         // writing back a Feed built from the stale snapshot would silently clobber that edit.
         val currentFeed = feedRepository.getFeed(feed.id) ?: feed
-        var updatedFeed = currentFeed.copy(lastGet = Instant.now().toEpochMilli(), imageUrl = parsed.imageUrl ?: currentFeed.imageUrl)
+        // Backfills a title left blank at subscribe time -- e.g. an OPML outline with no title/text
+        // attribute (issue #219) -- from the feed's own <title> once it's actually fetched.
+        val title = if (currentFeed.title.isNullOrBlank() && parsed.title.isNotBlank()) parsed.title else currentFeed.title
+        var updatedFeed = currentFeed.copy(
+            title = title,
+            lastGet = Instant.now().toEpochMilli(),
+            imageUrl = parsed.imageUrl ?: currentFeed.imageUrl,
+        )
         // New podcast subscriptions default to auto-queuing, capped at a small number of episodes
         // rather than unlimited (issue #137), so Next Up doesn't get flooded by a feed's entire
         // back catalog on the very first fetch.
