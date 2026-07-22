@@ -31,7 +31,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import java.io.IOException
 import java.io.InputStream
 import javax.inject.Inject
 
@@ -48,6 +47,14 @@ class AddFeedViewModel @Inject constructor(
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AddFeedUiState>(AddFeedUiState.Idle)
     val uiState: StateFlow<AddFeedUiState> = _uiState
+
+    /** One-shot OPML import result for a Snackbar; cleared via [consumeOpmlImportMessage]. */
+    private val _opmlImportMessage = MutableStateFlow<String?>(null)
+    val opmlImportMessage: StateFlow<String?> = _opmlImportMessage
+
+    fun consumeOpmlImportMessage() {
+        _opmlImportMessage.value = null
+    }
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
@@ -107,29 +114,49 @@ class AddFeedViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = AddFeedUiState.Loading
             val document = withContext(Dispatchers.IO) {
-                input.use { OpmlParser.parse(it) }
+                try {
+                    input.use { OpmlParser.parse(it) }
+                } catch (_: Exception) {
+                    null
+                }
             }
-            finishImport(document)
+            if (document == null) {
+                _uiState.value = AddFeedUiState.Idle
+                _opmlImportMessage.value = context.getString(R.string.add_feed_invalid_opml)
+            } else {
+                finishImport(document)
+            }
         }
     }
 
     fun importOpmlFromText(text: String) {
         if (text.isBlank()) {
-            _uiState.value = AddFeedUiState.Error(context.getString(R.string.add_feed_enter_opml_text_error))
+            _opmlImportMessage.value = context.getString(R.string.add_feed_enter_opml_text_error)
             return
         }
 
         viewModelScope.launch {
             _uiState.value = AddFeedUiState.Loading
-            val document = withContext(Dispatchers.IO) { text.byteInputStream().use { OpmlParser.parse(it) } }
-            finishImport(document)
+            val document = withContext(Dispatchers.IO) {
+                try {
+                    text.byteInputStream().use { OpmlParser.parse(it) }
+                } catch (_: Exception) {
+                    null
+                }
+            }
+            if (document == null) {
+                _uiState.value = AddFeedUiState.Idle
+                _opmlImportMessage.value = context.getString(R.string.add_feed_invalid_opml)
+            } else {
+                finishImport(document)
+            }
         }
     }
 
     fun importOpmlFromUrl(url: String) {
         val trimmedUrl = url.trim()
         if (trimmedUrl.isEmpty()) {
-            _uiState.value = AddFeedUiState.Error(context.getString(R.string.add_feed_enter_opml_url_error))
+            _opmlImportMessage.value = context.getString(R.string.add_feed_enter_opml_url_error)
             return
         }
 
@@ -142,12 +169,13 @@ class AddFeedViewModel @Inject constructor(
                         if (!response.isSuccessful) return@withContext null
                         response.body?.byteStream()?.use { OpmlParser.parse(it) }
                     }
-                } catch (_: IOException) {
+                } catch (_: Exception) {
                     null
                 }
             }
+            _uiState.value = AddFeedUiState.Idle
             if (document == null) {
-                _uiState.value = AddFeedUiState.Error(context.getString(R.string.add_feed_could_not_load_opml, trimmedUrl))
+                _opmlImportMessage.value = context.getString(R.string.add_feed_could_not_load_opml, trimmedUrl)
             } else {
                 finishImport(document)
             }
@@ -156,10 +184,11 @@ class AddFeedViewModel @Inject constructor(
 
     private suspend fun finishImport(document: OpmlDocument) {
         val importedCount = opmlImporter.import(document)
-        _uiState.value = if (importedCount > 0) {
-            AddFeedUiState.Success(context.getString(R.string.add_feed_imported_count, importedCount))
+        _uiState.value = AddFeedUiState.Idle
+        _opmlImportMessage.value = if (importedCount > 0) {
+            context.getString(R.string.add_feed_imported_count, importedCount)
         } else {
-            AddFeedUiState.Error(context.getString(R.string.add_feed_no_feeds_found_in_opml))
+            context.getString(R.string.add_feed_no_feeds_found_in_opml)
         }
     }
 

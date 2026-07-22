@@ -139,6 +139,7 @@ class SettingsViewModelTest {
 
         val feeds = db.feedDao().observeAll().first { it.size == 12 }
         assertEquals(12, feeds.size)
+        assertEquals("Imported 12 feeds", viewModel.addDefaultFeedsMessage.first { it != null })
     }
 
     @Test
