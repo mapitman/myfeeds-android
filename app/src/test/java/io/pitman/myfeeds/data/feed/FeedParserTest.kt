@@ -53,6 +53,46 @@ class FeedParserTest {
     }
 
     @Test
+    fun parseRss_urlFallsBackToPermalinkGuidWhenLinkMissing() {
+        // issue #221: a common valid RSS pattern omits <link> entirely and marks <guid
+        // isPermaLink="true"> (the spec's default when the attribute is absent) as the article's
+        // web URL instead.
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>Test</title>
+              <item>
+                <title>No Link Item</title>
+                <guid isPermaLink="true">https://example.com/no-link-item</guid>
+                <description>Body</description>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+
+        val item = FeedParser.parse(xml)!!.items.single()
+
+        assertEquals("https://example.com/no-link-item", item.url)
+        assertEquals("https://example.com/no-link-item", item.itemGuid)
+    }
+
+    @Test
+    fun parseRss_doesNotFallBackToGuidWhenIsPermaLinkIsFalse() {
+        val xml = """
+            <rss version="2.0"><channel>
+              <title>Test</title>
+              <item>
+                <title>Opaque Guid Item</title>
+                <guid isPermaLink="false">not-a-url-123</guid>
+                <description>Body</description>
+              </item>
+            </channel></rss>
+        """.trimIndent()
+
+        val item = FeedParser.parse(xml)!!.items.single()
+
+        assertEquals("", item.url)
+    }
+
+    @Test
     fun parseRss_podcastEnclosureFieldsExtracted() {
         val feed = FeedParser.parse(fixture("rss-podcast.xml"))!!
 
@@ -140,6 +180,27 @@ class FeedParserTest {
         assertEquals("Just a summary, no content element.", second.description)
         assertEquals("https://example.com/entry-2", second.itemGuid)
         assertEquals("https://example.com/entry-2", second.url)
+    }
+
+    @Test
+    fun parseAtom_linkWithTypeButNoRelIsTreatedAsAlternate() {
+        // issue #221: a <link> with no rel attribute defaults to rel="alternate" per the Atom
+        // spec -- previously this was only matched when its type was also blank, so a link with an
+        // explicit type but no rel (e.g. type="text/html") was skipped, leaving the item linkless.
+        val xml = """
+            <feed xmlns="http://www.w3.org/2005/Atom">
+              <title>Test</title>
+              <entry>
+                <title>No Rel Link Entry</title>
+                <id>urn:uuid:no-rel-entry</id>
+                <link type="text/html" href="https://example.com/no-rel-entry" />
+              </entry>
+            </feed>
+        """.trimIndent()
+
+        val item = FeedParser.parse(xml)!!.items.single()
+
+        assertEquals("https://example.com/no-rel-entry", item.url)
     }
 
     @Test
