@@ -43,6 +43,13 @@ class FeedUpdateEngine @Inject constructor(
         feeds.map { feed -> async { semaphore.withPermit { updateFeed(feed) } } }.awaitAll()
     }
 
+    /**
+     * Applies an already-fetched [parsed] feed to [feed], skipping a redundant re-fetch. Used by
+     * [io.pitman.myfeeds.data.opml.OpmlImporter], which must fetch each candidate feed once already
+     * to validate it before subscribing (issue #231).
+     */
+    suspend fun persistFetchedFeed(feed: Feed, parsed: ParsedFeed): FeedUpdateResult = persist(feed, parsed)
+
     private suspend fun persist(feed: Feed, parsed: ParsedFeed): FeedUpdateResult {
         // A feed's first-ever successful fetch is the only time it's safe to change auto-queue
         // defaults without risking overwriting a value the user has since set themselves via Feed

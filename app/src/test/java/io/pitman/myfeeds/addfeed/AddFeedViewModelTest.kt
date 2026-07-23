@@ -82,11 +82,13 @@ class AddFeedViewModelTest {
         )
         val settingsDataStore = SettingsDataStore(dataStore)
         val httpClient = OkHttpClient()
+        val feedFetcher = FeedFetcher(httpClient)
+        val feedUpdateEngine = FeedUpdateEngine(feedFetcher, repository, settingsDataStore)
         viewModel = AddFeedViewModel(
-            feedFetcher = FeedFetcher(httpClient),
-            feedUpdateEngine = FeedUpdateEngine(FeedFetcher(httpClient), repository, settingsDataStore),
+            feedFetcher = feedFetcher,
+            feedUpdateEngine = feedUpdateEngine,
             feedRepository = repository,
-            opmlImporter = OpmlImporter(db.feedDao()),
+            opmlImporter = OpmlImporter(db.feedDao(), feedFetcher, feedUpdateEngine, settingsDataStore),
             httpClient = httpClient,
             feedDirectory = FeedDirectory(context),
             context = context,
@@ -147,11 +149,14 @@ class AddFeedViewModelTest {
 
     @Test
     fun importOpml_populatesFeedsAndReportsCount() = runTest(testDispatcher) {
+        // OPML import now validates each feed by fetching it (issue #231), so the imported title
+        // comes from that fetch (server's rssXml fixture), not the OPML outline's own text.
+        server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0"><body>
               <outline text="Imported">
-                <outline text="Feed A" xmlUrl="https://a.example/feed" />
+                <outline text="Feed A" xmlUrl="${server.url("/feed.xml")}" />
               </outline>
             </body></opml>
         """.trimIndent()
@@ -161,7 +166,7 @@ class AddFeedViewModelTest {
 
         assertEquals("Imported 1 feeds", message)
         val feeds = db.feedDao().observeAll().first()
-        assertEquals(listOf("Feed A"), feeds.map { it.title })
+        assertEquals(listOf("A New Feed"), feeds.map { it.title })
     }
 
     @Test
@@ -175,11 +180,12 @@ class AddFeedViewModelTest {
 
     @Test
     fun importOpmlFromText_populatesFeedsAndReportsCount() = runTest(testDispatcher) {
+        server.enqueue(MockResponse().setResponseCode(200).setBody(rssXml))
         val opml = """
             <?xml version="1.0" encoding="utf-8"?>
             <opml version="1.0"><body>
               <outline text="Imported">
-                <outline text="Feed A" xmlUrl="https://a.example/feed" />
+                <outline text="Feed A" xmlUrl="${server.url("/feed.xml")}" />
               </outline>
             </body></opml>
         """.trimIndent()
@@ -189,7 +195,7 @@ class AddFeedViewModelTest {
 
         assertEquals("Imported 1 feeds", message)
         val feeds = db.feedDao().observeAll().first()
-        assertEquals(listOf("Feed A"), feeds.map { it.title })
+        assertEquals(listOf("A New Feed"), feeds.map { it.title })
     }
 
     @Test

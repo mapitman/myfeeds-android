@@ -6,6 +6,8 @@ import androidx.datastore.preferences.core.PreferenceDataStoreFactory
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.TrackedViewModelStore
+import io.pitman.myfeeds.data.feed.FeedFetcher
+import io.pitman.myfeeds.data.feed.FeedUpdateEngine
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
@@ -22,6 +24,9 @@ import kotlinx.coroutines.test.UnconfinedTestDispatcher
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
+import okhttp3.OkHttpClient
+import okhttp3.mockwebserver.MockResponse
+import okhttp3.mockwebserver.MockWebServer
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
@@ -62,6 +67,7 @@ class SettingsViewModelTest {
     @get:Rule
     val tempFolder = TemporaryFolder()
 
+    private lateinit var server: MockWebServer
     private lateinit var db: AppDatabase
     private lateinit var repository: FeedRepository
     private lateinit var settingsDataStore: SettingsDataStore
@@ -71,6 +77,15 @@ class SettingsViewModelTest {
     // Dispatchers.resetMain runs -- see TrackedViewModelStore's doc for the full leak mechanics
     // behind the #54/#60 flakiness this prevents.
     private val viewModelStore = TrackedViewModelStore()
+
+    private val defaultFeedsRssXml = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <rss version="2.0"><channel>
+          <title>A Feed</title>
+          <link>https://example.com</link>
+          <description>desc</description>
+        </channel></rss>
+    """.trimIndent()
 
     @Before
     fun setUp() {
@@ -89,13 +104,32 @@ class SettingsViewModelTest {
             produceFile = { File(tempFolder.newFolder(), "test.preferences_pb") },
         )
         settingsDataStore = SettingsDataStore(dataStore)
+        // OPML import now validates each feed by actually fetching it (issue #231) -- default_feeds.opml
+        // lists real external hosts, so every outgoing request is rewritten to this local server
+        // regardless of its original host, and answered with a generic valid RSS body.
+        server = MockWebServer()
+        server.start()
+        repeat(12) { server.enqueue(MockResponse().setResponseCode(200).setBody(defaultFeedsRssXml)) }
+        val httpClient = OkHttpClient.Builder()
+            .addInterceptor { chain ->
+                val original = chain.request()
+                val rewritten = original.url.newBuilder()
+                    .scheme(server.url("/").scheme)
+                    .host(server.hostName)
+                    .port(server.port)
+                    .build()
+                chain.proceed(original.newBuilder().url(rewritten).build())
+            }
+            .build()
+        val feedFetcher = FeedFetcher(httpClient)
+        val feedUpdateEngine = FeedUpdateEngine(feedFetcher, repository, settingsDataStore)
         // Real WorkManager deadlocked when touched from Robolectric-hosted ViewModel tests (see
         // the scheduled-refresh PR description), so SettingsViewModel depends on the
         // FeedRefreshScheduling interface and this test uses a no-op fake instead.
         viewModel = SettingsViewModel(
             settingsDataStore = settingsDataStore,
             feedRepository = repository,
-            opmlImporter = OpmlImporter(db.feedDao()),
+            opmlImporter = OpmlImporter(db.feedDao(), feedFetcher, feedUpdateEngine, settingsDataStore),
             opmlExporter = OpmlExporter(db.feedDao(), db.feedItemDao()),
             feedRefreshScheduler = object : FeedRefreshScheduling {
                 override fun schedule(intervalMinutes: Long) {}
@@ -114,6 +148,7 @@ class SettingsViewModelTest {
         // pumped while clearAndJoin waits out in-flight ViewModel coroutines (issues #54/#60).
         runTest(testDispatcher) { viewModelStore.clearAndJoin() }
         db.close()
+        server.shutdown()
         Dispatchers.resetMain()
     }
 
