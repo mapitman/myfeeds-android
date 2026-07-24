@@ -33,8 +33,9 @@ class AutoQueueAndDownloadEnforcer @Inject constructor(
             if (feed.autoDownloadEnabled) {
                 success.newItemIds.forEach { itemId ->
                     val item = feedRepository.getItem(itemId) ?: return@forEach
-                    if (item.isPodcastEpisode) downloadRepository.startDownload(item)
+                    if (item.isPodcastEpisode) downloadRepository.startDownload(item, autoDownloaded = true)
                 }
+                feed.maxDownloadsToKeep?.let { downloadRepository.enforceFeedDownloadCap(feed.id, it) }
             }
 
             if (feed.autoQueueEnabled) {

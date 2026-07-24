@@ -149,6 +149,7 @@
     <string name="feed_properties_max_articles_for_feed">Max. Artikel für diesen Feed: %1$d</string>
     <string name="feed_properties_max_episodes_for_feed">Max. Episoden für diesen Feed: %1$d</string>
     <string name="feed_properties_auto_download">Neue Episoden automatisch herunterladen</string>
+    <string name="feed_properties_max_downloads_to_keep">Max. heruntergeladene Episoden für diesen Feed</string>
     <string name="feed_properties_auto_queue">Neue Episoden automatisch zur Warteschlange hinzufügen</string>
     <string name="feed_properties_auto_queue_max_count">Max. Episoden in der Warteschlange für diesen Feed</string>
     <string name="feed_properties_auto_queue_unlimited">Unbegrenzt</string>

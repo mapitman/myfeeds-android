@@ -181,6 +181,28 @@ fun FeedPropertiesScreen(
                 )
                 Switch(checked = uiState.autoDownloadEnabled, onCheckedChange = null)
             }
+            if (uiState.autoDownloadEnabled) {
+                Text(
+                    text = stringResource(R.string.feed_properties_max_downloads_to_keep),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                Row(modifier = Modifier.padding(top = 4.dp)) {
+                    listOf(1, 3, 5, 10, null).forEach { maxCount ->
+                        FilterChip(
+                            selected = uiState.maxDownloadsToKeep == maxCount,
+                            onClick = { viewModel.setMaxDownloadsToKeep(maxCount) },
+                            label = {
+                                Text(
+                                    maxCount?.toString()
+                                        ?: stringResource(R.string.feed_properties_auto_queue_unlimited),
+                                )
+                            },
+                            modifier = Modifier.padding(end = 8.dp),
+                        )
+                    }
+                }
+            }
 
             Column(
                 modifier = Modifier

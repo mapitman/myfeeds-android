@@ -133,3 +133,13 @@ val MIGRATION_11_12 = object : Migration(11, 12) {
         db.execSQL("ALTER TABLE feeds ADD COLUMN startSkipSeconds INTEGER NOT NULL DEFAULT 0")
     }
 }
+
+/** Adds per-feed max-downloads-to-keep (issue #250): caps how many auto-downloaded episodes of a
+ *  feed are kept before the oldest are auto-deleted, plus the flag distinguishing an
+ *  auto-triggered download from a manual one so the cap never evicts a manual download. */
+val MIGRATION_12_13 = object : Migration(12, 13) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE feeds ADD COLUMN maxDownloadsToKeep INTEGER")
+        db.execSQL("ALTER TABLE feed_items ADD COLUMN autoDownloaded INTEGER NOT NULL DEFAULT 0")
+    }
+}
