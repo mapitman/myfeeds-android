@@ -182,7 +182,14 @@ class MainActivity : ComponentActivity() {
                     }
                     // Next Up (issue #106, #195): rather than a separate destination, it's the
                     // expanded state of the persistent player bottom sheet -- opened by expanding it.
-                    val onQueueClick: () -> Unit = { coroutineScope.launch { scaffoldState.bottomSheetState.expand() } }
+                    // On the currently-playing episode's own reader page, though, the sheet's content
+                    // is force-hidden below (issue #97) since that page already has its own full
+                    // player -- expanding it alone left a stuck, empty peek with nothing shown (issue
+                    // #248), so pop back off that page first to reveal the sheet before expanding it.
+                    val onQueueClick: () -> Unit = {
+                        if (isOnPlayingEpisodeReader) navController.popBackStack()
+                        coroutineScope.launch { scaffoldState.bottomSheetState.expand() }
+                    }
 
                     // Swiped down past peek to just NowPlayingMiniStrip (issue #197) -- the sheet
                     // itself is Hidden, so BottomSheetScaffold's innerPadding still reserves
