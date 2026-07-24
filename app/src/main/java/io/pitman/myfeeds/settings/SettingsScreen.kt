@@ -51,6 +51,7 @@ import androidx.annotation.StringRes
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import androidx.hilt.navigation.compose.hiltViewModel
+import io.pitman.myfeeds.BuildConfig
 import io.pitman.myfeeds.R
 import io.pitman.myfeeds.data.settings.AppSettings
 import io.pitman.myfeeds.data.settings.FontSize
@@ -158,6 +159,12 @@ fun SettingsScreen(
                 stringResource(R.string.app_name),
                 style = MaterialTheme.typography.bodyLarge,
                 modifier = Modifier.padding(vertical = 4.dp),
+            )
+            Text(
+                stringResource(R.string.settings_about_version, BuildConfig.VERSION_NAME),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 4.dp),
             )
             Text(
                 stringResource(R.string.settings_about_description),

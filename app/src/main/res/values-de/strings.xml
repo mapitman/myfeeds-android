@@ -95,6 +95,7 @@
     <string name="settings_download_on_cellular">Download über Mobilfunk</string>
     <string name="settings_allow_streaming">Streaming erlauben</string>
     <string name="settings_auto_delete_finished_downloads">Downloads nach Wiedergabe automatisch löschen</string>
+    <string name="settings_about_version">Version %1$s</string>
     <string name="settings_about_description">Ein RSS/Atom-Feedreader und Podcast-Client.</string>
     <string name="settings_export_opml">OPML exportieren</string>
     <string name="settings_save_opml_to_file">OPML in Datei speichern</string>

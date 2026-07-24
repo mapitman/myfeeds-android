@@ -10,12 +10,18 @@ android {
     namespace = "io.pitman.myfeeds"
     compileSdk = 36
 
+    // Set from CI via -PreleaseVersionName/-PreleaseVersionCode when a release tag is pushed
+    // (issue #252); these defaults keep local assembleDebug/assembleRelease builds working
+    // unchanged with no properties passed.
+    val releaseVersionName = (project.findProperty("releaseVersionName") as String?) ?: "0.1.0"
+    val releaseVersionCode = (project.findProperty("releaseVersionCode") as String?)?.toIntOrNull() ?: 1
+
     defaultConfig {
         applicationId = "io.pitman.myfeeds"
         minSdk = 31
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = releaseVersionCode
+        versionName = releaseVersionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -24,10 +30,29 @@ android {
         }
     }
 
+    // Release signing (issue #252): populated from RELEASE_KEYSTORE_PATH/RELEASE_KEYSTORE_PASSWORD/
+    // RELEASE_KEY_ALIAS/RELEASE_KEY_PASSWORD env vars, which CI sets after decoding the keystore
+    // secret. Left absent (rather than throwing) when those aren't set, so a local
+    // `./gradlew assembleRelease` with no env vars still succeeds -- just produces an unsigned APK.
+    signingConfigs {
+        create("release") {
+            val keystorePath = System.getenv("RELEASE_KEYSTORE_PATH")
+            if (keystorePath != null) {
+                storeFile = file(keystorePath)
+                storePassword = System.getenv("RELEASE_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("RELEASE_KEY_ALIAS")
+                keyPassword = System.getenv("RELEASE_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            if (System.getenv("RELEASE_KEYSTORE_PATH") != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 
@@ -42,6 +67,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true // exposes BuildConfig.VERSION_NAME for the About screen (issue #252)
     }
 
     testOptions {
