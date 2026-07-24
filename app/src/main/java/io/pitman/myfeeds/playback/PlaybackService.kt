@@ -113,6 +113,10 @@ class PlaybackService : MediaSessionService() {
             // amount as the in-app controls instead of Media3's own default increments (issue #244).
             .setSeekForwardIncrementMs(SKIP_FORWARD_MS)
             .setSeekBackIncrementMs(SKIP_BACKWARD_MS)
+            // Defaults to false, so without this, audio rerouted from a disconnecting Bluetooth
+            // device (or unplugged wired headphones) keeps playing out loud on the speaker
+            // instead of pausing (issue #243).
+            .setHandleAudioBecomingNoisy(true)
             .build()
         player.addListener(playerListener)
         loudnessEnhancer = runCatching { LoudnessEnhancer(player.audioSessionId) }.getOrNull()
