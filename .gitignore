@@ -12,3 +12,5 @@ app/build/
 app/release/
 *.hprof
 .kotlin/
+*.jks
+*.keystore

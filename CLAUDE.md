@@ -36,6 +36,18 @@ Single-module Android app (`app/`), Kotlin, Jetpack Compose UI, Hilt DI, Room fo
 
 Don't drive the UI yourself via `adb shell input tap`/screenshots to verify a change — scripting taps through screenshot coordinates is very token-intensive and brittle. Instead: build, install, and launch the app on the connected device (`./gradlew installDebug`, then `adb shell am start -n io.pitman.myfeeds/.MainActivity`), and hand back a numbered list of test steps for the user to perform themselves and report results.
 
+## Releases
+
+Tag pushes matching `vMAJOR.MINOR.PATCH` (e.g. `v1.2.3`) trigger `.github/workflows/release.yml`,
+which builds a signed release APK, derives `versionName`/`versionCode` from the tag
+(versionCode = major*10000 + minor*100 + patch -- keep minor/patch under 100), and publishes a
+GitHub Release with the APK attached and an auto-generated changelog. Signing uses a keystore
+stored (base64) in the `RELEASE_KEYSTORE_BASE64` secret, decoded to a temp file at build time;
+`RELEASE_KEYSTORE_PASSWORD`, `RELEASE_KEY_ALIAS`, `RELEASE_KEY_PASSWORD` are the matching secrets --
+`scripts/set-release-secrets.sh /path/to/keystore.jks` pushes all four via the `gh` CLI. Tags are
+append-only -- never delete and re-push a release tag. Local `assembleRelease` without these env
+vars builds an unsigned APK (succeeds, just not signed).
+
 ## Conventions
 
 - Non-obvious behavior is explained with a comment referencing the GitHub issue that drove it (e.g. `// issue #66`) — follow this pattern for new work rather than writing prose-only comments; it lets a reader trace *why* back to the originating issue.
