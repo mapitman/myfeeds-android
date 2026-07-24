@@ -30,8 +30,11 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val SKIP_FORWARD_MS = 30_000L
-private const val SKIP_BACKWARD_MS = 15_000L
+// Shared with PlaybackService, which applies the same amounts to ExoPlayer's seekForward()/
+// seekBack() so a Bluetooth device's hardware FAST_FORWARD/REWIND buttons (issue #244) skip by
+// the same amount as the in-app controls instead of falling back to Media3's own defaults.
+internal const val SKIP_FORWARD_MS = 30_000L
+internal const val SKIP_BACKWARD_MS = 15_000L
 private const val POSITION_TICK_MS = 500L
 
 /** issue #95: "previous chapter" restarts the current chapter if more than this far into it,
