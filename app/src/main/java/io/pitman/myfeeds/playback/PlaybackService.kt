@@ -10,6 +10,7 @@ import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -192,6 +193,12 @@ class PlaybackService : MediaSessionService() {
         override fun onIsPlayingChanged(isPlaying: Boolean) {
             if (isPlaying) {
                 startPositionSaveLoop()
+                // Release the advance wake lock (issue #241) once the auto-advanced episode is
+                // actually playing rather than in the coroutine's finally block below --
+                // prepare()/play() return before buffering completes, so releasing right after
+                // calling them left the CPU free to doze mid-buffer with the screen off, before
+                // the new stream's connection ever finished opening.
+                if (advanceWakeLock.isHeld) advanceWakeLock.release()
             } else {
                 positionSaveJob?.cancel()
                 // Skip the final save on end-of-track: onPlaybackStateChanged's STATE_ENDED
@@ -201,6 +208,12 @@ class PlaybackService : MediaSessionService() {
                     saveCurrentPosition()
                 }
             }
+        }
+
+        override fun onPlayerError(error: PlaybackException) {
+            // Advance failed to start (issue #241) -- don't hold the wake lock for its full
+            // timeout when we already know playback isn't coming.
+            if (advanceWakeLock.isHeld) advanceWakeLock.release()
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
@@ -221,9 +234,11 @@ class PlaybackService : MediaSessionService() {
                     }
                     settingsDataStore.setLastPlayingItem(null, null)
                     playNextQueued()
+                    // The wake lock is released once playback actually starts (onIsPlayingChanged
+                    // above) or fails (onPlayerError above), not here -- see issue #241. The
+                    // ADVANCE_WAKE_LOCK_TIMEOUT_MS cap still bounds it if neither ever fires.
                 } finally {
                     advancingFromEnded = false
-                    if (advanceWakeLock.isHeld) advanceWakeLock.release()
                 }
             }
         }
