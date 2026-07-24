@@ -8,6 +8,7 @@ import androidx.test.core.app.ApplicationProvider
 import io.pitman.myfeeds.data.local.AppDatabase
 import io.pitman.myfeeds.data.local.Feed
 import io.pitman.myfeeds.data.local.FeedItem
+import io.pitman.myfeeds.data.local.QueueEntry
 import io.pitman.myfeeds.data.repository.FeedRepository
 import io.pitman.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.test.runTest
@@ -131,5 +132,95 @@ class EnclosureDownloadRepositoryTest {
         assertEquals(listOf("item-1"), cancelledCalls)
         assertFalse(file.exists())
         assertNull(repository.getItem("item-1")?.downloadedFilePath)
+    }
+
+    @Test
+    fun startDownload_marksItemAsAutoDownloadedWhenRequested() = runTest {
+        seedFeedAndItem("https://example.com/episode.mp3")
+        val item = repository.getItem("item-1")!!
+
+        downloadRepository.startDownload(item, autoDownloaded = true)
+
+        assertTrue(repository.getItem("item-1")!!.autoDownloaded)
+    }
+
+    /** Downloaded episodes of feed [feedId], newest [publishDate] first, each with its own file
+     *  on disk so eviction assertions can check the underlying file was actually deleted. */
+    private suspend fun seedDownloadedEpisodes(feedId: Long, count: Int, autoDownloaded: Boolean = true): List<File> {
+        val items = (1..count).map { i ->
+            FeedItem(
+                id = "auto-$feedId-$i",
+                feedId = feedId,
+                itemGuid = "auto-$feedId-$i",
+                enclosureUrl = "https://example.com/$i.mp3",
+                enclosureType = "audio/mpeg",
+                publishDate = i.toLong(),
+            )
+        }
+        repository.insertItems(items)
+        return items.map { item ->
+            val file = tempFolder.newFile("${item.id}.mp3")
+            repository.setDownloadedFilePath(item.id, file.absolutePath)
+            repository.setAutoDownloaded(item.id, autoDownloaded)
+            file
+        }
+    }
+
+    @Test
+    fun enforceFeedDownloadCap_deletesOldestExcessBeyondCap() = runTest {
+        val feedId = repository.subscribe(Feed(title = "A Podcast"))
+        val files = seedDownloadedEpisodes(feedId, count = 3)
+
+        downloadRepository.enforceFeedDownloadCap(feedId, maxCount = 1)
+
+        // publishDate 1 and 2 are the oldest two of three -- evicted down to the newest one.
+        assertFalse(files[0].exists())
+        assertFalse(files[1].exists())
+        assertTrue(files[2].exists())
+        assertNull(repository.getItem("auto-$feedId-1")?.downloadedFilePath)
+        assertNull(repository.getItem("auto-$feedId-2")?.downloadedFilePath)
+        assertEquals(files[2].absolutePath, repository.getItem("auto-$feedId-3")?.downloadedFilePath)
+    }
+
+    @Test
+    fun enforceFeedDownloadCap_underCap_deletesNothing() = runTest {
+        val feedId = repository.subscribe(Feed(title = "A Podcast"))
+        val files = seedDownloadedEpisodes(feedId, count = 2)
+
+        downloadRepository.enforceFeedDownloadCap(feedId, maxCount = 5)
+
+        files.forEach { assertTrue(it.exists()) }
+    }
+
+    @Test
+    fun enforceFeedDownloadCap_exemptsQueuedEpisodeEvenIfOldest() = runTest {
+        val feedId = repository.subscribe(Feed(title = "A Podcast"))
+        val files = seedDownloadedEpisodes(feedId, count = 2)
+        db.queueDao().insert(QueueEntry(itemId = "auto-$feedId-1", position = 0, addedAt = 0))
+
+        downloadRepository.enforceFeedDownloadCap(feedId, maxCount = 1)
+
+        assertTrue(files[0].exists())
+    }
+
+    @Test
+    fun enforceFeedDownloadCap_exemptsCurrentlyPlayingEpisodeEvenIfOldest() = runTest {
+        val feedId = repository.subscribe(Feed(title = "A Podcast"))
+        val files = seedDownloadedEpisodes(feedId, count = 2)
+        settingsDataStore.setLastPlayingItem(feedId, "auto-$feedId-1")
+
+        downloadRepository.enforceFeedDownloadCap(feedId, maxCount = 1)
+
+        assertTrue(files[0].exists())
+    }
+
+    @Test
+    fun enforceFeedDownloadCap_neverEvictsManuallyDownloadedEpisode() = runTest {
+        val feedId = repository.subscribe(Feed(title = "A Podcast"))
+        val files = seedDownloadedEpisodes(feedId, count = 2, autoDownloaded = false)
+
+        downloadRepository.enforceFeedDownloadCap(feedId, maxCount = 0)
+
+        files.forEach { assertTrue(it.exists()) }
     }
 }

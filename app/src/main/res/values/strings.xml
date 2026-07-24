@@ -151,6 +151,7 @@
     <string name="feed_properties_max_articles_for_feed">Max articles for this feed: %1$d</string>
     <string name="feed_properties_max_episodes_for_feed">Max episodes for this feed: %1$d</string>
     <string name="feed_properties_auto_download">Auto-download new episodes</string>
+    <string name="feed_properties_max_downloads_to_keep">Max downloaded episodes to keep for this feed</string>
     <string name="feed_properties_auto_queue">Automatically add new episodes to queue</string>
     <string name="feed_properties_auto_queue_max_count">Max episodes to keep queued for this feed</string>
     <string name="feed_properties_auto_queue_unlimited">Unlimited</string>

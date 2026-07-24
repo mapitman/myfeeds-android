@@ -82,8 +82,18 @@ class FeedRepository @Inject constructor(
 
     suspend fun setDownloadedFilePath(itemId: String, path: String?) = feedItemDao.setDownloadedFilePath(itemId, path)
 
+    suspend fun setAutoDownloaded(itemId: String, autoDownloaded: Boolean) = feedItemDao.setAutoDownloaded(itemId, autoDownloaded)
+
     /** Every episode with a download in progress or completed, across all feeds (issue #69). */
     fun observeDownloadedItems(): Flow<List<DownloadedEpisode>> = feedItemDao.observeDownloadedItems()
+
+    /** A feed's auto-downloaded, completed episodes, newest first (issue #250) -- see
+     *  [FeedItemDao.autoDownloadedItemsForFeed]. */
+    suspend fun autoDownloadedItemsForFeed(feedId: Long): List<FeedItem> = feedItemDao.autoDownloadedItemsForFeed(feedId)
+
+    /** A feed's currently-queued item ids, regardless of how they got there (issue #250) --
+     *  reused from [trimToItemsToKeep]'s queue exemption for the same purpose against downloads. */
+    suspend fun queuedItemIdsForFeed(feedId: Long): Set<String> = queueDao.orderedItemIdsForFeed(feedId).toSet()
 
     /**
      * Deletes the oldest items beyond the feed's `itemsToKeep`, mirroring the original

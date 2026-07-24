@@ -21,6 +21,7 @@ import io.pitman.myfeeds.data.local.MIGRATION_8_9
 import io.pitman.myfeeds.data.local.MIGRATION_9_10
 import io.pitman.myfeeds.data.local.MIGRATION_10_11
 import io.pitman.myfeeds.data.local.MIGRATION_11_12
+import io.pitman.myfeeds.data.local.MIGRATION_12_13
 import io.pitman.myfeeds.data.local.QueueDao
 import javax.inject.Singleton
 
@@ -43,6 +44,7 @@ object DatabaseModule {
                 MIGRATION_9_10,
                 MIGRATION_10_11,
                 MIGRATION_11_12,
+                MIGRATION_12_13,
             )
             .build()
 

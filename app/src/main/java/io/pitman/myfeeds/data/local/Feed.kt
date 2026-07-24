@@ -41,6 +41,12 @@ data class Feed(
     /** Seconds to skip from the start when an episode of this feed begins playing fresh, i.e. has
      *  no saved resume position (issue #200); 0 means no skip. */
     val startSkipSeconds: Int = 0,
+    /** Only enforced against auto-downloaded episodes ([FeedItem.autoDownloaded]) of this feed
+     *  (issue #250); null means unlimited. Manually-downloaded episodes are never auto-deleted by
+     *  this cap, and a queued or currently-playing episode is exempt from eviction even if it's
+     *  the oldest auto-download, mirroring [io.pitman.myfeeds.data.repository.FeedRepository.trimToItemsToKeep]'s
+     *  queue exemption. */
+    val maxDownloadsToKeep: Int? = null,
 )
 
 /** Where auto-queued episodes are inserted in the Next Up queue (issue #166). Room stores enums

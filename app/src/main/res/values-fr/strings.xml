@@ -149,6 +149,7 @@
     <string name="feed_properties_max_articles_for_feed">Articles max. pour ce flux : %1$d</string>
     <string name="feed_properties_max_episodes_for_feed">Épisodes max. pour ce flux : %1$d</string>
     <string name="feed_properties_auto_download">Téléchargement automatique des nouveaux épisodes</string>
+    <string name="feed_properties_max_downloads_to_keep">Nb. max. d\'épisodes téléchargés pour ce flux</string>
     <string name="feed_properties_auto_queue">Ajouter automatiquement les nouveaux épisodes à la file d\'attente</string>
     <string name="feed_properties_auto_queue_max_count">Nb. max. d\'épisodes en file d\'attente pour ce flux</string>
     <string name="feed_properties_auto_queue_unlimited">Illimité</string>

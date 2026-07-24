@@ -57,6 +57,11 @@ class MigrationTest {
     }
 
     @Test
+    fun version13Schema_opensSuccessfully() {
+        helper.createDatabase(TEST_DB, 13).close()
+    }
+
+    @Test
     fun migrate1To2_addsDownloadColumnsWithoutDataLoss() {
         helper.createDatabase(TEST_DB, 1).apply {
             execSQL("INSERT INTO categories (id, name, sortOrder) VALUES (1, 'Tech', NULL)")
@@ -301,6 +306,34 @@ class MigrationTest {
         val migrated = helper.runMigrationsAndValidate(TEST_DB, 12, true, MIGRATION_11_12)
 
         migrated.query("SELECT startSkipSeconds FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertEquals(0, cursor.getInt(0))
+        }
+        migrated.close()
+    }
+
+    @Test
+    fun migrate12To13_addsMaxDownloadsAndAutoDownloadedColumnsWithoutDataLoss() {
+        helper.createDatabase(TEST_DB, 12).apply {
+            execSQL(
+                "INSERT INTO feeds (id, title, userTitle, description, feedUrl, siteUrl, imageUrl, " +
+                    "displayMode, itemsToKeep, lastGet, sortOrder, autoDownloadEnabled, autoQueueEnabled, " +
+                    "autoQueueMaxCount, playbackSpeed, autoQueuePosition, volumeBoostMillibels, startSkipSeconds) " +
+                    "VALUES (1, 'A Feed', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 0, NULL, 1.0, 'BOTTOM', 0, 0)",
+            )
+            execSQL(
+                "INSERT INTO feed_items (id, feedId, title, isRead) VALUES ('item-1', 1, 'An Item', 0)",
+            )
+            close()
+        }
+
+        val migrated = helper.runMigrationsAndValidate(TEST_DB, 13, true, MIGRATION_12_13)
+
+        migrated.query("SELECT maxDownloadsToKeep FROM feeds WHERE id = 1").use { cursor ->
+            assertTrue(cursor.moveToFirst())
+            assertTrue(cursor.isNull(0))
+        }
+        migrated.query("SELECT autoDownloaded FROM feed_items WHERE id = 'item-1'").use { cursor ->
             assertTrue(cursor.moveToFirst())
             assertEquals(0, cursor.getInt(0))
         }

@@ -149,6 +149,7 @@
     <string name="feed_properties_max_articles_for_feed">Máximo de artículos para esta fuente: %1$d</string>
     <string name="feed_properties_max_episodes_for_feed">Máximo de episodios para esta fuente: %1$d</string>
     <string name="feed_properties_auto_download">Descargar automáticamente episodios nuevos</string>
+    <string name="feed_properties_max_downloads_to_keep">Máx. episodios descargados para esta fuente</string>
     <string name="feed_properties_auto_queue">Añadir automáticamente episodios nuevos a la cola</string>
     <string name="feed_properties_auto_queue_max_count">Máx. episodios en cola para esta fuente</string>
     <string name="feed_properties_auto_queue_unlimited">Ilimitado</string>

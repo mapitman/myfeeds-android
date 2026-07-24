@@ -80,6 +80,22 @@ interface FeedItemDao {
     @Query("UPDATE feed_items SET downloadedFilePath = :path, downloadedBytes = NULL WHERE id = :id")
     suspend fun setDownloadedFilePath(id: String, path: String?)
 
+    @Query("UPDATE feed_items SET autoDownloaded = :autoDownloaded WHERE id = :id")
+    suspend fun setAutoDownloaded(id: String, autoDownloaded: Boolean)
+
+    // Only this feed's auto-downloaded, completed downloads, newest first, as eviction candidates
+    // for Feed.maxDownloadsToKeep (issue #250) -- manually-downloaded episodes are never
+    // candidates, see FeedItem.autoDownloaded. In-progress downloads (downloadedFilePath still
+    // null) aren't candidates either, matching how observeDownloadedItems tells the two apart.
+    @Query(
+        """
+        SELECT * FROM feed_items
+        WHERE feedId = :feedId AND autoDownloaded = 1 AND downloadedFilePath IS NOT NULL
+        ORDER BY publishDate DESC
+        """,
+    )
+    suspend fun autoDownloadedItemsForFeed(feedId: Long): List<FeedItem>
+
     // A download in progress has downloadedBytes set (cleared to NULL once downloadedFilePath is
     // set, see setDownloadedFilePath) -- either one present means "has a download" (issue #69).
     @Query(
