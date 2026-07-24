@@ -4,8 +4,10 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.media.audiofx.LoudnessEnhancer
+import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
+import android.view.KeyEvent
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -107,12 +109,6 @@ class PlaybackService : MediaSessionService() {
             // issue #179) can stall indefinitely once the device dozes / Wi-Fi goes idle, since
             // nothing is holding a CPU/Wi-Fi wake lock to let the new connection actually open.
             .setWakeMode(C.WAKE_MODE_NETWORK)
-            // Matches PlaybackController.skipForward()/skipBackward()'s amounts (issue #66), so a
-            // Bluetooth device's hardware FAST_FORWARD/REWIND buttons -- which Media3's default
-            // media-button handling maps to Player.seekForward()/seekBack() -- skip by the same
-            // amount as the in-app controls instead of Media3's own default increments (issue #244).
-            .setSeekForwardIncrementMs(SKIP_FORWARD_MS)
-            .setSeekBackIncrementMs(SKIP_BACKWARD_MS)
             // Defaults to false, so without this, audio rerouted from a disconnecting Bluetooth
             // device (or unplugged wired headphones) keeps playing out loud on the speaker
             // instead of pausing (issue #243).
@@ -177,6 +173,35 @@ class PlaybackService : MediaSessionService() {
                 .add(SessionCommand(CUSTOM_COMMAND_SET_VOLUME_BOOST, Bundle.EMPTY))
                 .build()
             return MediaSession.ConnectionResult.accept(sessionCommands, MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
+        }
+
+        // Bluetooth remotes vary in which key codes their forward/back buttons actually send --
+        // some send FAST_FORWARD/REWIND, but others (issue #244, confirmed on-device) send
+        // NEXT/PREVIOUS instead. Media3's default handling maps NEXT/PREVIOUS to
+        // seekToNext()/seekToPrevious(), which only operate on the player's own timeline; since
+        // Next Up is managed externally and only ever one MediaItem is loaded at a time (issue
+        // #179), that left the forward button doing nothing (no next item to seek to) and the
+        // back button restarting the current episode (seekToPrevious()'s no-previous-item
+        // fallback) instead of skipping by a fixed amount either way. Handling all four codes here
+        // directly, matching PlaybackController.skipForward()/skipBackward()'s amounts (issue #66).
+        @OptIn(markerClass = [UnstableApi::class])
+        override fun onMediaButtonEvent(session: MediaSession, controllerInfo: MediaSession.ControllerInfo, intent: Intent): Boolean {
+            if (intent.action != Intent.ACTION_MEDIA_BUTTON) return false
+            val keyEvent = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT, KeyEvent::class.java)
+            } else {
+                @Suppress("DEPRECATION")
+                intent.getParcelableExtra(Intent.EXTRA_KEY_EVENT)
+            } ?: return false
+            if (keyEvent.action != KeyEvent.ACTION_DOWN) return false
+            when (keyEvent.keyCode) {
+                KeyEvent.KEYCODE_MEDIA_NEXT, KeyEvent.KEYCODE_MEDIA_FAST_FORWARD, KeyEvent.KEYCODE_MEDIA_SKIP_FORWARD ->
+                    player.seekTo((player.currentPosition + SKIP_FORWARD_MS).coerceAtMost(player.duration.coerceAtLeast(0)))
+                KeyEvent.KEYCODE_MEDIA_PREVIOUS, KeyEvent.KEYCODE_MEDIA_REWIND, KeyEvent.KEYCODE_MEDIA_SKIP_BACKWARD ->
+                    player.seekTo((player.currentPosition - SKIP_BACKWARD_MS).coerceAtLeast(0))
+                else -> return false
+            }
+            return true
         }
 
         @OptIn(markerClass = [UnstableApi::class]) // SessionError (issue #212)
