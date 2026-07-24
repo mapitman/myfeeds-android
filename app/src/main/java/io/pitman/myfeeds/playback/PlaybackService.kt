@@ -107,6 +107,12 @@ class PlaybackService : MediaSessionService() {
             // issue #179) can stall indefinitely once the device dozes / Wi-Fi goes idle, since
             // nothing is holding a CPU/Wi-Fi wake lock to let the new connection actually open.
             .setWakeMode(C.WAKE_MODE_NETWORK)
+            // Matches PlaybackController.skipForward()/skipBackward()'s amounts (issue #66), so a
+            // Bluetooth device's hardware FAST_FORWARD/REWIND buttons -- which Media3's default
+            // media-button handling maps to Player.seekForward()/seekBack() -- skip by the same
+            // amount as the in-app controls instead of Media3's own default increments (issue #244).
+            .setSeekForwardIncrementMs(SKIP_FORWARD_MS)
+            .setSeekBackIncrementMs(SKIP_BACKWARD_MS)
             .build()
         player.addListener(playerListener)
         loudnessEnhancer = runCatching { LoudnessEnhancer(player.audioSessionId) }.getOrNull()
