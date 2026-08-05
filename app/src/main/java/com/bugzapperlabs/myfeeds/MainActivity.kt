@@ -16,6 +16,8 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -376,12 +378,21 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     }
-                    if (bottomSheetHidden) {
+                    // issue #279: crossfades/slides the strip in and out instead of an instant pop,
+                    // so it reads as a continuation of the sheet's own drag-to-hide motion rather
+                    // than an abrupt swap once bottomSheetHidden flips.
+                    AnimatedVisibility(
+                        visible = bottomSheetHidden,
+                        enter = fadeIn(tween(200)) + slideInVertically(tween(200)) { it },
+                        exit = fadeOut(tween(200)) + slideOutVertically(tween(200)) { it },
+                        modifier = Modifier.align(Alignment.BottomCenter),
+                    ) {
                         NowPlayingMiniStrip(
                             playbackState = playbackState,
                             onClick = { coroutineScope.launch { scaffoldState.bottomSheetState.partialExpand() } },
                             onTogglePlayPause = miniPlayerViewModel::togglePlayPause,
-                            modifier = Modifier.align(Alignment.BottomCenter).onGloballyPositioned {
+                            onSwipeUp = { coroutineScope.launch { scaffoldState.bottomSheetState.partialExpand() } },
+                            modifier = Modifier.onGloballyPositioned {
                                 miniStripHeight = with(density) { it.size.height.toDp() }
                             },
                         )

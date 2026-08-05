@@ -5,6 +5,7 @@ import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -37,6 +38,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -56,6 +58,10 @@ private val TRANSPORT_BUTTON_SIZE = 64.dp
 private val TRANSPORT_ICON_SIZE = 40.dp
 private val PLAY_BUTTON_SIZE = 88.dp
 private val PLAY_ICON_SIZE = 56.dp
+
+/** issue #279: minimum upward drag on [NowPlayingMiniStrip] before it's treated as a deliberate
+ *  swipe-up-to-expand rather than an incidental touch/scroll. */
+private val MINI_STRIP_SWIPE_UP_THRESHOLD = 24.dp
 
 /**
  * Persistent "now playing" bar (issue #66) shown across the app whenever [PlaybackController] has
@@ -275,10 +281,26 @@ fun NowPlayingMiniStrip(
     playbackState: PlaybackUiState,
     onClick: () -> Unit,
     onTogglePlayPause: () -> Unit,
+    // issue #279: swiping the strip back up restores the medium player, mirroring tapping it.
+    onSwipeUp: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = modifier.fillMaxWidth().clickable(onClick = onClick)
+            .pointerInput(onSwipeUp) {
+                val threshold = MINI_STRIP_SWIPE_UP_THRESHOLD.toPx()
+                var totalDrag = 0f
+                detectVerticalDragGestures(
+                    onDragStart = { totalDrag = 0f },
+                    onVerticalDrag = { change, dragAmount ->
+                        change.consume()
+                        totalDrag += dragAmount
+                    },
+                    onDragEnd = {
+                        if (totalDrag < -threshold) onSwipeUp()
+                    },
+                )
+            },
         color = MaterialTheme.colorScheme.surfaceContainerHighest,
         tonalElevation = 3.dp,
     ) {
