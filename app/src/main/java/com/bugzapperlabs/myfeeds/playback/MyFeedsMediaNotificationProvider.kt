@@ -2,6 +2,7 @@ package com.bugzapperlabs.myfeeds.playback
 
 import android.content.Context
 import android.os.Bundle
+import androidx.annotation.DrawableRes
 import androidx.annotation.OptIn
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -34,7 +35,6 @@ class MyFeedsMediaNotificationProvider(private val context: Context) : DefaultMe
         val compactViewExtras = { index: Int ->
             Bundle().apply { putInt(COMMAND_KEY_COMPACT_VIEW_INDEX, index) }
         }
-        val currentSpeed = session.player.playbackParameters.speed
         val skipBackward = CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
             .setSessionCommand(SessionCommand(CUSTOM_COMMAND_SKIP_BACKWARD, Bundle.EMPTY))
             .setDisplayName(context.getString(R.string.cd_rewind))
@@ -58,11 +58,7 @@ class MyFeedsMediaNotificationProvider(private val context: Context) : DefaultMe
             .setDisplayName(context.getString(R.string.cd_forward))
             .setExtras(compactViewExtras(2))
             .build()
-        val speedCycle = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-            .setIconResId(R.drawable.ic_notification_speed)
-            .setSessionCommand(SessionCommand(CUSTOM_COMMAND_CYCLE_SPEED, Bundle.EMPTY))
-            .setDisplayName(context.getString(R.string.notification_cd_speed, formatSpeedForNotification(currentSpeed)))
-            .build()
+        val speedCycle = buildSpeedCycleButton(context, session.player.playbackParameters.speed)
         return ImmutableList.of(skipBackward, playPause, skipForward, speedCycle)
     }
 }
@@ -88,12 +84,38 @@ internal fun buildSkipAndSpeedMediaButtonPreferences(context: Context, currentSp
         .setSessionCommand(SessionCommand(CUSTOM_COMMAND_SKIP_FORWARD, Bundle.EMPTY))
         .setDisplayName(context.getString(R.string.cd_forward))
         .build()
-    val speedCycle = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
-        .setIconResId(R.drawable.ic_notification_speed)
+    return listOf(skipBackward, skipForward, buildSpeedCycleButton(context, currentSpeed))
+}
+
+@OptIn(markerClass = [UnstableApi::class])
+private fun buildSpeedCycleButton(context: Context, currentSpeed: Float): CommandButton =
+    CommandButton.Builder(CommandButton.ICON_UNDEFINED)
+        .setIconResId(speedIconResId(currentSpeed))
         .setSessionCommand(SessionCommand(CUSTOM_COMMAND_CYCLE_SPEED, Bundle.EMPTY))
         .setDisplayName(context.getString(R.string.notification_cd_speed, formatSpeedForNotification(currentSpeed)))
         .build()
-    return listOf(skipBackward, skipForward, speedCycle)
+
+/** Baked-in-text icon for each [NOTIFICATION_PLAYBACK_SPEEDS] preset (issue #293) -- Media3's own
+ *  built-in skip icons (e.g. [CommandButton.ICON_SKIP_FORWARD_30]) bake their amount into the
+ *  glyph the same way, since [androidx.media3.session.CommandButton]/`VectorDrawable` icons have
+ *  no way to render arbitrary runtime text. Falls back to the generic speedometer glyph
+ *  ([R.drawable.ic_notification_speed]) if the current speed doesn't match a preset (shouldn't
+ *  normally happen -- speed is only ever set to one of these presets or a feed's saved default,
+ *  which is itself always one of these presets). */
+@DrawableRes
+internal fun speedIconResId(speed: Float): Int {
+    NOTIFICATION_PLAYBACK_SPEEDS.forEachIndexed { index, preset ->
+        if (kotlin.math.abs(preset - speed) < 0.01f) {
+            return when (index) {
+                0 -> R.drawable.ic_notification_speed_1x
+                1 -> R.drawable.ic_notification_speed_1_25x
+                2 -> R.drawable.ic_notification_speed_1_5x
+                3 -> R.drawable.ic_notification_speed_1_75x
+                else -> R.drawable.ic_notification_speed_2x
+            }
+        }
+    }
+    return R.drawable.ic_notification_speed
 }
 
 internal fun formatSpeedForNotification(speed: Float): String =
