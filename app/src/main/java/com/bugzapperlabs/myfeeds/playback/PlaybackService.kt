@@ -190,7 +190,19 @@ class PlaybackService : MediaSessionService() {
                 .add(SessionCommand(CUSTOM_COMMAND_SKIP_BACKWARD, Bundle.EMPTY))
                 .add(SessionCommand(CUSTOM_COMMAND_CYCLE_SPEED, Bundle.EMPTY))
                 .build()
-            return MediaSession.ConnectionResult.accept(sessionCommands, MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
+            // COMMAND_SEEK_TO_PREVIOUS is Media3's generic "restart the current item" command --
+            // distinct from COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM (real playlist navigation, already
+            // unavailable per the class-level comment on MyFeedsMediaNotificationProvider) -- and
+            // it's *always* available since it doesn't need an actual previous item. Left granted,
+            // the system's media notification/lock-screen UI renders it as its own restart-from-0
+            // button alongside our skip-backward-15/skip-forward-30 buttons (issue #293), which is
+            // redundant and confusing. Removing it (and its seek-to-next counterpart, for symmetry)
+            // leaves only our own custom skip buttons as the transport controls.
+            val playerCommands = MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS.buildUpon()
+                .remove(Player.COMMAND_SEEK_TO_PREVIOUS)
+                .remove(Player.COMMAND_SEEK_TO_NEXT)
+                .build()
+            return MediaSession.ConnectionResult.accept(sessionCommands, playerCommands)
         }
 
         // Bluetooth remotes vary in which key codes their forward/back buttons actually send --
