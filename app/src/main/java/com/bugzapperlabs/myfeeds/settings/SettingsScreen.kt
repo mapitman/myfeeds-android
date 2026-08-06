@@ -327,14 +327,26 @@ private fun BatteryOptimizationSetting() {
 
 /** Free API credentials for live podcast search via podcastindex.org (issue #93) -- search
  *  silently falls back to the offline directory when either field is blank, see
- *  [com.bugzapperlabs.myfeeds.data.directory.PodcastSearchService]. Local text-field state is
- *  seeded from [settings] once rather than re-derived on every recomposition, so a round trip
- *  through the DataStore write doesn't fight with the user's own typing. */
+ *  [com.bugzapperlabs.myfeeds.data.directory.PodcastSearchService]. Local text-field state tracks
+ *  whether the user has actually edited it: until they do, it keeps re-syncing from [settings]
+ *  (a [SharingStarted.WhileSubscribed] StateFlow can briefly show the empty default here on
+ *  re-navigation, before the real persisted value finishes loading from DataStore -- syncing only
+ *  pre-edit means that catches up instead of leaving the field stuck on the stale default). Once
+ *  the user types, local edits win outright so a DataStore write round trip doesn't fight typing. */
 @Composable
 private fun PodcastSearchSetting(settings: AppSettings, viewModel: SettingsViewModel) {
     val context = LocalContext.current
     var apiKey by remember { mutableStateOf(settings.podcastIndexApiKey.orEmpty()) }
     var apiSecret by remember { mutableStateOf(settings.podcastIndexApiSecret.orEmpty()) }
+    var apiKeyEdited by remember { mutableStateOf(false) }
+    var apiSecretEdited by remember { mutableStateOf(false) }
+
+    LaunchedEffect(settings.podcastIndexApiKey) {
+        if (!apiKeyEdited) apiKey = settings.podcastIndexApiKey.orEmpty()
+    }
+    LaunchedEffect(settings.podcastIndexApiSecret) {
+        if (!apiSecretEdited) apiSecret = settings.podcastIndexApiSecret.orEmpty()
+    }
 
     Column(modifier = Modifier.padding(vertical = 8.dp)) {
         Text(
@@ -353,6 +365,7 @@ private fun PodcastSearchSetting(settings: AppSettings, viewModel: SettingsViewM
             value = apiKey,
             onValueChange = {
                 apiKey = it
+                apiKeyEdited = true
                 viewModel.setPodcastIndexApiKey(it)
             },
             label = { Text(stringResource(R.string.settings_podcast_search_api_key_label)) },
@@ -363,6 +376,7 @@ private fun PodcastSearchSetting(settings: AppSettings, viewModel: SettingsViewM
             value = apiSecret,
             onValueChange = {
                 apiSecret = it
+                apiSecretEdited = true
                 viewModel.setPodcastIndexApiSecret(it)
             },
             label = { Text(stringResource(R.string.settings_podcast_search_api_secret_label)) },
