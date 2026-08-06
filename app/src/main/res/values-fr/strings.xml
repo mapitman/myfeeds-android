@@ -6,7 +6,7 @@
     <string name="action_delete">Supprimer</string>
 
     <plurals name="delete_confirm_title">
-        <item quantity="one">Supprimer cet élément ?</item>
+        <item quantity="one">Supprimer %1$d élément ?</item>
         <item quantity="other">Supprimer %1$d éléments ?</item>
     </plurals>
     <string name="delete_confirm_message">Cette action est irréversible.</string>
