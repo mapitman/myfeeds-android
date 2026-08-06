@@ -177,6 +177,7 @@
     <string name="add_feed_search_label">Search by topic or title</string>
     <string name="add_feed_search_no_results">No feeds found</string>
     <string name="add_feed_search_add_button">Add</string>
+    <string name="add_feed_podcast_search_hint">Add a free podcastindex.org API key for richer search results.</string>
 
     <!-- Feed properties -->
     <string name="feed_properties_title">Feed properties</string>

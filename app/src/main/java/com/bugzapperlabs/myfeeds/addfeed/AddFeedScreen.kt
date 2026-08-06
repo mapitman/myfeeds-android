@@ -60,10 +60,12 @@ fun AddFeedScreen(
     initialUrl: String? = null,
     onDone: () -> Unit = {},
     onBack: () -> Unit = {},
+    onNavigateToSettings: () -> Unit = {},
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val searchResults by viewModel.searchResults.collectAsState()
+    val hasPodcastIndexCredentials by viewModel.hasPodcastIndexCredentials.collectAsState()
     val opmlImportMessage by viewModel.opmlImportMessage.collectAsState()
     val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
@@ -124,6 +126,25 @@ fun AddFeedScreen(
                 .verticalScroll(rememberScrollState()),
         ) {
             Text(stringResource(R.string.add_feed_search_heading), style = MaterialTheme.typography.titleMedium)
+            if (!hasPodcastIndexCredentials) {
+                // Nudges toward configuring live search (issue #93) -- without a key/secret,
+                // search silently falls back to the bundled offline directory, which is easy to
+                // mistake for "this is all the results there are."
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth().padding(top = 4.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.add_feed_podcast_search_hint),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.weight(1f),
+                    )
+                    TextButton(onClick = onNavigateToSettings) {
+                        Text(stringResource(R.string.settings_title))
+                    }
+                }
+            }
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = viewModel::setSearchQuery,

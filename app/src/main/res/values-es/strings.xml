@@ -173,6 +173,7 @@
     <string name="add_feed_search_label">Buscar por tema o título</string>
     <string name="add_feed_search_no_results">No se encontraron fuentes</string>
     <string name="add_feed_search_add_button">Añadir</string>
+    <string name="add_feed_podcast_search_hint">Añade una clave de API gratuita de podcastindex.org para obtener mejores resultados de búsqueda.</string>
 
     <!-- Feed properties -->
     <string name="feed_properties_title">Propiedades de la fuente</string>

@@ -16,6 +16,7 @@ import com.bugzapperlabs.myfeeds.data.opml.OpmlDocument
 import com.bugzapperlabs.myfeeds.data.opml.OpmlImportCoordinator
 import com.bugzapperlabs.myfeeds.data.opml.OpmlParser
 import com.bugzapperlabs.myfeeds.data.repository.FeedRepository
+import com.bugzapperlabs.myfeeds.data.settings.SettingsDataStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -25,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -43,6 +45,7 @@ class AddFeedViewModel @Inject constructor(
     private val opmlImportCoordinator: OpmlImportCoordinator,
     private val httpClient: OkHttpClient,
     private val podcastSearchProvider: PodcastSearchProvider,
+    private val settingsDataStore: SettingsDataStore,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AddFeedUiState>(AddFeedUiState.Idle)
@@ -71,6 +74,13 @@ class AddFeedViewModel @Inject constructor(
     fun setSearchQuery(query: String) {
         _searchQuery.value = query
     }
+
+    /** Whether search will use live podcastindex.org results (issue #93) -- surfaced so the
+     *  screen can nudge the user toward Settings when it's still falling back to the offline
+     *  directory. */
+    val hasPodcastIndexCredentials: StateFlow<Boolean> = settingsDataStore.settings
+        .map { !it.podcastIndexApiKey.isNullOrBlank() && !it.podcastIndexApiSecret.isNullOrBlank() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     fun addFeedByUrl(url: String) {
         val trimmedUrl = url.trim()
