@@ -94,7 +94,7 @@ class AddFeedViewModelTest {
             feedRepository = repository,
             opmlImportCoordinator = opmlImportCoordinator,
             httpClient = httpClient,
-            feedDirectory = FeedDirectory(context),
+            podcastSearchProvider = FeedDirectory(context),
             context = context,
         )
         viewModelStore.put("addFeed", viewModel)

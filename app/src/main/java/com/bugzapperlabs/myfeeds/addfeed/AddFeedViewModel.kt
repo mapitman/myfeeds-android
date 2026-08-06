@@ -6,8 +6,8 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import com.bugzapperlabs.myfeeds.R
-import com.bugzapperlabs.myfeeds.data.directory.FeedDirectory
-import com.bugzapperlabs.myfeeds.data.directory.FeedDirectoryEntry
+import com.bugzapperlabs.myfeeds.data.directory.PodcastSearchProvider
+import com.bugzapperlabs.myfeeds.data.directory.PodcastSearchResult
 import com.bugzapperlabs.myfeeds.data.feed.FeedFetchResult
 import com.bugzapperlabs.myfeeds.data.feed.FeedFetcher
 import com.bugzapperlabs.myfeeds.data.feed.FeedUpdateEngine
@@ -42,7 +42,7 @@ class AddFeedViewModel @Inject constructor(
     private val feedRepository: FeedRepository,
     private val opmlImportCoordinator: OpmlImportCoordinator,
     private val httpClient: OkHttpClient,
-    private val feedDirectory: FeedDirectory,
+    private val podcastSearchProvider: PodcastSearchProvider,
     @ApplicationContext private val context: Context,
 ) : ViewModel() {
     private val _uiState = MutableStateFlow<AddFeedUiState>(AddFeedUiState.Idle)
@@ -61,10 +61,10 @@ class AddFeedViewModel @Inject constructor(
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery
 
-    val searchResults: StateFlow<List<FeedDirectoryEntry>> = _searchQuery
+    val searchResults: StateFlow<List<PodcastSearchResult>> = _searchQuery
         .debounce(SEARCH_DEBOUNCE_MS)
         .flatMapLatest { query ->
-            if (query.isBlank()) flowOf(emptyList()) else flowOf(query).mapLatest { feedDirectory.search(it) }
+            if (query.isBlank()) flowOf(emptyList()) else flowOf(query).mapLatest { podcastSearchProvider.search(it) }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
@@ -85,10 +85,10 @@ class AddFeedViewModel @Inject constructor(
         }
     }
 
-    fun addFromDirectory(entry: FeedDirectoryEntry) {
+    fun addFromDirectory(entry: PodcastSearchResult) {
         viewModelScope.launch {
             _uiState.value = AddFeedUiState.Loading
-            addFeed(entry.xmlUrl)
+            addFeed(entry.feedUrl)
         }
     }
 

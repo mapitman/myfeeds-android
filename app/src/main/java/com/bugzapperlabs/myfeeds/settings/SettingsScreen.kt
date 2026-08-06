@@ -28,6 +28,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Snackbar
@@ -157,6 +158,10 @@ fun SettingsScreen(
                 viewModel::setAutoDeleteFinishedDownloads,
             )
             BatteryOptimizationSetting()
+
+            HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
+            SectionHeader(stringResource(R.string.settings_section_podcast_search))
+            PodcastSearchSetting(settings, viewModel)
 
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             SectionHeader(stringResource(R.string.settings_section_actions))
@@ -317,6 +322,53 @@ private fun BatteryOptimizationSetting() {
                 Text(stringResource(R.string.settings_battery_optimization_button))
             }
         }
+    }
+}
+
+/** Free API credentials for live podcast search via podcastindex.org (issue #93) -- search
+ *  silently falls back to the offline directory when either field is blank, see
+ *  [com.bugzapperlabs.myfeeds.data.directory.PodcastSearchService]. Local text-field state is
+ *  seeded from [settings] once rather than re-derived on every recomposition, so a round trip
+ *  through the DataStore write doesn't fight with the user's own typing. */
+@Composable
+private fun PodcastSearchSetting(settings: AppSettings, viewModel: SettingsViewModel) {
+    val context = LocalContext.current
+    var apiKey by remember { mutableStateOf(settings.podcastIndexApiKey.orEmpty()) }
+    var apiSecret by remember { mutableStateOf(settings.podcastIndexApiSecret.orEmpty()) }
+
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(
+            stringResource(R.string.settings_podcast_search_description),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+        OutlinedButton(
+            onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://podcastindex.org/signup"))) },
+            modifier = Modifier.padding(bottom = 8.dp),
+        ) {
+            Text(stringResource(R.string.settings_podcast_search_get_key_button))
+        }
+        OutlinedTextField(
+            value = apiKey,
+            onValueChange = {
+                apiKey = it
+                viewModel.setPodcastIndexApiKey(it)
+            },
+            label = { Text(stringResource(R.string.settings_podcast_search_api_key_label)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
+        OutlinedTextField(
+            value = apiSecret,
+            onValueChange = {
+                apiSecret = it
+                viewModel.setPodcastIndexApiSecret(it)
+            },
+            label = { Text(stringResource(R.string.settings_podcast_search_api_secret_label)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+        )
     }
 }
 

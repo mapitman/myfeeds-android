@@ -50,7 +50,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.bugzapperlabs.myfeeds.R
-import com.bugzapperlabs.myfeeds.data.directory.FeedDirectoryEntry
+import com.bugzapperlabs.myfeeds.data.directory.PodcastSearchResult
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -141,7 +141,7 @@ fun AddFeedScreen(
                 } else {
                     Column(modifier = Modifier.padding(top = 8.dp)) {
                         searchResults.forEach { entry ->
-                            FeedDirectoryResultRow(
+                            PodcastSearchResultRow(
                                 entry = entry,
                                 enabled = uiState !is AddFeedUiState.Loading,
                                 onAdd = { viewModel.addFromDirectory(entry) },
@@ -244,18 +244,20 @@ fun AddFeedScreen(
 }
 
 @Composable
-private fun FeedDirectoryResultRow(entry: FeedDirectoryEntry, enabled: Boolean, onAdd: () -> Unit) {
+private fun PodcastSearchResultRow(entry: PodcastSearchResult, enabled: Boolean, onAdd: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(entry.title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(
-                entry.category,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            if (entry.subtitle.isNotBlank()) {
+                Text(
+                    entry.subtitle,
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
             if (!entry.description.isNullOrBlank()) {
                 Text(
                     entry.description,
