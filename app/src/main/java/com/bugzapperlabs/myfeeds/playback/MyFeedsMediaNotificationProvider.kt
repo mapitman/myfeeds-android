@@ -34,6 +34,7 @@ class MyFeedsMediaNotificationProvider(private val context: Context) : DefaultMe
         val compactViewExtras = { index: Int ->
             Bundle().apply { putInt(COMMAND_KEY_COMPACT_VIEW_INDEX, index) }
         }
+        val currentSpeed = session.player.playbackParameters.speed
         val skipBackward = CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
             .setSessionCommand(SessionCommand(CUSTOM_COMMAND_SKIP_BACKWARD, Bundle.EMPTY))
             .setDisplayName(context.getString(R.string.cd_rewind))
@@ -57,7 +58,6 @@ class MyFeedsMediaNotificationProvider(private val context: Context) : DefaultMe
             .setDisplayName(context.getString(R.string.cd_forward))
             .setExtras(compactViewExtras(2))
             .build()
-        val currentSpeed = session.player.playbackParameters.speed
         val speedCycle = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
             .setIconResId(R.drawable.ic_notification_speed)
             .setSessionCommand(SessionCommand(CUSTOM_COMMAND_CYCLE_SPEED, Bundle.EMPTY))
@@ -65,6 +65,35 @@ class MyFeedsMediaNotificationProvider(private val context: Context) : DefaultMe
             .build()
         return ImmutableList.of(skipBackward, playPause, skipForward, speedCycle)
     }
+}
+
+/**
+ * Builds the same skip-backward/skip-forward/cycle-speed [CommandButton]s as
+ * [MyFeedsMediaNotificationProvider.getMediaButtons] (minus notification-only compact-view
+ * placement extras, which don't mean anything here), for [PlaybackService] to push through
+ * [MediaSession.setMediaButtonPreferences] -- issue #293: without that, Media3's legacy platform
+ * bridge never learns about these custom actions, since it builds the legacy
+ * `PlaybackStateCompat`'s custom actions from the session's media button preferences/custom
+ * layout, not from whatever the notification provider itself renders. That legacy
+ * `PlaybackStateCompat` is what drives the system's own "now playing" media card/lock-screen
+ * controls, which otherwise falls back to a bare, generic previous/next chevron layout.
+ */
+@OptIn(markerClass = [UnstableApi::class])
+internal fun buildSkipAndSpeedMediaButtonPreferences(context: Context, currentSpeed: Float): List<CommandButton> {
+    val skipBackward = CommandButton.Builder(CommandButton.ICON_SKIP_BACK_15)
+        .setSessionCommand(SessionCommand(CUSTOM_COMMAND_SKIP_BACKWARD, Bundle.EMPTY))
+        .setDisplayName(context.getString(R.string.cd_rewind))
+        .build()
+    val skipForward = CommandButton.Builder(CommandButton.ICON_SKIP_FORWARD_30)
+        .setSessionCommand(SessionCommand(CUSTOM_COMMAND_SKIP_FORWARD, Bundle.EMPTY))
+        .setDisplayName(context.getString(R.string.cd_forward))
+        .build()
+    val speedCycle = CommandButton.Builder(CommandButton.ICON_UNDEFINED)
+        .setIconResId(R.drawable.ic_notification_speed)
+        .setSessionCommand(SessionCommand(CUSTOM_COMMAND_CYCLE_SPEED, Bundle.EMPTY))
+        .setDisplayName(context.getString(R.string.notification_cd_speed, formatSpeedForNotification(currentSpeed)))
+        .build()
+    return listOf(skipBackward, skipForward, speedCycle)
 }
 
 internal fun formatSpeedForNotification(speed: Float): String =

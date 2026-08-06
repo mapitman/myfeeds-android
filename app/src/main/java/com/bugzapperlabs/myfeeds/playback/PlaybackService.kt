@@ -13,6 +13,7 @@ import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
@@ -147,6 +148,19 @@ class PlaybackService : MediaSessionService() {
             .setSessionActivity(sessionActivityIntent)
             .setCallback(mediaSessionCallback)
             .build()
+        updateMediaButtonPreferences()
+    }
+
+    /** Pushes the skip/speed buttons through the session itself, not just the notification
+     *  provider (issue #293) -- see [buildSkipAndSpeedMediaButtonPreferences]'s doc for why both
+     *  are needed. Called again whenever the speed changes so the system media card's speed
+     *  button label stays in sync, mirroring how the notification's own label refreshes on every
+     *  rebuild via [MyFeedsMediaNotificationProvider.getMediaButtons]. */
+    @OptIn(markerClass = [UnstableApi::class])
+    private fun updateMediaButtonPreferences() {
+        mediaSession?.setMediaButtonPreferences(
+            buildSkipAndSpeedMediaButtonPreferences(this, player.playbackParameters.speed),
+        )
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
@@ -251,6 +265,13 @@ class PlaybackService : MediaSessionService() {
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
             val millibels = mediaItem?.mediaMetadata?.extras?.getInt(VOLUME_BOOST_EXTRA_KEY, 0) ?: 0
             applyVolumeBoost(millibels)
+        }
+
+        // Keeps the media button preferences' speed-cycle button label in sync (issue #293),
+        // covering both CUSTOM_COMMAND_CYCLE_SPEED presses and a new episode loading at its feed's
+        // configured default speed.
+        override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+            updateMediaButtonPreferences()
         }
 
         override fun onIsPlayingChanged(isPlaying: Boolean) {
