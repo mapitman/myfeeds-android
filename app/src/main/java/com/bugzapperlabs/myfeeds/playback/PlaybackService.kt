@@ -128,10 +128,11 @@ class PlaybackService : MediaSessionService() {
         // Without an explicit small icon, DefaultMediaNotificationProvider falls back to the
         // app's adaptive launcher icon (android.R.attr.icon), which the system can't flatten
         // into the monochrome silhouette a notification/lock-screen icon needs, so it renders
-        // blank. Reuse the same pre-flattened monochrome icon FeedRefreshWorker already uses for
-        // its notifications. (issue #116)
+        // blank. (issue #116) MyFeedsMediaNotificationProvider also swaps in skip-forward/
+        // skip-backward/cycle-speed buttons in place of the default (non-functional here)
+        // seek-to-next/seek-to-previous actions (issue #293).
         setMediaNotificationProvider(
-            DefaultMediaNotificationProvider.Builder(this).build().apply {
+            MyFeedsMediaNotificationProvider(this).apply {
                 setSmallIcon(R.drawable.ic_notification)
             },
         )
@@ -171,6 +172,9 @@ class PlaybackService : MediaSessionService() {
         override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
             val sessionCommands = MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS.buildUpon()
                 .add(SessionCommand(CUSTOM_COMMAND_SET_VOLUME_BOOST, Bundle.EMPTY))
+                .add(SessionCommand(CUSTOM_COMMAND_SKIP_FORWARD, Bundle.EMPTY))
+                .add(SessionCommand(CUSTOM_COMMAND_SKIP_BACKWARD, Bundle.EMPTY))
+                .add(SessionCommand(CUSTOM_COMMAND_CYCLE_SPEED, Bundle.EMPTY))
                 .build()
             return MediaSession.ConnectionResult.accept(sessionCommands, MediaSession.ConnectionResult.DEFAULT_PLAYER_COMMANDS)
         }
@@ -211,11 +215,35 @@ class PlaybackService : MediaSessionService() {
             customCommand: SessionCommand,
             args: Bundle,
         ): ListenableFuture<SessionResult> {
-            if (customCommand.customAction == CUSTOM_COMMAND_SET_VOLUME_BOOST) {
-                applyVolumeBoost(args.getInt(EXTRA_VOLUME_BOOST_MILLIBELS, 0))
-                return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+            when (customCommand.customAction) {
+                CUSTOM_COMMAND_SET_VOLUME_BOOST -> {
+                    applyVolumeBoost(args.getInt(EXTRA_VOLUME_BOOST_MILLIBELS, 0))
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+                // The notification's own skip-forward/skip-backward buttons (issue #293), using the
+                // same fixed seek amounts as onMediaButtonEvent above and PlaybackController's
+                // skipForward()/skipBackward(), since the standard seek-to-next/previous player
+                // commands don't apply here (see the class-level comment on
+                // MyFeedsMediaNotificationProvider).
+                CUSTOM_COMMAND_SKIP_FORWARD -> {
+                    player.seekTo((player.currentPosition + SKIP_FORWARD_MS).coerceAtMost(player.duration.coerceAtLeast(0)))
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+                CUSTOM_COMMAND_SKIP_BACKWARD -> {
+                    player.seekTo((player.currentPosition - SKIP_BACKWARD_MS).coerceAtLeast(0))
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+                // Cycles through the same speed presets as the in-app player's speed control
+                // (issue #293), wrapping back to the first once the last preset is passed.
+                CUSTOM_COMMAND_CYCLE_SPEED -> {
+                    val currentSpeed = player.playbackParameters.speed
+                    val currentIndex = NOTIFICATION_PLAYBACK_SPEEDS.indexOfFirst { (it - currentSpeed).let { d -> d < 0.01f && d > -0.01f } }
+                    val nextSpeed = NOTIFICATION_PLAYBACK_SPEEDS[(currentIndex + 1).mod(NOTIFICATION_PLAYBACK_SPEEDS.size)]
+                    player.setPlaybackSpeed(nextSpeed)
+                    return Futures.immediateFuture(SessionResult(SessionResult.RESULT_SUCCESS))
+                }
+                else -> return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
             }
-            return Futures.immediateFuture(SessionResult(SessionError.ERROR_NOT_SUPPORTED))
         }
     }
 
