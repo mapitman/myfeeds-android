@@ -215,7 +215,13 @@ class ArticleListViewModelTest {
         viewModel.refresh()
 
         assertNotNull(viewModel.refreshError.first { it != null })
-        assertFalse(viewModel.uiState.value.isRefreshing)
+        // Waits for isRefreshing to actually settle rather than reading .value immediately after
+        // refreshError resolves (issue #215) -- refresh()'s _refreshError.value = ... and
+        // isRefreshing.value = false run on whatever thread completed the feedRepository.getFeed
+        // suspension (a real Room dispatch, not virtual test time), so nothing guarantees the
+        // second write has landed yet just because a collector observed the first.
+        val settled = viewModel.uiState.first { !it.isRefreshing }
+        assertFalse(settled.isRefreshing)
     }
 
     @Test
